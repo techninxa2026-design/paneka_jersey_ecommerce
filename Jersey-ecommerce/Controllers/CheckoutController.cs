@@ -21,8 +21,10 @@ public sealed class CheckoutController(
     BkashGateway bkash,
     ILogger<CheckoutController> logger) : Controller
 {
-    private const string DeliverySession = "PANENKA_DELIVERY_V1";
-    private const string OrderTokenSession = "PANENKA_ORDER_TOKEN_V1";
+    // Bind checkout details to the signed-in account rather than just the browser session.
+    // This avoids exposing another customer's delivery details when users switch accounts.
+    private string DeliverySession => "PANENKA_DELIVERY_V2_" + UserId;
+    private string OrderTokenSession => "PANENKA_ORDER_TOKEN_V2_" + UserId;
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     [HttpGet("")]
