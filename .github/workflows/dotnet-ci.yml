@@ -34,6 +34,16 @@ jobs:
             if ($diagnostic) { Get-Content $diagnostic.FullName }
             exit 1
           }
+      - name: Validate deployable SQL Server migration script
+        shell: pwsh
+        run: |
+          $path = Join-Path $env:RUNNER_TEMP "panenka-migrations.sql"
+          dotnet ef migrations script --idempotent --project "Jersey-ecommerce/Jersey-ecommerce.csproj" --context ApplicationDbContext --no-build --configuration Release --output $path
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $sql = Get-Content -LiteralPath $path -Raw
+          if (-not $sql.Contains("AdminNotifications") -or -not $sql.Contains("AdminNotificationReads")) {
+            throw "Expected additive notification tables are missing from the SQL deployment script."
+          }
       - name: Validate bKash checkout modal JavaScript
         shell: pwsh
         run: |
