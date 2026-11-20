@@ -62,6 +62,25 @@ public sealed class BkashController(
         return View("~/Views/Checkout/BkashStatus.cshtml", viewModel);
     }
 
+    // Buyer-scoped status used by the waiting-for-verification page.
+    // A change in Admin is visible to this customer without contacting
+    // a payment gateway or exposing another customer's order details.
+    [HttpGet("State/{id:int}")]
+    public async Task<IActionResult> State(int id)
+    {
+        var state = await db.Orders.AsNoTracking()
+            .Where(o => o.Id == id && o.UserId == UserId &&
+                        o.Payment != null && o.Payment.Method == "Bkash")
+            .Select(o => new
+            {
+                orderStatus = o.Status,
+                paymentStatus = o.Payment!.Status
+            }).SingleOrDefaultAsync();
+        if (state == null) return NotFound();
+        Response.Headers.CacheControl = "no-store";
+        return Ok(state);
+    }
+
     [HttpPost("Submit/{id:int}")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Submit(int id, string? senderNumber,
