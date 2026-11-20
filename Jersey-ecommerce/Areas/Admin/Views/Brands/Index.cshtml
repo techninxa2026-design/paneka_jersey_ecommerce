@@ -1,0 +1,109 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.BrandIndexViewModel
+@{
+    ViewData["Title"] = "Brands Management";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+<link rel="stylesheet" href="@Url.Content("~/css/admin-brands.css")" />
+
+<main class="pb-page">
+    <header class="pb-header">
+        <div>
+            <div class="pb-crumb"><a href="/admin/dashboard">Dashboard</a> <i class="bi bi-chevron-right"></i> <span>Brands</span></div>
+            <p class="pb-eyebrow">PANENKA / CATALOG</p>
+            <h1 class="pb-title">Brands management</h1>
+            <p class="pb-subtitle">Manage the labels and manufacturers shown across your jersey catalog.</p>
+        </div>
+        <a class="pb-btn pb-btn-dark" href="@Url.Action("Create", "Brands", new { area = "Admin" })"><i class="bi bi-plus-lg"></i> Add new brand</a>
+    </header>
+
+    @if (TempData["Success"] is string success)
+    {
+        <div class="pb-alert" role="status"><i class="bi bi-check-circle"></i> @success</div>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <div class="pb-alert-error" role="alert"><i class="bi bi-exclamation-triangle"></i> @error</div>
+    }
+
+    <section class="pb-stats" aria-label="Brands summary">
+        <article class="pb-stat">
+            <div class="pb-stat-top"><span>Total brands</span><span class="pb-stat-icon"><i class="bi bi-tags"></i></span></div>
+            <div class="pb-stat-value">@Model.TotalBrands</div><p class="pb-stat-foot">All brands in your catalog</p>
+        </article>
+        <article class="pb-stat">
+            <div class="pb-stat-top"><span>Active brands</span><span class="pb-stat-icon"><i class="bi bi-check2-circle"></i></span></div>
+            <div class="pb-stat-value">@Model.ActiveBrands</div><p class="pb-stat-foot">Enabled on the storefront</p>
+        </article>
+        <article class="pb-stat">
+            <div class="pb-stat-top"><span>With products</span><span class="pb-stat-icon"><i class="bi bi-box-seam"></i></span></div>
+            <div class="pb-stat-value">@Model.ProductBrandCount</div><p class="pb-stat-foot">Brands assigned to at least one product</p>
+        </article>
+    </section>
+
+    <section class="pb-panel">
+        <div class="pb-panel-head">
+            <div class="pb-step"><i class="bi bi-list-ul"></i></div>
+            <div><h2 class="pb-panel-title">All brands</h2><p class="pb-panel-help">Search by brand name or slug, or filter by publishing status.</p></div>
+        </div>
+        <form class="pb-toolbar" method="get" action="@Url.Action("Index", "Brands", new { area = "Admin" })">
+            <label class="pb-search"><i class="bi bi-search"></i><input type="search" name="search" value="@Model.Search" placeholder="Search brands..." aria-label="Search brands" /></label>
+            <select name="status" class="pb-select" aria-label="Filter by status">
+                <option value="all" selected="@(Model.Status == "all" ? "selected" : null)">All statuses</option>
+                <option value="active" selected="@(Model.Status == "active" ? "selected" : null)">Active</option>
+                <option value="inactive" selected="@(Model.Status == "inactive" ? "selected" : null)">Inactive</option>
+            </select>
+            <button type="submit" class="pb-btn pb-btn-dark"><i class="bi bi-funnel"></i> Apply</button>
+            <a class="pb-btn" href="@Url.Action("Index", "Brands", new { area = "Admin" })">Reset</a>
+        </form>
+
+        @if (Model.Brands.Count == 0)
+        {
+            <div class="pb-empty">
+                <i class="bi bi-tags"></i>
+                <h3>No brands found</h3>
+                <p>Create your first brand or adjust the search filters.</p>
+                <a href="@Url.Action("Create", "Brands", new { area = "Admin" })" class="pb-btn pb-btn-dark">Add brand</a>
+            </div>
+        }
+        else
+        {
+            <div class="pb-table-wrap">
+                <table class="pb-table">
+                    <thead><tr><th>Brand</th><th>URL slug</th><th>Products</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+                    <tbody>
+                    @foreach (var brand in Model.Brands)
+                    {
+                        <tr>
+                            <td>
+                                <div class="pb-brand-cell">
+                                    <div class="pb-brand-mark">
+                                        @if (!string.IsNullOrWhiteSpace(brand.LogoUrl))
+                                        {
+                                            <img src="@brand.LogoUrl" alt="@brand.Name logo" loading="lazy" />
+                                        }
+                                        else { <i class="bi bi-image" aria-hidden="true"></i> }
+                                    </div>
+                                    <div><div class="pb-brand-name">@brand.Name</div><div class="pb-brand-id">ID #@brand.Id</div></div>
+                                </div>
+                            </td>
+                            <td><span class="pb-code">@brand.Slug</span></td>
+                            <td>@brand.ProductCount</td>
+                            <td>
+                                @if (brand.IsActive) { <span class="pb-pill"><span class="pb-dot"></span> Active</span> }
+                                else { <span class="pb-pill off"><span class="pb-dot"></span> Inactive</span> }
+                            </td>
+                            <td>
+                                <div class="pb-icon-links">
+                                    <a class="pb-mini-btn" title="Edit brand" aria-label="Edit @brand.Name" href="@Url.Action("Edit", "Brands", new { area = "Admin", id = brand.Id })"><i class="bi bi-pencil-square"></i></a>
+                                    <a class="pb-mini-btn danger" title="Delete brand" aria-label="Delete @brand.Name" href="@Url.Action("Delete", "Brands", new { area = "Admin", id = brand.Id })"><i class="bi bi-trash"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+        <div class="pb-bottom-note"><span>Showing @Model.Brands.Count brand(s)</span><span>Brands with linked products cannot be deleted.</span></div>
+    </section>
+</main>

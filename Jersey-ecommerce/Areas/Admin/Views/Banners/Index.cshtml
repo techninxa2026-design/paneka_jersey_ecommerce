@@ -1,0 +1,177 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.BannersIndexViewModel
+@{
+    ViewData["Title"] = "Banners & Slides";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var slideCount = Model.Slides.Count;
+    var bannerCount = Model.Banners.Count;
+    var utcNow = DateTime.UtcNow;
+    var liveSlides = Model.Slides.Count(s => s.IsActive && (!s.StartsAt.HasValue || s.StartsAt <= utcNow) && (!s.EndsAt.HasValue || s.EndsAt > utcNow));
+    var liveBanners = Model.Banners.Count(b => b.IsActive && (!b.StartsAt.HasValue || b.StartsAt <= utcNow) && (!b.EndsAt.HasValue || b.EndsAt > utcNow));
+}
+<link rel="stylesheet" href="@Url.Content("~/css/admin-banners.css")" />
+
+<div class="mc-page">
+    <div class="mc-heading">
+        <div>
+            <span class="mc-eyebrow">PANENKA / CONTENT MANAGEMENT</span>
+            <h1>Banners &amp; Slides</h1>
+            <p>Manage storefront promotions, homepage hero slides, and campaign banners.</p>
+        </div>
+        <div class="mc-heading-actions">
+            <a href="@Url.Content("~/Admin/Banners/CreateBanner")" class="mc-btn mc-btn-outline">
+                <i class="bi bi-plus-lg"></i> New Banner
+            </a>
+            <a href="@Url.Content("~/Admin/Banners/CreateSlide")" class="mc-btn mc-btn-dark">
+                <i class="bi bi-plus-lg"></i> New Slide
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] is string message)
+    {
+        <div class="mc-alert"><i class="bi bi-check-circle"></i> @message</div>
+    }
+
+    @if (TempData["Error"] is string errorMessage)
+    {
+        <div class="mc-alert mc-alert-error" role="alert"><i class="bi bi-exclamation-circle"></i> @errorMessage</div>
+    }
+
+    <div class="mc-stats">
+        <div class="mc-stat"><span>TOTAL SLIDES</span><strong>@slideCount</strong><small>Hero carousel images</small></div>
+        <div class="mc-stat"><span>ACTIVE SLIDES</span><strong>@liveSlides</strong><small>Active within date window</small></div>
+        <div class="mc-stat"><span>TOTAL BANNERS</span><strong>@bannerCount</strong><small>Marketing placements</small></div>
+        <div class="mc-stat"><span>ACTIVE BANNERS</span><strong>@liveBanners</strong><small>Active within date window</small></div>
+    </div>
+
+    <section class="mc-panel" id="hero-slides">
+        <div class="mc-panel-heading">
+            <div>
+                <span class="mc-section-kicker">01 / HERO CAROUSEL</span>
+                <h2>Homepage Slides <span class="mc-counter">@slideCount</span></h2>
+                <p>Desktop image, optional mobile image, call-to-action and display order.</p>
+            </div>
+            <a href="@Url.Content("~/Admin/Banners/CreateSlide")" class="mc-inline-add"><i class="bi bi-plus"></i> Add Slide</a>
+        </div>
+        <div class="mc-table-scroll">
+            <table class="mc-table">
+                <thead>
+                    <tr><th>PREVIEW / TITLE</th><th>CTA</th><th>ORDER</th><th>STATUS</th><th class="mc-actions-cell">ACTIONS</th></tr>
+                </thead>
+                <tbody>
+                    @if (Model.Slides.Count == 0)
+                    {
+                        <tr><td colspan="5"><div class="mc-empty"><i class="bi bi-images"></i><h3>No hero slides yet</h3><p>Add your first slide to start building the homepage carousel.</p><a href="@Url.Content("~/Admin/Banners/CreateSlide")" class="mc-btn mc-btn-dark">Add First Slide</a></div></td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var slide in Model.Slides)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="mc-media-info">
+                                        <div class="mc-thumb mc-thumb-slide">
+                                            @if (!string.IsNullOrWhiteSpace(slide.ImageUrl))
+                                            { <img src="@slide.ImageUrl" alt="@slide.Title" loading="lazy" /> }
+                                            else { <i class="bi bi-image"></i> }
+                                        </div>
+                                        <div class="mc-item-name">
+                                            <strong>@slide.Title</strong>
+                                            <span>@(string.IsNullOrWhiteSpace(slide.Subtitle) ? "No subtitle" : slide.Subtitle)</span>
+                                            @if (!string.IsNullOrWhiteSpace(slide.MobileImageUrl)) { <small><i class="bi bi-phone"></i> Mobile image</small> }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(slide.ButtonText)) { <strong class="mc-cta">@slide.ButtonText</strong> }
+                                    else { <span class="mc-muted">None</span> }
+                                </td>
+                                <td><span class="mc-order">@slide.DisplayOrder</span></td>
+                                <td>
+                                    <span class="mc-status @(slide.IsActive ? "mc-status-live" : "mc-status-off")">
+                                        <i class="bi @(slide.IsActive ? "bi-circle-fill" : "bi-circle")"></i> @(slide.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                    @if (slide.IsActive && slide.StartsAt.HasValue && slide.StartsAt.Value > utcNow) { <span class="mc-timed">UPCOMING</span> }
+                                    else if (slide.IsActive && slide.EndsAt.HasValue && slide.EndsAt.Value <= utcNow) { <span class="mc-timed">ENDED</span> }
+                                </td>
+                                <td>
+                                    <div class="mc-row-actions">
+                                        <a href="@(Url.Content("~/Admin/Banners/EditSlide") + "/" + slide.Id)" class="mc-icon-btn" title="Edit slide" aria-label="Edit slide"><i class="bi bi-pencil"></i></a>
+                                        <form action="@Url.Content("~/Admin/Banners/ToggleSlide")" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@slide.Id" />
+                                            <button type="submit" class="mc-icon-btn" title="@(slide.IsActive ? "Deactivate" : "Activate")" aria-label="Toggle slide status"><i class="bi @(slide.IsActive ? "bi-pause-circle" : "bi-play-circle")"></i></button>
+                                        </form>
+                                        <form action="@Url.Content("~/Admin/Banners/DeleteSlide")" method="post" onsubmit="return confirm('Permanently delete this slide and its uploaded images?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@slide.Id" />
+                                            <button type="submit" class="mc-icon-btn mc-danger" title="Delete slide" aria-label="Delete slide"><i class="bi bi-trash3"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="mc-panel" id="promo-banners">
+        <div class="mc-panel-heading">
+            <div>
+                <span class="mc-section-kicker">02 / STORE PROMOTIONS</span>
+                <h2>Promotional Banners <span class="mc-counter">@bannerCount</span></h2>
+                <p>Control campaigns across the homepage, shop and other placements.</p>
+            </div>
+            <a href="@Url.Content("~/Admin/Banners/CreateBanner")" class="mc-inline-add"><i class="bi bi-plus"></i> Add Banner</a>
+        </div>
+        <div class="mc-table-scroll">
+            <table class="mc-table">
+                <thead><tr><th>PREVIEW / TITLE</th><th>PLACEMENT</th><th>ORDER</th><th>STATUS</th><th class="mc-actions-cell">ACTIONS</th></tr></thead>
+                <tbody>
+                    @if (Model.Banners.Count == 0)
+                    {
+                        <tr><td colspan="5"><div class="mc-empty"><i class="bi bi-badge-ad"></i><h3>No banners yet</h3><p>Create a banner for a new collection, promotion or offer.</p><a href="@Url.Content("~/Admin/Banners/CreateBanner")" class="mc-btn mc-btn-dark">Add First Banner</a></div></td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var banner in Model.Banners)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="mc-media-info">
+                                        <div class="mc-thumb mc-thumb-banner"><img src="@banner.ImageUrl" alt="@banner.Title" loading="lazy" /></div>
+                                        <div class="mc-item-name"><strong>@banner.Title</strong><span>@(string.IsNullOrWhiteSpace(banner.Subtitle) ? "No subtitle" : banner.Subtitle)</span></div>
+                                    </div>
+                                </td>
+                                <td><span class="mc-placement">@banner.Placement</span></td>
+                                <td><span class="mc-order">@banner.DisplayOrder</span></td>
+                                <td>
+                                    <span class="mc-status @(banner.IsActive ? "mc-status-live" : "mc-status-off")"><i class="bi @(banner.IsActive ? "bi-circle-fill" : "bi-circle")"></i> @(banner.IsActive ? "Active" : "Inactive")</span>
+                                    @if (banner.IsActive && banner.StartsAt.HasValue && banner.StartsAt.Value > utcNow) { <span class="mc-timed">UPCOMING</span> }
+                                    else if (banner.IsActive && banner.EndsAt.HasValue && banner.EndsAt.Value <= utcNow) { <span class="mc-timed">ENDED</span> }
+                                </td>
+                                <td>
+                                    <div class="mc-row-actions">
+                                        <a href="@(Url.Content("~/Admin/Banners/EditBanner") + "/" + banner.Id)" class="mc-icon-btn" title="Edit banner" aria-label="Edit banner"><i class="bi bi-pencil"></i></a>
+                                        <form action="@Url.Content("~/Admin/Banners/ToggleBanner")" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@banner.Id" />
+                                            <button type="submit" class="mc-icon-btn" title="@(banner.IsActive ? "Deactivate" : "Activate")" aria-label="Toggle banner status"><i class="bi @(banner.IsActive ? "bi-pause-circle" : "bi-play-circle")"></i></button>
+                                        </form>
+                                        <form action="@Url.Content("~/Admin/Banners/DeleteBanner")" method="post" onsubmit="return confirm('Permanently delete this banner and its uploaded image?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@banner.Id" />
+                                            <button type="submit" class="mc-icon-btn mc-danger" title="Delete banner" aria-label="Delete banner"><i class="bi bi-trash3"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

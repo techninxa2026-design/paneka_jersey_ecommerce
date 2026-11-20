@@ -1,0 +1,23 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.VariantOptionDeleteViewModel
+@{
+    string entity = Model.IsColor ? "color" : "size";
+    string action = Model.IsColor ? "DeleteColor" : "DeleteSize";
+}
+<section class="vo-danger-panel" style="max-width:730px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:19px"><span class="vo-panel-icon" style="background:#fff1f0;color:#aa3529;width:50px;height:50px;font-size:22px"><i class="bi bi-trash3"></i></span><div><div class="vo-eyebrow" style="margin-bottom:5px">PANENKA / Delete confirmation</div><h2>Delete @entity?</h2></div></div>
+    <p>You're about to delete <strong style="color:#171717">@Model.Name</strong>. This cannot be undone.</p>
+    @if (Model.VariantCount > 0)
+    {
+        <div class="vo-warning vo-warning-locked"><strong><i class="bi bi-shield-exclamation"></i> Deletion blocked</strong><div>This @(entity) is used by <strong>@Model.VariantCount product variant(s)</strong>. Reassign or remove those variants before deleting the @(entity). Existing order and inventory data should be preserved.</div></div>
+        <a class="vo-btn" href="@Url.Action("Index", "Variants", new { area = "Admin", tab = Model.IsColor ? "colors" : "sizes" })"><i class="bi bi-arrow-left"></i> Back to sizes &amp; colors</a>
+    }
+    else
+    {
+        <div class="vo-warning"><strong><i class="bi bi-exclamation-triangle"></i> Permanent action</strong><div>The @(entity) definition will be deleted. Product records themselves are not deleted.</div></div>
+        <form method="post" action="@Url.Action(action, "Variants", new { area = "Admin", id = Model.Id })" style="display:flex;flex-wrap:wrap;gap:10px">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="vo-btn vo-btn-danger"><i class="bi bi-trash3"></i> Delete @entity permanently</button>
+            <a class="vo-btn" href="@Url.Action("Index", "Variants", new { area = "Admin", tab = Model.IsColor ? "colors" : "sizes" })">Cancel</a>
+        </form>
+    }
+</section>

@@ -1,0 +1,104 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.CollectionIndexViewModel
+@{
+    ViewData["Title"] = "Collections";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var inactive = Model.Total - Model.Active;
+}
+@await Html.PartialAsync("_CollectionStyles")
+<div class="pc-page">
+    <div class="pc-top">
+        <div>
+            <div class="pc-crumb"><a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })">Dashboard</a><i class="bi bi-chevron-right"></i><span>Collections</span></div>
+            <div class="pc-eyebrow">PANENKA / CATALOG MANAGEMENT</div>
+            <h1>Collections<span style="color:#a6a6a6">.</span></h1>
+            <p class="pc-subtitle">Curated edits, seasonal campaigns and the jerseys that define them.</p>
+        </div>
+        <a class="pc-btn pc-btn-dark" href="@Url.Action("Create", "Collections", new { area = "Admin" })">
+            <i class="bi bi-plus-lg"></i> New collection
+        </a>
+    </div>
+
+    @if (TempData["Success"] is string success)
+    {
+        <div class="pc-alert pc-alert-success"><i class="bi bi-check-circle"></i> @success</div>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <div class="pc-alert"><i class="bi bi-exclamation-circle"></i> @error</div>
+    }
+
+    <section class="pc-stats">
+        <div class="pc-stat"><div class="pc-stat-k"><span>Total collections</span><i class="bi bi-collection"></i></div><div class="pc-stat-value">@Model.Total</div><div class="pc-stat-note">All catalog collections</div></div>
+        <div class="pc-stat"><div class="pc-stat-k"><span>Active</span><i class="bi bi-check-circle"></i></div><div class="pc-stat-value">@Model.Active</div><div class="pc-stat-note">Published collection groups</div></div>
+        <div class="pc-stat"><div class="pc-stat-k"><span>Inactive</span><i class="bi bi-eye-slash"></i></div><div class="pc-stat-value">@inactive</div><div class="pc-stat-note">Hidden from storefront</div></div>
+        <div class="pc-stat"><div class="pc-stat-k"><span>With products</span><i class="bi bi-box-seam"></i></div><div class="pc-stat-value">@Model.WithProducts</div><div class="pc-stat-note">Curated with at least one product</div></div>
+    </section>
+
+    <section class="pc-card">
+        <div class="pc-toolbar">
+            <form method="get" action="@Url.Action("Index", "Collections", new { area = "Admin" })" class="pc-filters">
+                <div class="pc-search"><i class="bi bi-search"></i>
+                    <input class="pc-input" type="search" name="search" value="@Model.Search" placeholder="Search collections or slugs" aria-label="Search collections" />
+                </div>
+                <select class="pc-select" name="status" aria-label="Collection status">
+                    <option value="all" selected="@(Model.Status == "all" ? "selected" : null)">All statuses</option>
+                    <option value="active" selected="@(Model.Status == "active" ? "selected" : null)">Active</option>
+                    <option value="inactive" selected="@(Model.Status == "inactive" ? "selected" : null)">Inactive</option>
+                </select>
+                <button type="submit" class="pc-btn pc-btn-dark"><i class="bi bi-funnel"></i> Filter</button>
+                <a class="pc-btn" href="@Url.Action("Index", "Collections", new { area = "Admin" })">Reset</a>
+            </form>
+            <span class="pc-muted">@Model.Items.Count result(s)</span>
+        </div>
+
+        @if (Model.Items.Count == 0)
+        {
+            <div class="pc-empty">
+                <i class="bi bi-collection"></i><strong>No collections found</strong>
+                <div>Try another filter or create your first collection.</div>
+                <a class="pc-btn pc-btn-dark" style="margin-top:17px" href="@Url.Action("Create", "Collections", new { area = "Admin" })">
+                    <i class="bi bi-plus-lg"></i> Create collection
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="pc-table-wrap">
+                <table class="pc-table">
+                    <thead><tr>
+                        <th>Collection</th><th>Status</th><th>Products</th><th>Order</th><th>Created</th><th style="text-align:right">Actions</th>
+                    </tr></thead>
+                    <tbody>
+                    @foreach (var c in Model.Items)
+                    {
+                        <tr>
+                            <td><div class="pc-media-cell">
+                                <div class="pc-thumb">
+                                    @if (!string.IsNullOrWhiteSpace(c.ImageUrl))
+                                    { <img src="@c.ImageUrl" alt="@c.Name" loading="lazy" /> }
+                                    else
+                                    { <i class="bi bi-image" style="font-size:24px;color:#b9b9b9"></i> }
+                                </div>
+                                <div><span class="pc-item-name">@c.Name</span><span class="pc-item-sub">/@c.Slug</span></div>
+                            </div></td>
+                            <td><span class="pc-badge @(c.IsActive ? "pc-badge-active" : "")">@(c.IsActive ? "Active" : "Inactive")</span></td>
+                            <td><span style="font-weight:800;color:#222">@c.ProductCount</span> product(s)</td>
+                            <td>@c.DisplayOrder</td>
+                            <td>@c.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</td>
+                            <td><div class="pc-icon-actions">
+                                <a class="pc-icon-btn" title="Manage products" aria-label="Manage products in @c.Name"
+                                   href="@Url.Action("ManageProducts", "Collections", new { area = "Admin", id = c.Id })"><i class="bi bi-box-seam"></i></a>
+                                <a class="pc-icon-btn" title="Edit" aria-label="Edit @c.Name"
+                                   href="@Url.Action("Edit", "Collections", new { area = "Admin", id = c.Id })"><i class="bi bi-pencil-square"></i></a>
+                                <a class="pc-icon-btn pc-icon-btn-danger" title="Delete" aria-label="Delete @c.Name"
+                                   href="@Url.Action("Delete", "Collections", new { area = "Admin", id = c.Id })"><i class="bi bi-trash3"></i></a>
+                            </div></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+            <div class="pc-footnote">Manage products to assign multiple jerseys to a collection. Deleting a collection never deletes its products.</div>
+        }
+    </section>
+</div>

@@ -1,0 +1,78 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.CollectionProductsViewModel
+@{
+    ViewData["Title"] = "Collection Products";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var selectedCount = Model.Products.Count(p => p.Selected);
+}
+@await Html.PartialAsync("_CollectionStyles")
+<div class="pc-page" style="max-width:1060px">
+    <div class="pc-top">
+        <div>
+            <div class="pc-crumb"><a href="@Url.Action("Index", "Collections", new { area = "Admin" })">Collections</a><i class="bi bi-chevron-right"></i>
+                <a href="@Url.Action("Edit", "Collections", new { area = "Admin", id = Model.CollectionId })">@Model.CollectionName</a><i class="bi bi-chevron-right"></i>Products</div>
+            <div class="pc-eyebrow">PANENKA / COLLECTION CURATION</div>
+            <h1>Manage products<span style="color:#a6a6a6">.</span></h1>
+            <p class="pc-subtitle">Choose which jerseys belong to <b>@Model.CollectionName</b>.</p>
+        </div>
+        <a class="pc-btn" href="@Url.Action("Edit", "Collections", new { area = "Admin", id = Model.CollectionId })"><i class="bi bi-arrow-left"></i> Back to collection</a>
+    </div>
+    @if (TempData["Error"] is string error)
+    { <div class="pc-alert">@error</div> }
+    <div class="pc-info" style="margin-bottom:17px"><strong>Product curation</strong>
+        Select products to include in this collection. Clearing an item only removes the collection assignment, not the product. Existing product prices, categories and stock remain unchanged.
+    </div>
+
+    <form method="post" action="@Url.Action("ManageProducts", "Collections", new { area = "Admin", id = Model.CollectionId })">
+        @Html.AntiForgeryToken()
+        <div class="pc-card">
+            <div class="pc-products-heading">
+                <div><h2 style="font-size:14px;font-weight:850;margin:0 0 5px">Available products</h2>
+                    <span class="pc-muted"><span id="pcSelectedCount">@selectedCount</span> selected of @Model.Products.Count total</span></div>
+                <div class="pc-search"><i class="bi bi-search"></i>
+                    <input id="pcFindProducts" type="search" class="pc-input" placeholder="Find a jersey" aria-label="Find a product" />
+                </div>
+            </div>
+            @if (Model.Products.Count == 0)
+            {
+                <div class="pc-empty"><i class="bi bi-box-seam"></i><strong>No products created yet</strong><div>Create some products, then return here to build your edit.</div>
+                    <a class="pc-btn pc-btn-dark" href="@Url.Action("Index", "Products", new { area = "Admin" })" style="margin-top:16px">Open products</a>
+                </div>
+            }
+            else
+            {
+                <div class="pc-product-list" id="pcProductList">
+                    @foreach (var p in Model.Products)
+                    {
+                        <label class="pc-product-check" data-find="@((p.Name + " " + p.Slug).ToLowerInvariant())">
+                            <input type="checkbox" name="selectedProductIds" value="@p.Id" checked="@(p.Selected ? "checked" : null)" />
+                            <span><b>@p.Name</b><small>/@p.Slug</small></span>
+                        </label>
+                    }
+                </div>
+            }
+            <div class="pc-prod-foot">
+                <span class="pc-muted">Selected products will be linked to this collection when you save.</span>
+                <div class="pc-actions">
+                    <a class="pc-btn" href="@Url.Action("Edit", "Collections", new { area = "Admin", id = Model.CollectionId })">Cancel</a>
+                    <button class="pc-btn pc-btn-dark" type="submit"><i class="bi bi-check2-circle"></i> Save product selection</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<script>
+(() => {
+    // Search and counter only; NEVER intercept or disable the form submit.
+    const input = document.getElementById('pcFindProducts');
+    const list = document.getElementById('pcProductList');
+    const count = document.getElementById('pcSelectedCount');
+    if (!input || !list || !count) return;
+    const options = [...list.querySelectorAll('.pc-product-check')];
+    function update() { count.textContent = options.filter(e => e.querySelector('input').checked).length; }
+    input.addEventListener('input', () => {
+        const q = input.value.trim().toLowerCase();
+        options.forEach(e => e.classList.toggle('pc-is-hidden', !e.dataset.find.includes(q)));
+    });
+    options.forEach(e => e.querySelector('input').addEventListener('change', update));
+})();
+</script>

@@ -1,0 +1,92 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.ShipmentFormViewModel
+@using Jersey_ecommerce.Areas.Admin.ViewModels
+@{
+    var editing = Model.Id.HasValue;
+    var selectedOrder = Model.OrderId.ToString();
+}
+
+@* All controls have explicit name attributes; Tag Helpers are not required. *@
+@Html.ValidationSummary(false, "", new { @class = "ship-validation-summary", role = "alert" })
+
+<div class="ship-form-grid">
+    @if (!editing)
+    {
+        <div class="ship-field ship-span-2">
+            <label for="OrderId">Order <span class="text-danger">*</span></label>
+            <select id="OrderId" name="OrderId" class="ship-select" required>
+                <option value="0" selected="@(Model.OrderId == 0)">-- Select an order without a shipment --</option>
+                @foreach (var item in Model.AvailableOrders ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
+                {
+                    <option value="@item.Value" selected="@(item.Value == selectedOrder)">@item.Text</option>
+                }
+            </select>
+            @Html.ValidationMessageFor(m => m.OrderId, "", new { @class = "ship-validation" })
+            @if (Model.AvailableOrders == null || Model.AvailableOrders.Count == 0)
+            {
+                <div class="ship-help" role="status">
+                    No eligible orders found. Create an order first, or check if existing orders
+                    are cancelled or already have shipments.
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <input type="hidden" id="Id" name="Id" value="@Model.Id" />
+        <input type="hidden" id="OrderId" name="OrderId" value="@Model.OrderId" />
+        <div class="ship-field ship-span-2">
+            <label>Order (cannot be changed)</label>
+            <div class="ship-order-tag">@Model.OrderNumber — @Model.CustomerName</div>
+        </div>
+    }
+
+    <div class="ship-field">
+        <label for="Status">Shipment status <span class="text-danger">*</span></label>
+        <select id="Status" name="Status" class="ship-select" required>
+            @foreach (var status in ShipmentStatuses.Values)
+            {
+                <option value="@status" selected="@(status == Model.Status)">@ShipmentStatuses.Label(status)</option>
+            }
+        </select>
+        @Html.ValidationMessageFor(m => m.Status, "", new { @class = "ship-validation" })
+    </div>
+
+    <div class="ship-field">
+        <label for="CourierName">Courier / Delivery company</label>
+        <input type="text" id="CourierName" name="CourierName"
+               class="ship-input" value="@Model.CourierName" maxlength="100"
+               placeholder="e.g. Pathao Courier / Steadfast" />
+        @Html.ValidationMessageFor(m => m.CourierName, "", new { @class = "ship-validation" })
+    </div>
+
+    <div class="ship-field">
+        <label for="TrackingNumber">Tracking number</label>
+        <input type="text" id="TrackingNumber" name="TrackingNumber"
+               class="ship-input" value="@Model.TrackingNumber" maxlength="200"
+               placeholder="e.g. TRK-123456" />
+        @Html.ValidationMessageFor(m => m.TrackingNumber, "", new { @class = "ship-validation" })
+    </div>
+
+    <div class="ship-field">
+        <label for="EstimatedDeliveryAt">Estimated delivery date</label>
+        <input type="date" id="EstimatedDeliveryAt" name="EstimatedDeliveryAt"
+               class="ship-input" value="@(Model.EstimatedDeliveryAt?.ToString("yyyy-MM-dd") ?? "")" />
+        @Html.ValidationMessageFor(m => m.EstimatedDeliveryAt, "", new { @class = "ship-validation" })
+    </div>
+
+    <div class="ship-field ship-span-2">
+        <label for="TrackingUrl">Tracking URL</label>
+        <input type="url" id="TrackingUrl" name="TrackingUrl" class="ship-input"
+               value="@Model.TrackingUrl" maxlength="500"
+               placeholder="https://courier.example/track/..." />
+        @Html.ValidationMessageFor(m => m.TrackingUrl, "", new { @class = "ship-validation" })
+    </div>
+
+    <div class="ship-field ship-span-2">
+        <label for="Notes">Internal notes</label>
+        <textarea id="Notes" name="Notes" class="ship-textarea" maxlength="1000"
+                  placeholder="Instructions, handover notes or delivery information...">@Model.Notes</textarea>
+        @Html.ValidationMessageFor(m => m.Notes, "", new { @class = "ship-validation" })
+        <div class="ship-help">Notes are for administrators; they are not sent to the courier.</div>
+    </div>
+</div>

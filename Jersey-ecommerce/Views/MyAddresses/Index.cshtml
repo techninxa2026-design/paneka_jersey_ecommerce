@@ -1,0 +1,31 @@
+@model IEnumerable<Jersey_ecommerce.Models.Customers.Address>
+@{ Layout = null; }
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Delivery Addresses | PANENKA</title><link rel="stylesheet" href="/css/panenka-product.css"></head><body>
+<header><div class="inner"><a class="logo" href="/">PANENKA</a><nav><a href="/shop">SHOP</a><a href="/MyOrders">MY ORDERS</a><a href="/Account/Profile">ACCOUNT</a></nav></div></header>
+<main class="container" style="min-height:65vh;padding-bottom:70px"><div class="crumb">Your account / Delivery addresses</div><h1>Saved addresses.</h1>
+@if(TempData["AddressInfo"] is string msg){<p class="messages">@msg</p>}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin:32px 0">
+@foreach(var a in Model){<article style="padding:20px;border:1px solid #ddd"><h3>@a.FullName @(a.IsDefault ? "· DEFAULT" : "")</h3>
+<p class="helper">@a.PhoneNumber<br>@a.AddressLine1 @a.AddressLine2<br>@a.City, @a.District @a.PostalCode</p>
+<div class="actions"><form method="post" action="/MyAddresses/Delete/@a.Id">@Html.AntiForgeryToken()<button class="secondary" type="submit">DELETE</button></form>
+@if(!a.IsDefault){<form method="post" action="/MyAddresses/Default/@a.Id">@Html.AntiForgeryToken()<button class="secondary" type="submit">MAKE DEFAULT</button></form>}</div>
+<details style="margin-top:18px;border-top:1px solid #ddd;padding-top:12px"><summary style="cursor:pointer;font-size:12px;font-weight:700">EDIT ADDRESS</summary>
+<form method="post" action="/MyAddresses/Save" style="padding-top:8px">@Html.AntiForgeryToken()
+<input type="hidden" name="Id" value="@a.Id">
+<div class="review-form"><label>Full name<input name="FullName" value="@a.FullName" required maxlength="150"></label>
+<label>Phone<input name="PhoneNumber" value="@a.PhoneNumber" required maxlength="30"></label>
+<label>Address<input name="AddressLine1" value="@a.AddressLine1" required maxlength="200"></label>
+<label>Landmark<input name="AddressLine2" value="@a.AddressLine2" maxlength="200"></label>
+<label>City<input name="City" value="@a.City" required maxlength="100"></label>
+<label>District<input name="District" value="@a.District" maxlength="100"></label>
+<label>Postal code<input name="PostalCode" value="@a.PostalCode" maxlength="20"></label>
+<button class="primary" type="submit">SAVE CHANGES</button></div></form></details>
+</article>}
+</div><form method="post" action="/MyAddresses/Save" style="max-width:700px;border-top:1px solid #ddd;padding-top:24px">
+@Html.AntiForgeryToken()<h2>Add delivery address</h2>
+<div class="review-form"><label>Full name<input name="FullName" maxlength="150" required></label><label>Phone<input name="PhoneNumber" maxlength="30" required></label>
+<label>House, road, area<input name="AddressLine1" maxlength="200" required></label><label>Apartment / landmark<input name="AddressLine2" maxlength="200"></label>
+<label>City<input name="City" maxlength="100" required></label><label>District<input name="District" maxlength="100"></label>
+<label>Postal code<input name="PostalCode" maxlength="20"></label>
+<button type="submit" class="primary">SAVE ADDRESS</button></div></form></main><footer class="footer"><div class="container">PANENKA</div></footer></body></html>

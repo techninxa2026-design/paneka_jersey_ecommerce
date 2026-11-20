@@ -1,0 +1,18 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.VariantOptionFormViewModel
+@{
+    ViewData["Title"] = "Edit Size";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+@await Html.PartialAsync("_VariantStyles")
+<div class="vo-page">
+    <div class="vo-head">
+        <div>
+            <div class="vo-crumb"><a href="/admin/dashboard">Dashboard</a><i class="bi bi-chevron-right"></i><a href="/admin/variants">Sizes &amp; Colors</a><i class="bi bi-chevron-right"></i><span>Edit Size</span></div>
+            <div class="vo-eyebrow">PANENKA / Catalog attributes</div>
+            <h1 class="vo-title">Edit Size<span style="color:#aaa">.</span></h1>
+            <p class="vo-subtitle">Update this size while preserving product variant references.</p>
+        </div>
+        <a class="vo-btn" href="@Url.Action("Index", "Variants", new { area = "Admin", tab = "sizes" })"><i class="bi bi-arrow-left"></i> Back to sizes &amp; colors</a>
+    </div>
+    @await Html.PartialAsync("_VariantForm", Model)
+</div>

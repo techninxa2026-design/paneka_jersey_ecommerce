@@ -1,0 +1,122 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.CollectionFormViewModel
+
+<div class="pc-form-layout">
+    <div class="pc-stack">
+        <section class="pc-card">
+            <div class="pc-card-heading">
+                <div class="pc-step">01</div>
+                <div><h2>Collection information</h2><p class="pc-muted">Give your curated product group its identity.</p></div>
+            </div>
+            <div class="pc-card-body">
+                <div class="pc-field">
+                    <label for="Name" class="pc-label">Collection name <span class="pc-required">*</span></label>
+                    <input id="Name" name="Name" type="text" class="pc-input" maxlength="100"
+                           value="@Model.Name" placeholder="e.g. The Retro Edit" />
+                    @Html.ValidationMessage("Name", "", new { @class = "pc-error" })
+                    <p class="pc-help">Use a memorable name shoppers can understand.</p>
+                </div>
+                <div class="pc-field">
+                    <label for="Slug" class="pc-label">URL slug</label>
+                    <input id="Slug" name="Slug" type="text" class="pc-input" maxlength="120"
+                           value="@Model.Slug" placeholder="the-retro-edit" />
+                    @Html.ValidationMessage("Slug", "", new { @class = "pc-error" })
+                    <p class="pc-help">Automatically generated while creating; editable any time.</p>
+                    <div id="pcSlugPreview" class="pc-help"></div>
+                </div>
+                <div class="pc-field">
+                    <label for="Description" class="pc-label">Description</label>
+                    <textarea id="Description" name="Description" maxlength="500" class="pc-textarea"
+                              placeholder="Describe what makes this collection special...">@Model.Description</textarea>
+                    @Html.ValidationMessage("Description", "", new { @class = "pc-error" })
+                    <p class="pc-help">Optional. Up to 500 characters.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="pc-card">
+            <div class="pc-card-heading">
+                <div class="pc-step">02</div>
+                <div><h2>Collection artwork</h2><p class="pc-muted">Use an editorial banner or product flat-lay.</p></div>
+            </div>
+            <div class="pc-card-body">
+                <label for="ImageFile" class="pc-label">@(Model.Id == 0 ? "Upload image" : "Replace collection image")</label>
+                <input id="ImageFile" name="ImageFile" type="file" class="pc-upload"
+                       accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
+                @Html.ValidationMessage("ImageFile", "", new { @class = "pc-error" })
+                <p class="pc-help">Optional · JPG, PNG or WEBP · Up to 5 MB.</p>
+                <div class="pc-preview">
+                    <img id="pcImagePreview" alt="Collection artwork preview" />
+                    <div class="pc-placeholder" id="pcImagePlaceholder">
+                        <i class="bi bi-image"></i><b>Collection artwork</b>
+                        <small>Choose an image to preview it</small>
+                    </div>
+                </div>
+                <div id="pcImageStatus" class="pc-help"></div>
+                @if (Model.Id != 0 && !string.IsNullOrWhiteSpace(Model.ImageUrl))
+                {
+                    <div class="pc-divider"></div>
+                    <label class="pc-label" style="display:flex;gap:9px;align-items:center;cursor:pointer">
+                        <input type="checkbox" name="RemoveImage" value="true" id="RemoveImage"
+                               checked="@(Model.RemoveImage ? "checked" : null)" />
+                        Remove existing artwork on save
+                    </label>
+                    <input type="hidden" name="RemoveImage" value="false" />
+                    <p class="pc-help">Do not select a replacement file at the same time.</p>
+                }
+            </div>
+        </section>
+    </div>
+
+    <aside class="pc-stack">
+        <section class="pc-card">
+            <div class="pc-card-heading">
+                <div><h2>Publishing</h2><p class="pc-muted">Control storefront visibility.</p></div>
+            </div>
+            <div class="pc-card-body">
+                <div class="pc-switch-row">
+                    <div><label for="IsActive" class="pc-label">Active collection</label><p class="pc-muted">Available for storefront display.</p></div>
+                    <input type="checkbox" id="IsActive" name="IsActive" class="pc-switch" value="true"
+                           checked="@(Model.IsActive ? "checked" : null)" />
+                    <input type="hidden" name="IsActive" value="false" />
+                </div>
+                <div class="pc-divider"></div>
+                <p class="pc-help" id="pcActiveStatus"></p>
+            </div>
+        </section>
+
+        <section class="pc-card">
+            <div class="pc-card-heading"><div class="pc-step">03</div><div><h2>Display order</h2><p class="pc-muted">Arrange collections on the storefront.</p></div></div>
+            <div class="pc-card-body">
+                <label for="DisplayOrder" class="pc-label">Position</label>
+                <input id="DisplayOrder" name="DisplayOrder" type="number" min="0" class="pc-input"
+                       value="@Model.DisplayOrder" />
+                @Html.ValidationMessage("DisplayOrder", "", new { @class = "pc-error" })
+                <p class="pc-help">Lower numbers appear earlier. Use 0 for top priority.</p>
+            </div>
+        </section>
+
+        @if (Model.Id != 0)
+        {
+            <div class="pc-meta"><strong>Collection #@Model.Id</strong><div style="margin-top:7px">Products can be managed separately without deleting them.</div>
+                <a class="pc-btn" style="margin-top:12px;width:100%"
+                   href="@Url.Action("ManageProducts", "Collections", new { area = "Admin", id = Model.Id })">
+                    <i class="bi bi-box-seam"></i> Manage collection products
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="pc-info"><strong><i class="bi bi-lightbulb"></i> Create first, curate next</strong>
+                Save the collection, then open <b>Manage products</b> to add jerseys to it.</div>
+        }
+
+        <section class="pc-panel-save">
+            <strong>@(Model.Id == 0 ? "Publish your collection" : "Save your changes")</strong>
+            <p>@(Model.Id == 0 ? "Create your collection. You can add products immediately afterward." : "Changes to the collection will be saved without changing its products.")</p>
+            <button type="submit" class="pc-btn pc-btn-dark" id="pcSaveButton">
+                <i class="bi bi-check2-circle"></i> @(Model.Id == 0 ? "Create collection" : "Save changes")
+            </button>
+            <a class="pc-btn" href="@Url.Action("Index", "Collections", new { area = "Admin" })">Cancel</a>
+        </section>
+    </aside>
+</div>

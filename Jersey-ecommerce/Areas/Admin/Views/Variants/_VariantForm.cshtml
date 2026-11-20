@@ -1,0 +1,69 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.VariantOptionFormViewModel
+@{
+    bool editing = Model.Id > 0;
+    string entityName = Model.IsColor ? "color" : "size";
+    string actionName = Model.IsColor ? (editing ? "EditColor" : "CreateColor") : (editing ? "EditSize" : "CreateSize");
+    string buttonText = editing ? "Save changes" : "Create " + entityName;
+    string postUrl = Url.Action(actionName, "Variants", new { area = "Admin", id = editing ? (int?)Model.Id : null }) ?? "/admin/variants";
+    string safeHex = System.Text.RegularExpressions.Regex.IsMatch(Model.HexCode ?? "", "^#[A-Fa-f0-9]{6}$") ? Model.HexCode! : "#111111";
+}
+
+<form action="@postUrl" method="post" novalidate>
+    @Html.AntiForgeryToken()
+    @if (editing) { <input type="hidden" name="Id" value="@Model.Id" /> }
+    @Html.ValidationSummary(false, "Please review the following errors:", new { @class = "vo-alert vo-validation" })
+
+    <div class="vo-form-grid">
+        <div class="vo-form-stack">
+            <section class="vo-panel">
+                <div class="vo-panel-header"><div class="vo-panel-head-left"><span class="vo-panel-icon"><i class="bi @(Model.IsColor ? "bi-palette" : "bi-rulers")"></i></span><div><h2>@(Model.IsColor ? "Color information" : "Size information")</h2><div class="vo-panel-note">Name and @(Model.IsColor ? "visual appearance" : "catalog label")</div></div></div></div>
+                <div class="vo-body">
+                    <div class="vo-field">
+                        <label class="vo-label" for="Name">@(Model.IsColor ? "Color name" : "Size name") <span class="vo-required">*</span></label>
+                        <input class="vo-input" type="text" name="Name" id="Name" value="@Model.Name" maxlength="100" placeholder="@(Model.IsColor ? "e.g. Midnight Black" : "e.g. XL")" />
+                        @Html.ValidationMessage("Name", "", new { @class = "vo-error" })
+                        <p class="vo-hint">Use a clear, unique label. @(Model.IsColor ? "Examples: Black, White, Navy, Red." : "Examples: XS, S, M, L, XL, XXL.")</p>
+                    </div>
+                    @if (Model.HasHexCode)
+                    {
+                        <div class="vo-field">
+                            <label class="vo-label" for="HexCode">Color swatch <span class="vo-required">*</span></label>
+                            <input class="vo-picker" id="HexCode" type="color" name="HexCode" value="@safeHex" aria-label="Choose a color" />
+                            @Html.ValidationMessage("HexCode", "", new { @class = "vo-error" })
+                            <p class="vo-hint">Choose the exact color with the picker. A hexadecimal value is saved to your model.</p>
+                        </div>
+                    }
+                </div>
+            </section>
+            @if (Model.IsColor)
+            {
+                <div class="vo-info"><strong><i class="bi bi-palette"></i> Color swatches</strong>Color names are used in variant dropdowns. When your existing Color model contains a hexadecimal field, this form also stores the visual color swatch. It does not change existing variants.</div>
+            }
+            else
+            {
+                <div class="vo-info"><strong><i class="bi bi-rulers"></i> Size naming</strong>Keep size labels consistent across jerseys so shoppers can compare sizes. Existing product variants keep their size references after a label edit.</div>
+            }
+        </div>
+
+        <aside class="vo-form-stack">
+            @if (Model.HasIsActive)
+            {
+                <section class="vo-panel"><div class="vo-panel-header"><div class="vo-panel-head-left"><span class="vo-panel-icon"><i class="bi bi-eye"></i></span><div><h2>Visibility</h2><div class="vo-panel-note">Availability across your catalog</div></div></div></div>
+                <div class="vo-body"><div class="vo-switch-line"><div><label class="vo-label" for="IsActive">Active @(entityName)</label><div class="vo-panel-note">Enable this option for selection.</div></div><input type="checkbox" name="IsActive" id="IsActive" class="vo-switch" value="true" checked="@(Model.IsActive ? "checked" : null)" /><input type="hidden" name="IsActive" value="false" /></div></div></section>
+            }
+            @if (Model.HasDisplayOrder)
+            {
+                <section class="vo-panel"><div class="vo-panel-header"><div class="vo-panel-head-left"><span class="vo-panel-icon"><i class="bi bi-sort-numeric-down"></i></span><div><h2>Organization</h2><div class="vo-panel-note">Control the display order</div></div></div></div>
+                <div class="vo-body"><label class="vo-label" for="DisplayOrder">Display order</label><input type="number" name="DisplayOrder" id="DisplayOrder" min="0" class="vo-input" value="@Model.DisplayOrder" />@Html.ValidationMessage("DisplayOrder", "", new { @class = "vo-error" })<p class="vo-hint">Smaller numbers are shown first.</p></div></section>
+            }
+            @if (editing)
+            {
+                <div class="vo-info"><strong>Record #@Model.Id</strong>You are editing an existing @(entityName). Variants using this option will continue referencing the same record.</div>
+            }
+            <section class="vo-save"><strong>@(editing ? "Save your changes" : "Ready to create?")</strong><p>@(editing ? "Update this option without changing product stock or SKU records." : "Add this option to your product variant catalog.")</p>
+                <button type="submit" class="vo-btn vo-btn-primary"><i class="bi bi-check2-circle"></i> @buttonText</button>
+                <a class="vo-btn" href="@Url.Action("Index", "Variants", new { area = "Admin", tab = Model.IsColor ? "colors" : "sizes" })">Cancel</a>
+            </section>
+        </aside>
+    </div>
+</form>

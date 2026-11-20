@@ -1,0 +1,43 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.ShipmentFormViewModel
+@{
+    ViewData["Title"] = "Edit Shipment";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var editUrl = Url.Action("Edit", "Shipments", new { area = "Admin", id = Model.Id });
+    var detailsUrl = Url.Action("Details", "Shipments", new { area = "Admin", id = Model.Id });
+}
+<link rel="stylesheet" href="@Url.Content("~/css/admin-shipments.css")" />
+<div class="ship-page">
+    <div class="ship-head">
+        <div>
+            <div class="ship-kicker">Sales / Shipments / Edit</div>
+            <h2 class="ship-title">Edit SHP-@(Model.Id?.ToString("D5"))</h2>
+            <p class="ship-subtitle">Update courier information, tracking details, or delivery status.</p>
+        </div>
+        <a href="@detailsUrl" class="ship-btn ship-btn-light">
+            <i class="bi bi-arrow-left"></i> Shipment details
+        </a>
+    </div>
+    <div class="ship-form-wrap">
+        <div class="ship-card">
+            <div class="ship-card-head"><h3 class="ship-card-title">Delivery information</h3></div>
+            <form action="@editUrl" method="post" autocomplete="off">
+                @Html.AntiForgeryToken()
+                <div class="ship-form-body">
+                    @await Html.PartialAsync("_Form", Model)
+                </div>
+                <div class="ship-form-footer">
+                    <button type="submit" class="ship-btn"><i class="bi bi-check2"></i> Save changes</button>
+                    <a href="@detailsUrl" class="ship-btn ship-btn-light">Cancel</a>
+                </div>
+            </form>
+        </div>
+        <aside class="ship-card">
+            <div class="ship-card-head"><h3 class="ship-card-title">Status &amp; tracking</h3></div>
+            <div class="ship-hint">
+                <p>Dispatch timestamps are set automatically on first dispatch.</p>
+                <p>Marking a shipment Delivered updates the order and records delivery time.</p>
+                <p class="mb-0">Your controller restricts changes after delivery to Delivered or Returned.</p>
+            </div>
+        </aside>
+    </div>
+</div>

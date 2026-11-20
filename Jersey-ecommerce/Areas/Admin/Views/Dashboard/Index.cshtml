@@ -1,0 +1,380 @@
+@using System
+@using System.Linq
+@using System.Globalization
+@model Jersey_ecommerce.Areas.Admin.ViewModels.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Store Overview";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+
+    var maxRevenue = Math.Max(1m, Model.SalesTrend.Count == 0 ? 0m : Model.SalesTrend.Max(x => x.Revenue));
+    var maxCategory = Math.Max(1, Model.TopCategories.Count == 0 ? 0 : Model.TopCategories.Max(x => x.ProductCount));
+    var sign = Model.RevenueChangePercent.HasValue && Model.RevenueChangePercent.Value > 0 ? "+" : "";
+    var changePositive = Model.RevenueChangePercent.HasValue && Model.RevenueChangePercent.Value >= 0;
+    var alertCount = Model.PendingOlderThan24Hours + Model.OutOfStockProducts + Model.LowStockProducts + Model.ProductsWithoutImages;
+}
+
+@section Styles {
+<style>
+    .so { --so-black:#141414; --so-text:#181818; --so-muted:#777; --so-soft:#f6f6f5;
+          --so-border:#e9e9e7; --so-white:#fff; color:var(--so-text); padding-bottom:30px; }
+    .so *, .so *::before, .so *::after { box-sizing:border-box; }
+    .so a { text-decoration:none; }
+    .so .smallcaps { font-size:10px; font-weight:800; letter-spacing:1.45px; text-transform:uppercase; color:var(--so-muted); }
+    .so .heading-row { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-bottom:24px; }
+    .so h1 { font-size:clamp(29px,3.1vw,42px); letter-spacing:-1.7px; line-height:1.1; font-weight:850; margin:7px 0; }
+    .so .intro { margin:0; font-size:12px; color:var(--so-muted); line-height:1.6; }
+    .so .dash-actions { display:flex; align-items:center; flex-wrap:wrap; gap:9px; }
+    .so .ui-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; font-weight:800; font-size:11px;
+                     padding:11px 15px; border:1px solid #dededd; color:#252525; background:#fff; transition:background .15s,border-color .15s; }
+    .so .ui-button:hover { color:#111; border-color:#aaa; background:#f8f8f8; }
+    .so .ui-button.black { color:#fff; background:#141414; border-color:#141414; }
+    .so .ui-button.black:hover { background:#333; color:#fff; }
+    .so .summary { display:grid; grid-template-columns: minmax(0,1.4fr) minmax(270px,1fr); overflow:hidden; background:#171717; color:#fff; border:1px solid #171717; }
+    .so .summary-left { padding:27px 30px 28px; position:relative; background:radial-gradient(ellipse at 90% 0%, #3a3a3a 0%,#191919 60%); }
+    .so .summary-right { padding:25px; border-left:1px solid #3b3b3b; display:grid; grid-template-columns:1fr 1fr; column-gap:24px; row-gap:22px; align-content:center; }
+    .so .summary .smallcaps { color:#aaa; }
+    .so .hero-revenue { font-size:clamp(34px,4.3vw,54px); line-height:1.12; letter-spacing:-2.4px; font-weight:850; margin:14px 0 5px; overflow-wrap:anywhere; }
+    .so .hero-caption { color:#b7b7b7; font-size:11px; margin:0 0 23px; }
+    .so .summary-trend { display:inline-flex; align-items:center; gap:7px; color:#e4e4e4; font-size:11px; font-weight:600; }
+    .so .summary-trend .indicator { background:#343434; padding:6px 9px; font-weight:800; }
+    .so .summary-trend .indicator.up { background:#daf4e5; color:#16633a; }
+    .so .summary-trend .indicator.down { background:#ffebe8; color:#96362d; }
+    .so .mini-value { font-size:22px; font-weight:800; letter-spacing:-.7px; margin-top:8px; overflow-wrap:anywhere; }
+    .so .mini-label { font-size:10px; color:#a7a7a7; margin-top:5px; }
+    .so .filter-strip { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .so .filter-link { display:inline-block; border:1px solid var(--so-border); color:#555; padding:8px 11px; font-weight:700; font-size:11px; background:#fff; }
+    .so .filter-link:hover, .so .filter-link.active { background:#151515; border-color:#151515; color:white; }
+    .so .section-heading { display:flex; align-items:end; justify-content:space-between; flex-wrap:wrap; gap:12px; margin:30px 0 14px; }
+    .so .section-heading h2 { font-size:19px; font-weight:850; letter-spacing:-.55px; margin:6px 0 0; }
+    .so .section-heading p { margin:5px 0 0; font-size:11px; color:var(--so-muted); }
+    .so .section-link { color:#222; font-size:11px; font-weight:800; }
+    .so .section-link:hover { color:#666; }
+    .so .metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .so .metric { position:relative; display:flex; flex-direction:column; min-width:0; min-height:143px; background:#fff; border:1px solid var(--so-border); padding:19px; color:var(--so-text); }
+    .so a.metric:hover { border-color:#aaa; color:#111; }
+    .so .metric-head { display:flex; align-items:center; justify-content:space-between; gap:9px; }
+    .so .metric-icon { width:31px; height:31px; display:grid; place-items:center; font-size:15px; background:#f5f5f5; }
+    .so .metric-name { font-size:10px; color:#666; font-weight:800; letter-spacing:.4px; text-transform:uppercase; }
+    .so .metric-value { margin:15px 0 8px; font-size:clamp(24px,2.3vw,33px); font-weight:850; letter-spacing:-1.1px; line-height:1; overflow-wrap:anywhere; }
+    .so .metric-note { font-size:11px; color:#888; line-height:1.5; margin-top:auto; }
+    .so .metric-note b { color:#242424; }
+    .so .metric.urgent { border-color:#e6cac7; }
+    .so .metric.urgent .metric-icon { background:#fff1ef; color:#9d392f; }
+    .so .layout-main { display:grid; grid-template-columns:minmax(0,1.72fr) minmax(290px,.9fr); gap:14px; align-items:stretch; }
+    .so .panel { background:white; border:1px solid var(--so-border); min-width:0; }
+    .so .panel-head { display:flex; justify-content:space-between; align-items:start; gap:12px; padding:20px 21px; border-bottom:1px solid var(--so-border); }
+    .so .panel-head h3 { margin:0; font-size:14px; font-weight:850; letter-spacing:-.25px; }
+    .so .panel-head p { font-size:10px; color:#999; margin:5px 0 0; line-height:1.5; }
+    .so .panel-body { padding:20px 21px; }
+    .so .section-tag { background:#f5f5f5; padding:6px 9px; font-weight:800; font-size:10px; color:#666; white-space:nowrap; }
+    .so .chart-number { font-size:26px; font-weight:850; letter-spacing:-1px; margin:0 0 3px; }
+    .so .chart-hint { color:#888; font-size:10px; }
+    .so .sales-chart { height:224px; display:flex; align-items:end; gap:5px; padding:17px 0 0; border-bottom:1px solid #ededed; margin-top:12px;
+                       background:repeating-linear-gradient(to top,transparent 0px,transparent 53px,#f3f3f3 54px,#f3f3f3 55px); }
+    .so .chart-col { min-width:0; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:end; height:100%; position:relative; }
+    .so .chart-bar { width:100%; max-width:45px; min-height:3px; background:#252525; border-radius:2px 2px 0 0; transition:background .18s; }
+    .so .chart-bar.empty { background:#ddd; }
+    .so .chart-col:hover .chart-bar { background:#797979; }
+    .so .chart-labels { display:flex; gap:5px; margin-top:8px; }
+    .so .chart-label { flex:1; text-align:center; font-size:9px; font-weight:600; color:#8a8a8a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .so .chart-foot { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:19px; font-size:11px; color:#777; }
+    .so .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#212121; margin-right:7px; }
+    .so .attention { display:grid; gap:10px; padding:18px 20px; }
+    .so .attention-item { display:flex; align-items:center; gap:12px; padding:13px; background:#fafafa; border:1px solid #eee; color:inherit; }
+    .so .attention-item:hover { border-color:#bbb; color:#111; }
+    .so .attention-icon { display:grid; place-items:center; background:#eee; width:35px; height:35px; flex-shrink:0; font-size:15px; }
+    .so .attention-info { flex:1; min-width:0; }
+    .so .attention-info b { display:block; font-size:11px; margin-bottom:4px; }
+    .so .attention-info span { display:block; font-size:10px; color:#929292; }
+    .so .attention-number { margin-left:auto; font-size:21px; font-weight:850; }
+    .so .attention-number.hot { color:#a33e36; }
+    .so .attention-item.all-good { background:#f5faf6; border-color:#e0eee3; }
+    .so .two-panels { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .so .stock-row { display:flex; align-items:center; gap:11px; border-bottom:1px solid #f1f1f1; padding:13px 0; }
+    .so .stock-row:first-child { padding-top:0; }
+    .so .stock-row:last-child { border-bottom:0; padding-bottom:0; }
+    .so .stock-name { font-size:11px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .so .stock-sub { font-size:10px; color:#999; margin-top:4px; }
+    .so .stock-amount { font-size:11px; white-space:nowrap; font-weight:800; color:#a33e36; background:#fff0ef; padding:7px 9px; }
+    .so .stock-amount.low { background:#fff8e9; color:#855b19; }
+    .so .stock-link { flex:1; min-width:0; color:#171717; }
+    .so .stock-link:hover { color:#777; }
+    .so .top-rank { display:grid; place-items:center; width:31px; height:31px; flex:none; background:#f5f5f5; font-size:11px; font-weight:800; }
+    .so .table-scroll { overflow-x:auto; }
+    .so .order-table { width:100%; margin:0; border-collapse:collapse; white-space:nowrap; }
+    .so .order-table th { text-align:left; padding:13px 19px; background:#fafafa; font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#777; }
+    .so .order-table td { padding:16px 19px; font-size:11px; border-top:1px solid #f0f0f0; color:#555; }
+    .so .order-table tr:hover td { background:#fdfdfd; }
+    .so .order-table .ref { color:#151515; font-weight:850; }
+    .so .order-table .money { color:#191919; font-weight:800; }
+    .so .pill { display:inline-block; padding:6px 9px; font-size:9px; font-weight:850; text-transform:uppercase; letter-spacing:.4px; background:#f0f0f0; color:#333; }
+    .so .pill.good { background:#e9f5ed; color:#266143; }
+    .so .pill.wait { background:#fff5e4; color:#8c5d20; }
+    .so .pill.bad { background:#fff0ed; color:#993c36; }
+    .so .status-item { padding:11px 0; border-bottom:1px solid #f4f4f4; }
+    .so .status-item:last-child { border-bottom:0; }
+    .so .status-line { display:flex; justify-content:space-between; gap:10px; font-size:11px; margin-bottom:7px; }
+    .so .status-line b { font-size:11px; }
+    .so .progress-track { height:5px; background:#f0f0f0; overflow:hidden; }
+    .so .progress-fill { height:100%; background:#292929; min-width:2px; }
+    .so .empty { text-align:center; padding:28px 16px; color:#888; font-size:11px; line-height:1.7; }
+    .so .empty i { display:block; font-size:24px; color:#666; margin-bottom:8px; }
+    .so .quick-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+    .so .quick { min-width:0; display:flex; align-items:center; gap:11px; padding:15px; background:#fff; border:1px solid var(--so-border); color:#222; }
+    .so .quick:hover { border-color:#999; color:#151515; }
+    .so .quick i { width:33px; height:33px; flex:none; display:grid; place-items:center; font-size:17px; background:#f4f4f4; }
+    .so .quick b { display:block; font-size:11px; }
+    .so .quick small { display:block; font-size:10px; color:#929292; margin-top:5px; }
+    .so .customer-row { padding:11px 0; display:flex; align-items:center; gap:10px; border-bottom:1px solid #f2f2f2; }
+    .so .customer-row:last-child { border-bottom:0; }
+    .so .avatar { flex:none; width:33px; height:33px; display:grid; place-items:center; font-weight:850; background:#f0f0f0; color:#555; }
+    .so .customer-name { font-size:11px; font-weight:800; margin-bottom:3px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+    .so .customer-email { font-size:10px; color:#949494; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .so .customer-time { margin-left:auto; color:#999; font-size:10px; white-space:nowrap; }
+    .so .footnote { font-size:10px; line-height:1.7; color:#969696; margin-top:21px; }
+    @@media (max-width:1199px) {
+        .so .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .so .quick-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @@media (max-width:991px) {
+        .so .summary, .so .layout-main, .so .two-panels { grid-template-columns:1fr; }
+        .so .summary-right { border-left:0; border-top:1px solid #3b3b3b; }
+    }
+    @@media (max-width:575px) {
+        .so h1 { font-size:31px; }
+        .so .summary-left, .so .summary-right { padding:21px; }
+        .so .metrics { gap:9px; }
+        .so .metric { padding:13px; min-height:130px; }
+        .so .metric-value { font-size:25px; }
+        .so .panel-body { padding:16px; }
+        .so .panel-head { padding:15px; }
+        .so .quick-grid { grid-template-columns:1fr 1fr; }
+        .so .quick { padding:11px; }
+        .so .sales-chart { gap:3px; }
+    }
+</style>
+}
+
+<div class="so">
+    <header class="heading-row">
+        <div>
+            <div class="smallcaps">Panenka / Administration / Analytics</div>
+            <h1>Store overview<span style="color:#999">.</span></h1>
+            <p class="intro">A clear, real-data snapshot of your sales, orders, catalog and customers.</p>
+        </div>
+        <div class="dash-actions">
+            <a class="ui-button" asp-area="Admin" asp-controller="Orders" asp-action="Index"><i class="bi bi-receipt"></i> Orders</a>
+            <a class="ui-button black" href="/admin/products/create"><i class="bi bi-plus-lg"></i> Add product</a>
+        </div>
+    </header>
+
+    <div class="heading-row" style="margin-bottom:12px;align-items:center">
+        <div class="smallcaps">Sales reporting window</div>
+        <nav class="filter-strip" aria-label="Sales reporting period">
+            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" asp-route-days="7" class="filter-link @(Model.Days == 7 ? "active" : "")">7 days</a>
+            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" asp-route-days="30" class="filter-link @(Model.Days == 30 ? "active" : "")">30 days</a>
+            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" asp-route-days="90" class="filter-link @(Model.Days == 90 ? "active" : "")">90 days</a>
+        </nav>
+    </div>
+
+    <section class="summary" aria-label="Sales summary">
+        <div class="summary-left">
+            <div class="smallcaps">Completed-order revenue · last @Model.Days days</div>
+            <div class="hero-revenue">৳@Model.PeriodRevenue.ToString("N2")</div>
+            <p class="hero-caption">@Model.RangeStartLocal.ToString("dd MMM yyyy") — @Model.RangeEndLocal.ToString("dd MMM yyyy") (Bangladesh time)</p>
+            <div class="summary-trend">
+                @if (Model.RevenueChangePercent.HasValue)
+                {
+                    <span class="indicator @(changePositive ? "up" : "down")"><i class="bi @(changePositive ? "bi-arrow-up-right" : "bi-arrow-down-right")"></i> @(sign + Model.RevenueChangePercent.Value.ToString("N1"))%</span>
+                    <span>vs. the previous @Model.Days days</span>
+                }
+                else
+                {
+                    <span class="indicator">No baseline</span><span>Previous period had no completed-order revenue</span>
+                }
+            </div>
+        </div>
+        <div class="summary-right">
+            <div><div class="smallcaps">Today's sales</div><div class="mini-value">৳@Model.TodayRevenue.ToString("N2")</div><div class="mini-label">Completed orders today</div></div>
+            <div><div class="smallcaps">Today's orders</div><div class="mini-value">@Model.TodayOrders.ToString("N0")</div><div class="mini-label">All order statuses</div></div>
+            <div><div class="smallcaps">Lifetime sales</div><div class="mini-value">৳@Model.TotalRevenue.ToString("N2")</div><div class="mini-label">Completed orders only</div></div>
+            <div><div class="smallcaps">Lifetime orders</div><div class="mini-value">@Model.TotalOrders.ToString("N0")</div><div class="mini-label">Every recorded order</div></div>
+        </div>
+    </section>
+
+    <div class="section-heading">
+        <div><div class="smallcaps">Essential business indicators</div><h2>At a glance</h2></div>
+        <span class="smallcaps">Live database figures</span>
+    </div>
+    <section class="metrics" aria-label="Store key performance indicators">
+        <div class="metric"><div class="metric-head"><span class="metric-name">Orders in period</span><span class="metric-icon"><i class="bi bi-bag-check"></i></span></div><div class="metric-value">@Model.PeriodOrders.ToString("N0")</div><div class="metric-note"><b>@Model.CompletedPeriodOrders.ToString("N0") completed</b> · all other statuses included in total</div></div>
+        <div class="metric"><div class="metric-head"><span class="metric-name">Avg. order value</span><span class="metric-icon"><i class="bi bi-cash-stack"></i></span></div><div class="metric-value">৳@Model.AverageOrderValue.ToString("N2")</div><div class="metric-note">Completed-order revenue ÷ completed orders · period</div></div>
+        <a class="metric" asp-area="Admin" asp-controller="Customers" asp-action="Index"><div class="metric-head"><span class="metric-name">New registrations</span><span class="metric-icon"><i class="bi bi-person-plus"></i></span></div><div class="metric-value">@Model.NewCustomers.ToString("N0")</div><div class="metric-note"><b>@Model.TotalCustomers.ToString("N0") total</b> registered accounts · period</div></a>
+        <a class="metric" asp-area="Admin" asp-controller="Products" asp-action="Index"><div class="metric-head"><span class="metric-name">Products</span><span class="metric-icon"><i class="bi bi-box-seam"></i></span></div><div class="metric-value">@Model.TotalProducts.ToString("N0")</div><div class="metric-note"><b>@Model.PublishedProducts published</b> · @Model.DraftProducts drafts</div></a>
+        <a class="metric" asp-area="Admin" asp-controller="Products" asp-action="Index"><div class="metric-head"><span class="metric-name">Stock units</span><span class="metric-icon"><i class="bi bi-boxes"></i></span></div><div class="metric-value">@Model.AvailableStockUnits.ToString("N0")</div><div class="metric-note">Shared stock across all products, including drafts</div></a>
+        <a class="metric @(Model.OutOfStockProducts > 0 ? "urgent" : "")" asp-area="Admin" asp-controller="Products" asp-action="Index"><div class="metric-head"><span class="metric-name">Out of stock</span><span class="metric-icon"><i class="bi bi-x-octagon"></i></span></div><div class="metric-value">@Model.OutOfStockProducts.ToString("N0")</div><div class="metric-note">Published products with zero available units</div></a>
+        <a class="metric @(Model.LowStockProducts > 0 ? "urgent" : "")" asp-area="Admin" asp-controller="Products" asp-action="Index"><div class="metric-head"><span class="metric-name">Low stock</span><span class="metric-icon"><i class="bi bi-exclamation-triangle"></i></span></div><div class="metric-value">@Model.LowStockProducts.ToString("N0")</div><div class="metric-note">Published products with 1–5 units remaining</div></a>
+        <a class="metric" asp-area="Admin" asp-controller="Orders" asp-action="Index"><div class="metric-head"><span class="metric-name">Pending orders</span><span class="metric-icon"><i class="bi bi-hourglass-split"></i></span></div><div class="metric-value">@Model.PendingOrders.ToString("N0")</div><div class="metric-note"><b>@Model.PendingOlderThan24Hours older than 24h</b> · lifetime</div></a>
+    </section>
+
+    <div class="section-heading">
+        <div><div class="smallcaps">Performance and priorities</div><h2>Sales & attention</h2></div>
+        <span class="smallcaps">Updated on each page load</span>
+    </div>
+    <div class="layout-main">
+        <section class="panel" aria-label="Sales trend">
+            <div class="panel-head"><div><h3>Revenue trend</h3><p>Completed-order revenue · @(Model.Days == 7 ? "daily" : Model.Days == 30 ? "2-day" : "weekly") totals · Bangladesh local dates</p></div><span class="section-tag">Last @Model.Days days</span></div>
+            <div class="panel-body">
+                <div class="chart-number">৳@Model.PeriodRevenue.ToString("N2")</div>
+                <div class="chart-hint">@Model.CompletedPeriodOrders completed orders in this window</div>
+                <div class="sales-chart" role="img" aria-label="Revenue by time period. Each bar has a tooltip with revenue and order count.">
+                    @foreach (var point in Model.SalesTrend)
+                    {
+                        var height = point.Revenue <= 0m ? 3 : Math.Max(5, (int)Math.Round(point.Revenue / maxRevenue * 197m));
+                        <div class="chart-col" title="@point.Label: ৳@point.Revenue.ToString("N2") completed sales; @point.Orders total orders">
+                            <div class="chart-bar @(point.Revenue <= 0 ? "empty" : "")" style="height:@(height)px;"></div>
+                        </div>
+                    }
+                </div>
+                <div class="chart-labels" aria-hidden="true">
+                    @foreach (var point in Model.SalesTrend)
+                    { <span class="chart-label" title="@point.Label">@point.Label</span> }
+                </div>
+                <div class="chart-foot"><span><span class="dot"></span>Completed-order revenue</span><span>Previous period: ৳@Model.PreviousPeriodRevenue.ToString("N2")</span></div>
+            </div>
+        </section>
+        <section class="panel" aria-label="Needs attention">
+            <div class="panel-head"><div><h3>Needs attention</h3><p>Issues worth checking next</p></div><span class="section-tag">@alertCount flags</span></div>
+            <div class="attention">
+                @if (alertCount == 0)
+                {
+                    <div class="attention-item all-good"><span class="attention-icon"><i class="bi bi-check-circle"></i></span><div class="attention-info"><b>Nothing urgent flagged</b><span>No pending or catalog warnings based on current rules</span></div></div>
+                }
+                else
+                {
+                    <a class="attention-item" asp-area="Admin" asp-controller="Orders" asp-action="Index"><span class="attention-icon"><i class="bi bi-clock-history"></i></span><span class="attention-info"><b>Pending over 24 hours</b><span>Review orders waiting for action</span></span><span class="attention-number @(Model.PendingOlderThan24Hours > 0 ? "hot" : "")">@Model.PendingOlderThan24Hours</span></a>
+                    <a class="attention-item" asp-area="Admin" asp-controller="Products" asp-action="Index"><span class="attention-icon"><i class="bi bi-box-seam"></i></span><span class="attention-info"><b>Out-of-stock products</b><span>Published items that cannot be fulfilled</span></span><span class="attention-number @(Model.OutOfStockProducts > 0 ? "hot" : "")">@Model.OutOfStockProducts</span></a>
+                    <a class="attention-item" asp-area="Admin" asp-controller="Products" asp-action="Index"><span class="attention-icon"><i class="bi bi-exclamation-triangle"></i></span><span class="attention-info"><b>Low-stock products</b><span>Only 1–5 units remain</span></span><span class="attention-number">@Model.LowStockProducts</span></a>
+                    <a class="attention-item" asp-area="Admin" asp-controller="Products" asp-action="Index"><span class="attention-icon"><i class="bi bi-image"></i></span><span class="attention-info"><b>Missing product images</b><span>Check incomplete catalog listings</span></span><span class="attention-number">@Model.ProductsWithoutImages</span></a>
+                }
+            </div>
+        </section>
+    </div>
+
+    <div class="section-heading"><div><div class="smallcaps">Catalog and demand</div><h2>Inventory & bestsellers</h2></div><a class="section-link" asp-area="Admin" asp-controller="Products" asp-action="Index">Manage products <i class="bi bi-arrow-up-right"></i></a></div>
+    <div class="two-panels">
+        <section class="panel"><div class="panel-head"><div><h3>Stock watchlist</h3><p>Published products that need replenishment first</p></div><span class="section-tag">≤ 5 units</span></div><div class="panel-body">
+            @if (!Model.StockAlerts.Any())
+            { <div class="empty"><i class="bi bi-box2-heart"></i>All published products have more than 5 units, or none are published.</div> }
+            else
+            {
+                @foreach (var item in Model.StockAlerts)
+                {
+                    <div class="stock-row"><a class="stock-link" asp-area="Admin" asp-controller="Products" asp-action="Edit" asp-route-id="@item.ProductId"><div class="stock-name">@item.Name</div><div class="stock-sub">@item.CategoryName · Open product</div></a><span class="stock-amount @(item.StockQuantity == 0 ? "" : "low")">@(item.StockQuantity == 0 ? "Out of stock" : $"{item.StockQuantity} left")</span></div>
+                }
+            }
+        </div></section>
+        <section class="panel"><div class="panel-head"><div><h3>Top selling products</h3><p>Units sold on completed orders in the selected period</p></div><span class="section-tag">Top 5</span></div><div class="panel-body">
+            @if (!Model.TopSellers.Any())
+            { <div class="empty"><i class="bi bi-trophy"></i>No completed-order items in this period yet.</div> }
+            else
+            {
+                var rank = 0;
+                @foreach (var item in Model.TopSellers)
+                {
+                    rank++;
+                    <div class="stock-row"><span class="top-rank">@rank.ToString("00")</span><a class="stock-link" asp-area="Admin" asp-controller="Products" asp-action="Edit" asp-route-id="@item.ProductId"><div class="stock-name">@item.ProductName</div><div class="stock-sub">@item.UnitsSold.ToString("N0") units sold</div></a><span style="white-space:nowrap;font-size:11px;font-weight:850">৳@item.SalesAmount.ToString("N2")</span></div>
+                }
+            }
+        </div></section>
+    </div>
+
+    <div class="section-heading"><div><div class="smallcaps">Latest transactions</div><h2>Recent orders</h2></div><a class="section-link" asp-area="Admin" asp-controller="Orders" asp-action="Index">See all orders <i class="bi bi-arrow-up-right"></i></a></div>
+    <section class="panel">
+        <div class="panel-head"><div><h3>Order activity</h3><p>Latest 8 orders · displayed in Bangladesh time</p></div><span class="section-tag">All statuses</span></div>
+        @if (!Model.RecentOrders.Any())
+        { <div class="empty"><i class="bi bi-cart-x"></i>No orders yet. Recent purchases will appear here.</div> }
+        else
+        {
+            <div class="table-scroll"><table class="order-table"><thead><tr><th>Reference</th><th>Status</th><th>Order value</th><th>Date</th><th></th></tr></thead><tbody>
+                @foreach (var order in Model.RecentOrders)
+                {
+                    var normalizedStatus = (order.Status ?? "").Trim().ToLowerInvariant();
+                    var statusStyle = normalizedStatus == "completed" || normalizedStatus == "delivered" ? "good"
+                        : normalizedStatus == "pending" || normalizedStatus == "processing" ? "wait"
+                        : normalizedStatus == "cancelled" || normalizedStatus == "canceled" || normalizedStatus == "failed" ? "bad" : "";
+                    <tr><td><span class="ref">@(string.IsNullOrWhiteSpace(order.OrderNumber) ? $"ORDER-{order.Id}" : order.OrderNumber)</span></td><td><span class="pill @statusStyle">@(string.IsNullOrWhiteSpace(order.Status) ? "Unknown" : order.Status)</span></td><td class="money">৳@order.TotalAmount.ToString("N2")</td><td>@order.CreatedAt.AddHours(6).ToString("dd MMM yyyy · hh:mm tt")</td><td><a class="section-link" asp-area="Admin" asp-controller="Orders" asp-action="Index" aria-label="Open order management">View <i class="bi bi-arrow-up-right"></i></a></td></tr>
+                }
+            </tbody></table></div>
+        }
+    </section>
+
+    <div class="section-heading"><div><div class="smallcaps">Operational breakdown</div><h2>Store health</h2></div></div>
+    <div class="two-panels">
+        <section class="panel"><div class="panel-head"><div><h3>All-time order status</h3><p>Every status currently stored in the database</p></div><span class="section-tag">@Model.TotalOrders orders</span></div><div class="panel-body">
+            @if (!Model.OrderStatuses.Any())
+            { <div class="empty"><i class="bi bi-bar-chart"></i>Order status summary appears after your first order.</div> }
+            else
+            {
+                @foreach (var state in Model.OrderStatuses)
+                {
+                    var width = Math.Max(0m, Math.Min(100m, state.SharePercent)).ToString("0.#", CultureInfo.InvariantCulture);
+                    <div class="status-item"><div class="status-line"><span>@(string.IsNullOrWhiteSpace(state.Status) ? "Unknown" : state.Status)</span><b>@state.Count.ToString("N0") · @state.SharePercent.ToString("N1")%</b></div><div class="progress-track"><div class="progress-fill" style="width:@(width)%"></div></div></div>
+                }
+            }
+        </div></section>
+        <section class="panel"><div class="panel-head"><div><h3>Product mix by category</h3><p>Categories containing the most products</p></div><span class="section-tag">@Model.TotalCategories categories</span></div><div class="panel-body">
+            @if (!Model.TopCategories.Any())
+            { <div class="empty"><i class="bi bi-grid"></i>Categories will appear once products are added.</div> }
+            else
+            {
+                @foreach (var cat in Model.TopCategories)
+                {
+                    var width = (100m * cat.ProductCount / maxCategory).ToString("0.#", CultureInfo.InvariantCulture);
+                    <div class="status-item"><div class="status-line"><span>@cat.Name</span><b>@cat.ProductCount.ToString("N0") products</b></div><div class="progress-track"><div class="progress-fill" style="width:@(width)%"></div></div></div>
+                }
+            }
+            <p class="footnote" style="margin-bottom:0">@Model.FeaturedProducts featured products · @Model.PublishedProducts published · @Model.DraftProducts drafts.</p>
+        </div></section>
+    </div>
+
+    <div class="section-heading"><div><div class="smallcaps">People and shortcuts</div><h2>Accounts & operations</h2></div></div>
+    <div class="two-panels">
+        <section class="panel"><div class="panel-head"><div><h3>Recent registrations</h3><p>Latest registered accounts (may include staff)</p></div><a class="section-link" asp-area="Admin" asp-controller="Customers" asp-action="Index">View customers <i class="bi bi-arrow-up-right"></i></a></div><div class="panel-body">
+            @if (!Model.RecentCustomers.Any())
+            { <div class="empty"><i class="bi bi-people"></i>No registered customers to display.</div> }
+            else
+            {
+                @foreach (var customer in Model.RecentCustomers)
+                {
+                    var displayName = string.IsNullOrWhiteSpace(customer.Name) ? (string.IsNullOrWhiteSpace(customer.Email) ? "Customer" : customer.Email) : customer.Name;
+                    <div class="customer-row"><span class="avatar">@displayName.Substring(0, 1).ToUpperInvariant()</span><div style="min-width:0;flex:1"><div class="customer-name">@displayName</div><div class="customer-email">@customer.Email</div></div><span class="customer-time">@customer.CreatedAt.AddHours(6).ToString("dd MMM")</span></div>
+                }
+            }
+        </div></section>
+        <section class="panel"><div class="panel-head"><div><h3>Catalog snapshot</h3><p>Business modules and content counters</p></div><span class="section-tag">Lifetime</span></div><div class="panel-body">
+            <div class="metrics" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">
+                <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="metric" style="min-height:105px;padding:13px"><span class="metric-name">Categories</span><span class="metric-value">@Model.TotalCategories</span></a>
+                <a asp-area="Admin" asp-controller="Brands" asp-action="Index" class="metric" style="min-height:105px;padding:13px"><span class="metric-name">Brands</span><span class="metric-value">@Model.TotalBrands</span></a>
+                <a asp-area="Admin" asp-controller="Coupons" asp-action="Index" class="metric" style="min-height:105px;padding:13px"><span class="metric-name">Coupons</span><span class="metric-value">@Model.TotalCoupons</span></a>
+                <a asp-area="Admin" asp-controller="Reviews" asp-action="Index" class="metric" style="min-height:105px;padding:13px"><span class="metric-name">Reviews</span><span class="metric-value">@Model.TotalReviews</span></a>
+            </div>
+            <p class="footnote" style="margin-bottom:0">@Model.TotalShipments shipment records · @Model.AvailableStockUnits.ToString("N0") shared stock units in your catalog.</p>
+        </div></section>
+    </div>
+
+    <div class="section-heading"><div><div class="smallcaps">Useful destinations</div><h2>Quick management</h2></div></div>
+    <nav class="quick-grid" aria-label="Administration shortcuts">
+        <a class="quick" asp-area="Admin" asp-controller="Products" asp-action="Index"><i class="bi bi-grid"></i><span><b>Products</b><small>Manage stock & catalog</small></span></a>
+        <a class="quick" asp-area="Admin" asp-controller="Orders" asp-action="Index"><i class="bi bi-basket"></i><span><b>Orders</b><small>Review purchases</small></span></a>
+        <a class="quick" asp-area="Admin" asp-controller="Shipments" asp-action="Index"><i class="bi bi-truck"></i><span><b>Shipments</b><small>Delivery operations</small></span></a>
+        <a class="quick" asp-area="Admin" asp-controller="Customers" asp-action="Index"><i class="bi bi-people"></i><span><b>Customers</b><small>Registered shoppers</small></span></a>
+        <a class="quick" asp-area="Admin" asp-controller="Coupons" asp-action="Index"><i class="bi bi-ticket-perforated"></i><span><b>Coupons</b><small>Sales promotions</small></span></a>
+        <a class="quick" asp-area="Admin" asp-controller="Reviews" asp-action="Index"><i class="bi bi-chat-square-text"></i><span><b>Reviews</b><small>Customer feedback</small></span></a>
+        <a class="quick" asp-area="Admin" asp-controller="Brands" asp-action="Index"><i class="bi bi-tags"></i><span><b>Brands</b><small>Brand directory</small></span></a>
+        <a class="quick" asp-area="Admin" asp-controller="Settings" asp-action="Index"><i class="bi bi-gear"></i><span><b>Settings</b><small>Store configuration</small></span></a>
+    </nav>
+
+    
+</div>

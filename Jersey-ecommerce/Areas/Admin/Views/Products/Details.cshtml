@@ -1,0 +1,23 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.Products.ProductDetailsViewModel
+@{ Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml"; ViewData["Title"] = Model.Product.Name; ViewData["ActivePage"] = "Products"; }
+<link rel="stylesheet" href="~/css/admin-products.css" asp-append-version="true" />
+<div class="pp-page">
+    <div class="pp-heading pp-heading-flex"><div><a asp-action="Index" class="pp-back"><i class="bi bi-arrow-left"></i> Back to products</a><div class="pp-eyebrow">CATALOG / PRODUCT DETAILS</div><h1>@Model.Product.Name</h1><p>@Model.Product.CategoryName · @(Model.Product.BrandName ?? "Unbranded")</p></div><div class="pp-actions"><a asp-action="Edit" asp-route-id="@Model.Product.Id" class="pp-btn pp-btn-dark"><i class="bi bi-pencil-square"></i> Edit product</a></div></div>
+    <div class="pp-detail-summary">
+        <div class="pp-card pp-detail-hero">
+            <div class="pp-detail-image">@if(!string.IsNullOrEmpty(Model.Product.ImageUrl)){<img src="@Model.Product.ImageUrl" alt="@Model.Product.Name" />}else{<i class="bi bi-image"></i>}</div>
+            <div class="pp-detail-thumbs">@foreach(var photo in Model.Photos){<img src="@photo.Url" alt="Product gallery photo" />}</div>
+        </div>
+        <div class="pp-card pp-detail-about"><div class="pp-eyebrow">PRODUCT DETAILS</div><h2>@Model.Product.Name</h2><div class="pp-detail-price">৳@Model.Product.Price.ToString("N2") @if(Model.CompareAtPrice.HasValue){<del>৳@Model.CompareAtPrice.Value.ToString("N2")</del>}</div>
+            <div class="pp-detail-tags">@if(Model.Product.IsPublished){<span class="pp-tag pp-tag-published">Published</span>}else{<span class="pp-tag">Draft</span>}@if(Model.Product.IsFeatured){<span class="pp-tag">Featured</span>}@if(Model.IsNewArrival){<span class="pp-tag">New arrival</span>}</div>
+            <p>@Model.ShortDescription</p><div class="pp-detail-props"><div><span>SKU</span><strong>@(Model.Product.SKU ?? "Not set")</strong></div><div><span>Available units</span><strong>@Model.Product.AvailableQuantity</strong></div><div><span>Size/color combinations</span><strong>@Model.Product.VariantCount</strong></div><div><span>Category</span><strong>@Model.Product.CategoryName</strong></div></div>
+            @if(!string.IsNullOrWhiteSpace(Model.Description)){<h3>Description</h3><p class="pp-prewrap">@Model.Description</p>}
+        </div>
+    </div>
+    <div class="pp-panel"><div class="pp-panel-header"><div class="pp-eyebrow">INVENTORY</div><h2>Size & color variants (@Model.Variants.Count)</h2></div>
+        <div class="pp-table-scroll"><table class="pp-table"><thead><tr><th>IMAGE</th><th>SIZE</th><th>COLOR</th><th>SKU</th><th>PRICE</th><th>AVAILABLE</th><th>STATE</th></tr></thead><tbody>
+        @foreach(var v in Model.Variants){<tr><td><div class="pp-thumb">@if(!string.IsNullOrEmpty(v.ImageUrl)){<img src="@v.ImageUrl" alt="Variant photo" />}else{<i class="bi bi-image"></i>}</div></td><td>@v.Size</td><td>@v.Color</td><td class="pp-mono">@v.SKU</td><td class="pp-money">৳@v.Price.ToString("N2")</td><td><span class="pp-stock @(v.StockQuantity == 0 ? "pp-stock-zero" : "")">@v.StockQuantity</span></td><td>@if(v.IsActive){<span class="pp-tag pp-tag-published">Active</span>}else{<span class="pp-tag">Inactive</span>}</td></tr>}
+        @if(!Model.Variants.Any()){<tr><td colspan="7"><div class="pp-empty">No variants yet. Edit this product to add sizes and colors.</div></td></tr>}
+        </tbody></table></div>
+    </div>
+</div>

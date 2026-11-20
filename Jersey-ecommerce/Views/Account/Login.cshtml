@@ -1,0 +1,63 @@
+@model Jersey_ecommerce.ViewModels.Account.LoginViewModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Sign in";
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        @TempData["Success"]
+    </div>
+}
+<div class="auth-shell login-shell">
+    <aside class="auth-story">
+        <span class="story-eyebrow"><span class="story-dot"></span> Panenka MEMBERS</span>
+        <div>
+            <div class="story-symbol">P<span>.</span></div>
+            <h1>Back in<br /><em>the game.</em></h1>
+            <p>Your favorite kits, saved pieces, and orders are ready when you are.</p>
+            <div class="story-highlights">
+                <span>THE GAME NEVER STOPS.</span>
+            </div>
+        </div>
+        <span class="story-bottom">WEAR THE PASSION — 2026</span>
+    </aside>
+
+    <section class="auth-form-panel">
+        <div class="auth-form-inner login-form-inner">
+            <div class="form-overline">WELCOME BACK</div>
+            <h2>Sign in to Panenka<span class="accent-text">.</span></h2>
+            <p class="form-subtitle">New here? <a asp-controller="Account" asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl">Create an account</a></p>
+
+            <form asp-area="" asp-controller="Account" asp-action="Login" method="post" class="auth-form">
+                <input asp-for="ReturnUrl" type="hidden" />
+                <div asp-validation-summary="ModelOnly" class="form-alert" role="alert"></div>
+
+                <div class="field">
+                    <label asp-for="Email"></label>
+                    <input asp-for="Email" type="email" placeholder="you@example.com" autocomplete="email" />
+                    <span asp-validation-for="Email" class="field-error"></span>
+                </div>
+
+                <div class="field">
+                    <label asp-for="Password"></label>
+                    <div class="password-wrap">
+                        <input asp-for="Password" type="password" placeholder="Enter your password" autocomplete="current-password" />
+                        <button type="button" class="password-toggle" data-toggle-password aria-label="Show password">Show</button>
+                    </div>
+                    <span asp-validation-for="Password" class="field-error"></span>
+                </div>
+
+                <div class="auth-options">
+                    <label class="remember-line"><input asp-for="RememberMe" type="checkbox" /> <span>Remember me</span></label>
+                    <span class="muted">Keep your account secure</span>
+                </div>
+
+                <button type="submit" class="auth-submit">Sign in <span aria-hidden="true">→</span></button>
+                <div class="auth-divider"><span>NEW TO Panenka?</span></div>
+                <a class="secondary-action" asp-controller="Account" asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl">Create a free account</a>
+            </form>
+        </div>
+    </section>
+</div>

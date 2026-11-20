@@ -1,0 +1,54 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.CollectionFormViewModel
+<script>
+(() => {
+    // Presentation only. Never intercept or disable form submission.
+    const nameInput = document.getElementById('Name');
+    const slugInput = document.getElementById('Slug');
+    const slugPreview = document.getElementById('pcSlugPreview');
+    const activeInput = document.getElementById('IsActive');
+    const activeStatus = document.getElementById('pcActiveStatus');
+    const imageInput = document.getElementById('ImageFile');
+    const imagePreview = document.getElementById('pcImagePreview');
+    const imagePlaceholder = document.getElementById('pcImagePlaceholder');
+    const imageStatus = document.getElementById('pcImageStatus');
+    const existingImage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ImageUrl ?? ""));
+    let edited = !!slugInput.value.trim();
+    let objectUrl = null;
+
+    function makeSlug(value) {
+        return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120).replace(/-+$/g, '');
+    }
+    function showSlug() {
+        slugPreview.textContent = slugInput.value.trim() ? 'Preview: /collections/' + slugInput.value.trim() : 'A URL slug will be created from the name.';
+    }
+    nameInput.addEventListener('input', () => {
+        if (!edited) slugInput.value = makeSlug(nameInput.value);
+        showSlug();
+    });
+    slugInput.addEventListener('input', () => { edited = !!slugInput.value.trim(); showSlug(); });
+    showSlug();
+
+    function statusText() { activeStatus.textContent = activeInput.checked ? '● Status: Active' : '○ Status: Inactive'; }
+    activeInput.addEventListener('change', statusText);
+    statusText();
+
+    function showImage(url) {
+        imagePreview.style.display = 'none';
+        imagePlaceholder.style.display = 'block';
+        imagePreview.onload = () => { imagePreview.style.display = 'block'; imagePlaceholder.style.display = 'none'; };
+        imagePreview.onerror = () => { imagePreview.style.display = 'none'; imagePlaceholder.style.display = 'block'; };
+        if (url) imagePreview.src = url;
+        else imagePreview.removeAttribute('src');
+    }
+    showImage(existingImage);
+    if (existingImage) imageStatus.textContent = 'Current collection artwork';
+    imageInput.addEventListener('change', () => {
+        if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+        const file = imageInput.files && imageInput.files[0];
+        if (!file) { showImage(existingImage); imageStatus.textContent = existingImage ? 'Current collection artwork' : ''; return; }
+        objectUrl = URL.createObjectURL(file);
+        showImage(objectUrl);
+        imageStatus.textContent = 'Selected: ' + file.name;
+    });
+})();
+</script>

@@ -1,0 +1,75 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.PaymentTransactionsIndexViewModel
+@{
+    ViewData["Title"] = "Payment Transactions";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+@await Html.PartialAsync("_PaymentStyles")
+
+<div class="pp-page">
+    <header class="pp-head">
+        <div>
+            <div class="pp-crumb"><a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })">Dashboard</a><i class="bi bi-chevron-right"></i><a href="@Url.Action("Index", "Payments", new { area = "Admin" })">Payments</a><i class="bi bi-chevron-right"></i><span>Transactions</span></div>
+            <div class="pp-kicker">PANENKA / PAYMENT AUDIT</div>
+            <h1 class="pp-title">Transaction ledger</h1>
+            <p class="pp-subtitle">Browse payment transaction events and gateway references. Transactions are recorded by your backend and payment provider—not manually created here.</p>
+        </div>
+        <div class="pp-head-actions"><a class="pp-btn pp-btn-primary" href="@Url.Action("Index", "Payments", new { area = "Admin" })"><i class="bi bi-arrow-left"></i> Back to payments</a></div>
+    </header>
+
+    <section class="pp-stats" style="grid-template-columns:repeat(2,minmax(0,1fr));max-width:560px">
+        <article class="pp-stat"><div class="pp-stat-label"><i class="bi bi-journal-text"></i> Recorded transactions</div><div class="pp-stat-value">@Model.TotalCount.ToString("N0")</div><div class="pp-stat-hint">All transaction types and statuses</div></article>
+        <article class="pp-stat"><div class="pp-stat-label"><i class="bi bi-funnel"></i> Filter results</div><div class="pp-stat-value">@Model.FilteredCount.ToString("N0")</div><div class="pp-stat-hint">Matching transactions</div></article>
+    </section>
+
+    <section class="pp-card" style="margin-bottom:18px"><div class="pp-card-head"><div><h2 class="pp-card-title">Filter transactions</h2><p class="pp-card-desc">Search by order number, provider transaction ID, or reference.</p></div></div>
+        <div class="pp-card-body"><form method="get" action="@Url.Action("Transactions", "Payments", new { area = "Admin" })" class="pp-filters pp-filters-transaction">
+            <div><label class="pp-label" for="search">Search</label><input id="search" class="pp-input" type="search" name="search" value="@Model.Search" placeholder="Order #, transaction reference..." /></div>
+            <div><label class="pp-label" for="type">Type</label><select id="type" name="type" class="pp-select"><option value="">All types</option>@foreach (var option in Model.TypeOptions) { if (Model.Type == option) { <option selected value="@option">@option</option> } else { <option value="@option">@option</option> } }</select></div>
+            <div><label class="pp-label" for="status">Status</label><select id="status" name="status" class="pp-select"><option value="">All statuses</option>@foreach (var option in Model.StatusOptions) { if (Model.Status == option) { <option selected value="@option">@option</option> } else { <option value="@option">@option</option> } }</select></div>
+            <div class="pp-filter-actions"><button type="submit" class="pp-btn pp-btn-primary"><i class="bi bi-search"></i> Filter</button><a class="pp-btn" title="Reset" href="@Url.Action("Transactions", "Payments", new { area = "Admin" })"><i class="bi bi-x-lg"></i></a></div>
+        </form></div>
+    </section>
+
+    <section class="pp-card">
+        <div class="pp-card-head"><div><h2 class="pp-card-title">Recorded events</h2><p class="pp-card-desc">All entries are read-only.</p></div><span class="pp-muted">Page @Model.Page of @Model.TotalPages</span></div>
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="pp-empty"><i class="bi bi-inboxes"></i><strong>No transactions found</strong>Try another filter or wait for payment events to be recorded.</div>
+        }
+        else
+        {
+            <div class="pp-table-wrap"><table class="pp-table"><thead><tr><th>Transaction</th><th>Order / payment</th><th>Type</th><th>Status</th><th>Amount</th><th>Recorded</th><th>Gateway reference</th><th></th></tr></thead><tbody>
+            @foreach (var t in Model.Rows)
+            {
+                var state = (t.Status ?? "").ToLowerInvariant();
+                var badge = state switch
+                {
+                    "pending" or "processing" => "pp-pending",
+                    "paid" or "success" or "succeeded" or "completed" => "pp-success",
+                    "failed" or "declined" => "pp-failed",
+                    "refunded" or "reversed" => "pp-reversed",
+                    _ => ""
+                };
+                <tr>
+                    <td><span class="pp-primary-text">TX-@t.Id</span><div class="pp-secondary-text">@(string.IsNullOrWhiteSpace(t.Reference) ? "No internal ref" : t.Reference)</div></td>
+                    <td><a class="pp-link" href="@Url.Action("Details", "Payments", new { area = "Admin", id = t.PaymentId })">PAY-@t.PaymentId</a><div class="pp-secondary-text">@t.OrderNumber</div></td>
+                    <td><span class="pp-primary-text">@t.TransactionType</span></td>
+                    <td><span class="pp-badge @badge">@t.Status</span>@if (!string.IsNullOrWhiteSpace(t.FailureReason)) { <div class="pp-secondary-text" style="color:#b3544b">@t.FailureReason</div> }</td>
+                    <td><span class="pp-primary-text">@t.Amount.ToString("N2")</span><div class="pp-secondary-text">@t.Currency</div></td>
+                    <td><span class="pp-primary-text">@t.CreatedAt.ToString("dd MMM yyyy")</span><div class="pp-secondary-text">@t.CreatedAt.ToString("HH:mm") UTC</div></td>
+                    <td><span class="pp-muted">@(string.IsNullOrWhiteSpace(t.ProviderTransactionId) ? "—" : t.ProviderTransactionId)</span></td>
+                    <td><a class="pp-btn pp-btn-small" href="@Url.Action("Details", "Payments", new { area = "Admin", id = t.PaymentId })">Details <i class="bi bi-arrow-up-right"></i></a></td>
+                </tr>
+            }
+            </tbody></table></div>
+        }
+        <div class="pp-foot"><span class="pp-muted">Showing @Model.Rows.Count of @Model.FilteredCount transactions</span><nav class="pp-pages" aria-label="Transaction pages">
+            @if (Model.Page > 1)
+            { <a class="pp-btn pp-btn-small" href="@Url.Action("Transactions", "Payments", new { area = "Admin", search = Model.Search, status = Model.Status, type = Model.Type, page = Model.Page - 1 })"><i class="bi bi-chevron-left"></i> Previous</a> }
+            <span class="pp-current">@Model.Page / @Model.TotalPages</span>
+            @if (Model.Page < Model.TotalPages)
+            { <a class="pp-btn pp-btn-small" href="@Url.Action("Transactions", "Payments", new { area = "Admin", search = Model.Search, status = Model.Status, type = Model.Type, page = Model.Page + 1 })">Next <i class="bi bi-chevron-right"></i></a> }
+        </nav></div>
+    </section>
+    <div class="pp-note" style="margin-top:16px"><i class="bi bi-shield-lock"></i> Admin payment tools are intentionally read-only. Never mark a payment as paid, settled, or refunded without verified provider confirmation and an audited backend workflow.</div>
+</div>

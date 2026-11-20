@@ -1,0 +1,72 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.Products.ProductFormViewModel
+@using System.Text.Json
+@{
+    var editing = (string?)ViewData["Mode"] == "edit";
+    var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    var existingVariants = JsonSerializer.Serialize(Model.Variants.Select(v => new
+    {
+        v.SizeId, v.ColorId, v.SKU, v.StockQuantity, v.Price, v.IsActive, v.ExistingImageUrl, v.RemoveImage
+    }), options);
+    var sizes = JsonSerializer.Serialize(Model.Sizes, options);
+    var colors = JsonSerializer.Serialize(Model.Colors, options);
+}
+<form id="ppProductForm" class="pp-form-layout" asp-area="Admin" asp-controller="Products" asp-action="@(editing ? "Edit" : "Create")" asp-route-id="@(editing ? Model.Id : null)" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <div class="pp-form-main">
+        <div asp-validation-summary="All" class="pp-validation"></div>
+        <div class="pp-card"><div class="pp-card-title"><span class="pp-step">01</span><div><h2>Product information</h2><p>Essential information for the storefront.</p></div></div>
+            <div class="pp-field"><label asp-for="Name">Product name <b>*</b></label><input asp-for="Name" class="pp-input" placeholder="e.g. PANENKA Home Jersey 2026" maxlength="200" /><span asp-validation-for="Name" class="pp-error"></span></div>
+            <div class="pp-field"><label asp-for="Slug">URL slug</label><input asp-for="Slug" class="pp-input" placeholder="Automatically generated from the product name" maxlength="220" /><span class="pp-hint">Leave blank to generate a unique slug automatically.</span><span asp-validation-for="Slug" class="pp-error"></span></div>
+            <div class="pp-field"><label asp-for="ShortDescription">Short description</label><textarea asp-for="ShortDescription" class="pp-input" rows="3" maxlength="1000" placeholder="One or two lines about this product"></textarea><span asp-validation-for="ShortDescription" class="pp-error"></span></div>
+            <div class="pp-field"><label asp-for="Description">Full description</label><textarea asp-for="Description" class="pp-input" rows="6" placeholder="Materials, care instructions and product details..."></textarea></div>
+        </div>
+        <div class="pp-card"><div class="pp-card-title"><span class="pp-step">02</span><div><h2>Product gallery</h2><p>Upload up to 10 gallery images, 5 MB each (JPG, PNG, WEBP).</p></div></div>
+            @if(Model.ExistingImages.Any())
+            {
+                <div class="pp-existing-gallery">
+                    @foreach(var photo in Model.ExistingImages)
+                    {
+                        <div class="pp-existing-photo"><img src="@photo.Url" alt="Product image" />
+                            <label class="pp-photo-toggle"><input type="checkbox" name="RemoveImageIds" value="@photo.Id" checked="@Model.RemoveImageIds.Contains(photo.Id)" /><span>Remove</span></label>
+                            <label class="pp-photo-primary"><input type="radio" name="PrimaryImageId" value="@photo.Id" checked="@(Model.PrimaryImageId.HasValue ? Model.PrimaryImageId.Value == photo.Id : photo.IsPrimary)" /><span>Cover photo</span></label>
+                        </div>
+                    }
+                </div>
+            }
+            <label class="pp-upload" for="ppGalleryInput"><i class="bi bi-images"></i><strong>Choose product images</strong><small>Click here or drag images into the selection dialog</small></label>
+            <input id="ppGalleryInput" name="NewImages" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden />
+            <div id="ppGalleryPreview" class="pp-new-gallery"></div><span asp-validation-for="NewImages" class="pp-error"></span>
+            <span asp-validation-for="RemoveImageIds" class="pp-error"></span>
+            <span asp-validation-for="PrimaryImageId" class="pp-error"></span>
+        </div>
+        <div class="pp-card" id="ppVariantCard"><div class="pp-card-title"><span class="pp-step">03</span><div><h2>Sizes, colors & stock</h2><p>Select sizes, then assign colors and availability for each combination.</p></div></div>
+            <div class="pp-field"><label>Available sizes</label><div id="ppSizeChoices" class="pp-choice-list"></div></div>
+            <div id="ppSizeGroups" class="pp-size-groups"></div>
+            <div id="ppVariantFormFields"></div>
+            <div id="ppVariantMessage" class="pp-hint">Select a size to start configuring colors.</div>
+            <span asp-validation-for="Variants" class="pp-error"></span>
+            <div class="pp-inline-warning"><i class="bi bi-info-circle"></i> Every checked size/color combination has its own stock quantity, SKU and optional photo. Product-level stock is calculated from active variants.</div>
+        </div>
+    </div>
+    <aside class="pp-form-aside">
+        <div class="pp-card"><div class="pp-card-title"><span class="pp-step">04</span><div><h2>Organize</h2><p>Catalog placement</p></div></div>
+            <div class="pp-field"><label asp-for="CategoryId">Category <b>*</b></label><select asp-for="CategoryId" asp-items="Model.Categories" class="pp-input"><option value="0">Choose category</option></select><span asp-validation-for="CategoryId" class="pp-error"></span></div>
+            <div class="pp-field"><label asp-for="BrandId">Brand</label><select asp-for="BrandId" asp-items="Model.Brands" class="pp-input"><option value="">No brand</option></select><span asp-validation-for="BrandId" class="pp-error"></span></div>
+            <div class="pp-field"><label asp-for="SKU">Product SKU (optional)</label><input asp-for="SKU" class="pp-input" maxlength="100" placeholder="e.g. PN-HOME-26" /><span asp-validation-for="SKU" class="pp-error"></span></div>
+        </div>
+        <div class="pp-card"><div class="pp-card-title"><span class="pp-step">05</span><div><h2>Pricing</h2><p>Base and comparison prices</p></div></div>
+            <div class="pp-field"><label asp-for="BasePrice">Base price (৳) <b>*</b></label><input asp-for="BasePrice" type="number" min="0" step="0.01" class="pp-input" /><span asp-validation-for="BasePrice" class="pp-error"></span></div>
+            <div class="pp-field"><label asp-for="CompareAtPrice">Compare-at price (৳)</label><input asp-for="CompareAtPrice" type="number" min="0" step="0.01" class="pp-input" placeholder="Optional" /><span asp-validation-for="CompareAtPrice" class="pp-error"></span></div>
+        </div>
+        <div class="pp-card"><div class="pp-card-title"><span class="pp-step">06</span><div><h2>Visibility</h2><p>Storefront controls</p></div></div>
+            <label class="pp-switch-row"><span><strong>Published</strong><small>Visible on the store</small></span><input asp-for="IsPublished" type="checkbox" /><span class="pp-switch"></span></label>
+            <label class="pp-switch-row"><span><strong>Featured product</strong><small>Highlight on the store</small></span><input asp-for="IsFeatured" type="checkbox" /><span class="pp-switch"></span></label>
+            <label class="pp-switch-row"><span><strong>New arrival</strong><small>Show new-arrival label</small></span><input asp-for="IsNewArrival" type="checkbox" /><span class="pp-switch"></span></label>
+        </div>
+        <div class="pp-card pp-save-card"><button type="submit" class="pp-btn pp-btn-dark pp-btn-block"><i class="bi bi-check2"></i> @(editing ? "Save changes" : "Create product")</button><a asp-action="Index" class="pp-btn pp-btn-light pp-btn-block">Cancel</a><small>Changes will be saved to your existing catalog database.</small></div>
+    </aside>
+</form>
+<script type="application/json" id="ppSizeData">@Html.Raw(sizes)</script>
+<script type="application/json" id="ppColorData">@Html.Raw(colors)</script>
+<script type="application/json" id="ppVariantData">@Html.Raw(existingVariants)</script>

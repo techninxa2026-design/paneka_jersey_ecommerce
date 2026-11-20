@@ -1,0 +1,238 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.OrderDetailsViewModel
+@using System
+@using System.Linq
+@{
+    ViewData["Title"] = "Order " + Model.Order.OrderNumber;
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var order = Model.Order;
+    string BadgeClass(string? status) => (status ?? "").Trim().ToLowerInvariant() switch
+    {
+        "pending" => "po-badge-pending",
+        "confirmed" => "po-badge-confirmed",
+        "processing" => "po-badge-processing",
+        "shipped" => "po-badge-shipped",
+        "delivered" => "po-badge-delivered",
+        "cancelled" => "po-badge-cancelled",
+        "returned" => "po-badge-returned",
+        "refunded" => "po-badge-refunded",
+        _ => ""
+    };
+}
+@await Html.PartialAsync("_OrderStyles")
+
+<div class="po-page">
+    <header class="po-head">
+        <div>
+            <div class="po-crumb po-hide-print"><a href="/admin/dashboard">Dashboard</a><i class="bi bi-chevron-right"></i><a href="@Url.Action("Index", "Orders", new { area = "Admin" })">Orders</a><i class="bi bi-chevron-right"></i><span>@order.OrderNumber</span></div>
+            <div class="po-eyebrow">PANENKA / Order record</div>
+            <h1 class="po-title">@order.OrderNumber</h1>
+            <p class="po-subtitle">Placed on @order.CreatedAt.ToString("dd MMMM yyyy 'at' HH:mm") UTC · Order ID #@order.Id</p>
+        </div>
+        <div class="po-actions po-hide-print">
+            <a class="po-btn" href="@Url.Action("Index", "Orders", new { area = "Admin" })"><i class="bi bi-arrow-left"></i> All orders</a>
+            <button type="button" class="po-btn po-btn-dark" onclick="window.print()"><i class="bi bi-printer"></i> Print order</button>
+        </div>
+    </header>
+
+    @if (TempData["Success"] is string success)
+    {
+        <div role="status" class="po-alert po-alert-success po-hide-print"><i class="bi bi-check-circle"></i> @success</div>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <div role="alert" class="po-alert po-hide-print"><i class="bi bi-exclamation-triangle"></i> @error</div>
+    }
+
+    <div class="po-detail-grid">
+        <div class="po-stack">
+            <section class="po-card">
+                <div class="po-card-h">
+                    <div class="po-card-heading"><div class="po-info-icon"><i class="bi bi-box-seam"></i></div><div><h2 class="po-card-title">Items in this order</h2><p class="po-card-subtitle">Snapshot at the time the customer checked out</p></div></div>
+                    <span class="po-tag">@order.Items.Sum(i => i.Quantity) total units</span>
+                </div>
+                @if (order.Items.Count == 0)
+                {
+                    <div class="po-empty"><i class="bi bi-box"></i><strong>No line items found</strong><span>Review the order data in your database.</span></div>
+                }
+                else
+                {
+                    @foreach (var item in order.Items.OrderBy(i => i.Id))
+                    {
+                        <div class="po-lineitem">
+                            @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                            {
+                                <img class="po-item-image" src="@Url.Content(item.ImageUrl)" alt="@item.ProductName" loading="lazy" />
+                            }
+                            else
+                            {
+                                <span class="po-item-image po-item-placeholder"><i class="bi bi-image"></i></span>
+                            }
+                            <div style="min-width:0">
+                                <div class="po-item-name">@item.ProductName</div>
+                                <div class="po-item-desc">SKU: @(string.IsNullOrWhiteSpace(item.SKU) ? "—" : item.SKU)</div>
+                                <div class="po-item-desc">Size: @(item.SizeName ?? "—") · Color: @(item.ColorName ?? "—")</div>
+                            </div>
+                            <div><div class="po-data-label">Qty</div><div class="po-strong">× @item.Quantity</div></div>
+                            <div class="po-item-price"><div class="po-data-label">Unit price</div><div class="po-strong">৳@item.UnitPrice.ToString("N2")</div></div>
+                            <div><div class="po-data-label">Line total</div><div class="po-strong">৳@item.LineTotal.ToString("N2")</div></div>
+                        </div>
+                    }
+                }
+                <div class="po-totals">
+                    <div class="po-total-line"><span>Subtotal</span><strong>৳@order.Subtotal.ToString("N2")</strong></div>
+                    <div class="po-total-line"><span>Discount</span><strong>− ৳@order.DiscountAmount.ToString("N2")</strong></div>
+                    <div class="po-total-line"><span>Shipping</span><strong>৳@order.ShippingCost.ToString("N2")</strong></div>
+                    <div class="po-total-line"><span>Tax</span><strong>৳@order.TaxAmount.ToString("N2")</strong></div>
+                    <div class="po-total-line po-total-grand"><span>Total</span><strong>৳@order.TotalAmount.ToString("N2")</strong></div>
+                </div>
+            </section>
+
+            <div class="po-two">
+                <section class="po-card">
+                    <div class="po-card-h"><div class="po-card-heading"><div class="po-info-icon"><i class="bi bi-person"></i></div><h2 class="po-card-title">Customer</h2></div></div>
+                    <div class="po-card-body" style="display:grid;gap:15px">
+                        <div><div class="po-data-label">Customer name</div><div class="po-data-value">@order.CustomerName</div></div>
+                        <div><div class="po-data-label">Email</div><div class="po-data-value">@order.CustomerEmail</div></div>
+                        <div><div class="po-data-label">Phone</div><div class="po-data-value">@order.CustomerPhone</div></div>
+                        <div><div class="po-data-label">Account reference</div><div class="po-data-value">@(order.UserId ?? "Guest checkout")</div></div>
+                    </div>
+                </section>
+                <section class="po-card">
+                    <div class="po-card-h"><div class="po-card-heading"><div class="po-info-icon"><i class="bi bi-geo-alt"></i></div><h2 class="po-card-title">Shipping address</h2></div></div>
+                    <div class="po-card-body" style="display:grid;gap:15px">
+                        <div><div class="po-data-label">Deliver to</div><div class="po-data-value">@order.CustomerName</div></div>
+                        <div><div class="po-data-label">Street address</div><div class="po-data-value">@order.ShippingAddressLine1<br />@order.ShippingAddressLine2</div></div>
+                        <div><div class="po-data-label">City / District</div><div class="po-data-value">
+                            @order.ShippingCity
+                            @if (!string.IsNullOrWhiteSpace(order.ShippingDistrict))
+                            {
+                                <span>, @order.ShippingDistrict</span>
+                            }
+                        </div></div>
+                        <div><div class="po-data-label">Postal code / Country</div><div class="po-data-value">@order.ShippingPostalCode @order.ShippingCountry</div></div>
+                    </div>
+                </section>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(order.CustomerNote))
+            {
+                <section class="po-card">
+                    <div class="po-card-h"><div class="po-card-heading"><div class="po-info-icon"><i class="bi bi-chat-left-text"></i></div><h2 class="po-card-title">Customer's note</h2></div></div>
+                    <div class="po-card-body"><div class="po-note">@order.CustomerNote</div></div>
+                </section>
+            }
+
+            <section class="po-card">
+                <div class="po-card-h"><div class="po-card-heading"><div class="po-info-icon"><i class="bi bi-clock-history"></i></div><div><h2 class="po-card-title">Status history</h2><p class="po-card-subtitle">Saved changes to this order</p></div></div></div>
+                <div class="po-card-body">
+                    @if (!order.StatusHistory.Any())
+                    {
+                        <div class="po-muted">No status history recorded yet. The next admin update will create a history entry.</div>
+                    }
+                    else
+                    {
+                        <ol class="po-timeline">
+                        @foreach (var history in order.StatusHistory.OrderByDescending(h => h.CreatedAt))
+                        {
+                            <li class="po-event">
+                                <div class="po-event-title">@history.Status</div>
+                                <div class="po-event-date">@history.CreatedAt.ToString("dd MMM yyyy, HH:mm") UTC · @(history.ChangedByUser?.Email ?? "System")</div>
+                                @if (!string.IsNullOrWhiteSpace(history.Note))
+                                {
+                                    <div class="po-event-note">@history.Note</div>
+                                }
+                            </li>
+                        }
+                        </ol>
+                    }
+                </div>
+            </section>
+        </div>
+
+        <aside class="po-stack">
+            <section class="po-card">
+                <div class="po-card-h"><div><h2 class="po-card-title">Order status</h2><p class="po-card-subtitle">Fulfillment progression</p></div></div>
+                <div class="po-card-body">
+                    <div style="margin-bottom:16px"><span class="po-badge @BadgeClass(order.Status)">@order.Status</span></div>
+                    @if (Model.NextStatus is not null)
+                    {
+                        <form class="po-status-form po-hide-print" method="post" action="@Url.Action("ChangeStatus", "Orders", new { area = "Admin", id = order.Id })">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="OrderId" value="@order.Id" />
+                            <input type="hidden" name="ExpectedStatus" value="@order.Status" />
+                            <input type="hidden" name="NewStatus" value="@Model.NextStatus" />
+                            <div><div class="po-data-label">Next stage</div><div class="po-data-value"><strong>@order.Status</strong> <i class="bi bi-arrow-right"></i> <strong>@Model.NextStatus</strong></div></div>
+                            <div><label class="po-label" for="statusNote">Internal note (optional)</label><textarea class="po-textarea" name="Note" id="statusNote" maxlength="500" placeholder="Preparation completed, handed to courier..."></textarea></div>
+                            <button class="po-btn po-btn-dark" type="submit" style="width:100%"><i class="bi bi-check2-circle"></i> Mark as @Model.NextStatus</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <p class="po-muted">No further automatic status transition is available for this order.</p>
+                    }
+                    <div class="po-safety" style="margin-top:16px"><strong>Important:</strong> This action changes only the order fulfillment status and records an audit entry. It does not charge/refund a payment, book a shipment, restore stock, or cancel an order.</div>
+                </div>
+            </section>
+
+            <section class="po-card">
+                <div class="po-card-h"><div class="po-card-heading"><div class="po-info-icon"><i class="bi bi-credit-card"></i></div><h2 class="po-card-title">Payment</h2></div></div>
+                <div class="po-card-body">
+                    @if (order.Payment is null)
+                    {
+                        <div class="po-muted">No payment record associated with this order.</div>
+                    }
+                    else
+                    {
+                        <div style="display:grid;gap:16px">
+                            <div><div class="po-data-label">Status</div><span class="po-badge @BadgeClass(order.Payment.Status)">@order.Payment.Status</span></div>
+                            <div><div class="po-data-label">Method</div><div class="po-data-value">@order.Payment.Method</div></div>
+                            <div><div class="po-data-label">Recorded amount</div><div class="po-data-value po-strong">@order.Payment.Currency @order.Payment.Amount.ToString("N2")</div></div>
+                            <div><div class="po-data-label">Transaction reference</div><div class="po-data-value">@(order.Payment.TransactionReference ?? "—")</div></div>
+                            @if (order.PaidAt.HasValue)
+                            {
+                                <div><div class="po-data-label">Paid at</div><div class="po-data-value">@order.PaidAt.Value.ToString("dd MMM yyyy, HH:mm") UTC</div></div>
+                            }
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <section class="po-card">
+                <div class="po-card-h"><div class="po-card-heading"><div class="po-info-icon"><i class="bi bi-truck"></i></div><h2 class="po-card-title">Shipment</h2></div></div>
+                <div class="po-card-body">
+                    @if (order.Shipment is null)
+                    {
+                        <div class="po-muted">No shipment record associated with this order.</div>
+                    }
+                    else
+                    {
+                        <div style="display:grid;gap:16px">
+                            <div><div class="po-data-label">Status</div><span class="po-badge @BadgeClass(order.Shipment.Status)">@order.Shipment.Status</span></div>
+                            <div><div class="po-data-label">Courier</div><div class="po-data-value">@(order.Shipment.CourierName ?? "—")</div></div>
+                            <div><div class="po-data-label">Tracking number</div><div class="po-data-value">@(order.Shipment.TrackingNumber ?? "—")</div></div>
+                            @if (!string.IsNullOrWhiteSpace(order.Shipment.TrackingUrl) &&
+                                 Uri.TryCreate(order.Shipment.TrackingUrl, UriKind.Absolute, out var trackingUri) &&
+                                 (trackingUri.Scheme == Uri.UriSchemeHttp || trackingUri.Scheme == Uri.UriSchemeHttps))
+                            {
+                                <a class="po-btn po-btn-sm" href="@order.Shipment.TrackingUrl" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i> Track delivery</a>
+                            }
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <section class="po-card">
+                <div class="po-card-h"><h2 class="po-card-title">Record information</h2></div>
+                <div class="po-card-body"><div style="display:grid;gap:15px">
+                    <div><div class="po-data-label">Order ID</div><div class="po-data-value">#@order.Id</div></div>
+                    <div><div class="po-data-label">Last updated</div><div class="po-data-value">@order.UpdatedAt.ToString() UTC</div></div>
+                    <div><div class="po-data-label">Coupon</div><div class="po-data-value">@(order.CouponCode ?? "—")</div></div>
+                    @if (order.CancelledAt.HasValue)
+                    {
+                        <div><div class="po-data-label">Cancelled at</div><div class="po-data-value">@order.CancelledAt.Value.ToString("dd MMM yyyy, HH:mm") UTC</div></div>
+                    }
+                </div></div>
+            </section>
+        </aside>
+    </div>
+</div>

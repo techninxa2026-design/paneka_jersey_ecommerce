@@ -1,0 +1,175 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.ShipmentListViewModel
+@using Jersey_ecommerce.Areas.Admin.ViewModels
+@{
+    ViewData["Title"] = "Shipments";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+
+    var indexUrl = Url.Action("Index", "Shipments", new { area = "Admin" });
+    var createUrl = Url.Action("Create", "Shipments", new { area = "Admin" });
+}
+
+<link rel="stylesheet" href="@Url.Content("~/css/admin-shipments.css")" />
+
+<div class="ship-page">
+    <header class="ship-head">
+        <div>
+            <div class="ship-kicker">SALES / SHIPMENTS</div>
+            <h2 class="ship-title">Shipments<span class="ship-title-dot">.</span></h2>
+            <p class="ship-subtitle">Manage shipment records, delivery companies and tracking details.</p>
+        </div>
+        <a class="ship-btn" href="@createUrl"><i class="bi bi-plus-lg"></i> Create shipment</a>
+    </header>
+
+    @if (TempData["Success"] is string success)
+    {
+        <div class="ship-alert" role="status"><i class="bi bi-check-circle"></i> @success</div>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <div class="ship-alert ship-alert-error" role="alert"><i class="bi bi-exclamation-triangle"></i> @error</div>
+    }
+
+    <section class="ship-stats" aria-label="Shipment statistics">
+        <div class="ship-stat">
+            <i class="bi bi-box-seam ship-stat-icon"></i>
+            <div class="ship-stat-label">TOTAL SHIPMENTS</div>
+            <div class="ship-stat-number">@Model.AllCount</div>
+            <div class="ship-stat-foot">All delivery records</div>
+        </div>
+        <div class="ship-stat">
+            <i class="bi bi-clock-history ship-stat-icon"></i>
+            <div class="ship-stat-label">PENDING / PACKED</div>
+            <div class="ship-stat-number">@Model.PendingCount</div>
+            <div class="ship-stat-foot">Waiting for dispatch</div>
+        </div>
+        <div class="ship-stat">
+            <i class="bi bi-truck ship-stat-icon"></i>
+            <div class="ship-stat-label">ON THE WAY</div>
+            <div class="ship-stat-number">@Model.OnTheWayCount</div>
+            <div class="ship-stat-foot">In delivery process</div>
+        </div>
+        <div class="ship-stat">
+            <i class="bi bi-check2-circle ship-stat-icon"></i>
+            <div class="ship-stat-label">DELIVERED</div>
+            <div class="ship-stat-number">@Model.DeliveredCount</div>
+            <div class="ship-stat-foot">Successfully completed</div>
+        </div>
+    </section>
+
+    <section class="ship-card">
+        <div class="ship-card-head">
+            <div>
+                <h3 class="ship-card-title">Shipment records</h3>
+                <div class="ship-muted">@Model.TotalRecords matching shipment(s)</div>
+            </div>
+        </div>
+
+        <form class="ship-filters" action="@indexUrl" method="get">
+            <div class="ship-field ship-field-grow">
+                <label for="shipmentSearch">Search shipments</label>
+                <input id="shipmentSearch" class="ship-input" type="search" name="search"
+                       value="@Model.Search" placeholder="Order number, customer, courier or tracking" />
+            </div>
+            <div class="ship-field ship-filter-status">
+                <label for="shipmentStatus">Status</label>
+                <select id="shipmentStatus" class="ship-select" name="status">
+                    @if (string.IsNullOrWhiteSpace(Model.Status))
+                    {
+                        <option value="" selected="selected">All statuses</option>
+                    }
+                    else
+                    {
+                        <option value="">All statuses</option>
+                    }
+                    @foreach (var status in ShipmentStatuses.Values)
+                    {
+                        if (status == Model.Status)
+                        {
+                            <option value="@status" selected="selected">@ShipmentStatuses.Label(status)</option>
+                        }
+                        else
+                        {
+                            <option value="@status">@ShipmentStatuses.Label(status)</option>
+                        }
+                    }
+                </select>
+            </div>
+            <button type="submit" class="ship-btn"><i class="bi bi-search"></i> Search</button>
+            <a class="ship-btn ship-btn-light" href="@indexUrl">Clear</a>
+        </form>
+
+        <div class="ship-table-wrap">
+            <table class="ship-table">
+                <thead>
+                    <tr>
+                        <th>SHIPMENT / ORDER</th>
+                        <th>CUSTOMER</th>
+                        <th>COURIER &amp; TRACKING</th>
+                        <th>STATUS</th>
+                        <th>CREATED</th>
+                        <th>DELIVERY ESTIMATE</th>
+                        <th class="ship-align-right">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Rows)
+                    {
+                        var detailsUrl = Url.Action("Details", "Shipments", new { area = "Admin", id = item.Id });
+                        var editUrl = Url.Action("Edit", "Shipments", new { area = "Admin", id = item.Id });
+                        var statusClass = "ship-status-" + (item.Status ?? "").ToLowerInvariant();
+
+                        <tr>
+                            <td>
+                                <div class="ship-strong">SHP-@item.Id.ToString("D5")</div>
+                                <div class="ship-secondary">Order @item.OrderNumber</div>
+                            </td>
+                            <td><span class="ship-strong">@item.CustomerName</span></td>
+                            <td>
+                                <div class="ship-strong">@(string.IsNullOrWhiteSpace(item.CourierName) ? "Not assigned" : item.CourierName)</div>
+                                <div class="ship-secondary">@(string.IsNullOrWhiteSpace(item.TrackingNumber) ? "No tracking number" : item.TrackingNumber)</div>
+                            </td>
+                            <td><span class="ship-status @statusClass">@ShipmentStatuses.Label(item.Status)</span></td>
+                            <td>@item.CreatedAt.ToString("dd MMM yyyy")</td>
+                            <td>@(item.EstimatedDeliveryAt?.ToString("dd MMM yyyy") ?? "—")</td>
+                            <td>
+                                <div class="ship-actions">
+                                    <a class="ship-icon-btn" href="@detailsUrl" aria-label="View shipment @item.Id" title="View details"><i class="bi bi-eye"></i></a>
+                                    <a class="ship-icon-btn" href="@editUrl" aria-label="Edit shipment @item.Id" title="Edit shipment"><i class="bi bi-pencil-square"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.Rows == null || Model.Rows.Count == 0)
+        {
+            <div class="ship-empty">
+                <i class="bi bi-box-seam"></i>
+                <h3>No shipment records found</h3>
+                <p>Only saved shipments appear here. Create a shipment for an eligible order to get started.</p>
+                <a class="ship-btn" href="@createUrl"><i class="bi bi-plus-lg"></i> Create shipment</a>
+            </div>
+        }
+
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="ship-pager" aria-label="Shipment pagination">
+                <span class="ship-muted">Page @Model.Page of @Model.TotalPages · @Model.TotalRecords results</span>
+                <div class="ship-pages">
+                    @if (Model.Page > 1)
+                    {
+                        var prevUrl = Url.Action("Index", "Shipments", new { area = "Admin", page = Model.Page - 1, search = Model.Search, status = Model.Status });
+                        <a class="ship-btn ship-btn-light ship-btn-sm" href="@prevUrl"><i class="bi bi-chevron-left"></i> Previous</a>
+                    }
+                    @if (Model.Page < Model.TotalPages)
+                    {
+                        var nextUrl = Url.Action("Index", "Shipments", new { area = "Admin", page = Model.Page + 1, search = Model.Search, status = Model.Status });
+                        <a class="ship-btn ship-btn-light ship-btn-sm" href="@nextUrl">Next <i class="bi bi-chevron-right"></i></a>
+                    }
+                </div>
+            </nav>
+        }
+    </section>
+</div>

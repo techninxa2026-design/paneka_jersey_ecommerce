@@ -1,0 +1,12 @@
+@model IEnumerable<Jersey_ecommerce.Models.Shopping.WishListItem>
+@{ Layout = null; }
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Saved Jerseys | PANENKA</title><link rel="stylesheet" href="/css/panenka-product.css"></head><body>
+<header><div class="inner"><a class="logo" href="/">PANENKA</a><nav><a href="/shop">SHOP</a><a href="/Cart">BAG</a><a href="/MyOrders">ORDERS</a><a href="/Account/Profile">ACCOUNT</a></nav></div></header>
+<main class="container" style="min-height:65vh"><div class="crumb"><a href="/">Home</a> / Wishlist</div><h1>Saved jerseys.</h1>
+@if(!Model.Any()){<p class="helper">Your wishlist is empty. <a href="/shop"><u>Browse jerseys</u></a></p>}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;padding:20px 0 80px">
+@foreach(var x in Model){var photo=x.Product.Images.OrderByDescending(i=>i.IsPrimary).ThenBy(i=>i.DisplayOrder).FirstOrDefault()?.ImageUrl;
+<article><a href="/Product/Details/@x.Product.Slug"><div class="gallery-main" style="aspect-ratio:1.1">@if(photo!=null){<img style="width:100%;height:100%;object-fit:contain" src="@photo" alt="@x.Product.Name">}else{<span class="gallery-empty">PANENKA</span>}</div><h3>@x.Product.Name</h3></a><p class="price" style="font-size:17px">৳@x.Product.BasePrice.ToString("N2")</p>
+<form method="post" action="/Wishlist/Remove/@x.ProductId">@Html.AntiForgeryToken()<button type="submit" class="secondary">REMOVE FROM WISHLIST</button></form></article>}
+</div></main><footer class="footer"><div class="container">PANENKA · FOOTBALL CULTURE</div></footer></body></html>

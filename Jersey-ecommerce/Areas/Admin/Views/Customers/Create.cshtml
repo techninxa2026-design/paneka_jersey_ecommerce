@@ -1,0 +1,116 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.CustomerFormViewModel
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var editing = Model.IsEdit;
+    ViewData["Title"] = editing ? "Edit Customer" : "Create Customer";
+
+    // Your current controller uses attribute routes: Admin/Customers/Create and Admin/Customers/Edit/{id}.
+    // Use a real action URL and explicit name attributes so the form still posts correctly
+    // if the MVC Tag Helpers have not been imported.
+    var formAction = editing
+        ? "/Admin/Customers/Edit/" + Uri.EscapeDataString(Model.Id ?? "")
+        : "/Admin/Customers/Create";
+}
+<link rel="stylesheet" href="@Url.Content("~/css/admin-customers.css")" />
+<div class="customers-page">
+    <div class="customers-heading">
+        <div>
+            <span class="customers-eyebrow">CUSTOMERS / @(editing ? "EDIT ACCOUNT" : "NEW ACCOUNT")</span>
+            <h2>@(editing ? "Edit customer" : "Create customer")<span class="customers-dot">.</span></h2>
+            <p>@(editing ? "Update account details and access." : "Register a new customer with a secure login.")</p>
+        </div>
+        <a href="/Admin/Customers" class="customers-btn customers-btn-light"><i class="bi bi-arrow-left"></i> Back to customers</a>
+    </div>
+
+    @if (TempData["Error"] is string errorMessage)
+    {
+        <div class="customers-alert customers-alert-error" role="alert">@errorMessage</div>
+    }
+
+    <form action="@formAction" method="post" autocomplete="off">
+        @Html.AntiForgeryToken()
+        @if (editing)
+        {
+            <input type="hidden" name="Id" value="@Model.Id" />
+        }
+
+        <!-- This works without Tag Helpers and displays Identity / ModelState errors. -->
+        @Html.ValidationSummary(false, "", new { @class = "customers-validation-summary", role = "alert" })
+
+        <div class="customers-form-grid">
+            <section class="customers-panel">
+                <div class="customers-panel-title"><span>01</span><div><h3>Personal information</h3><p>Customer account profile</p></div></div>
+                <div class="customers-field">
+                    <label for="FullName">Full name</label>
+                    <input id="FullName" name="FullName" type="text" class="customers-input" maxlength="150" minlength="2"
+                           value="@Model.FullName" autocomplete="name" placeholder="e.g. Rahim Ahmed" required />
+                    @Html.ValidationMessageFor(m => m.FullName, "", new { @class = "customers-error" })
+                </div>
+                <div class="customers-field">
+                    <label for="Email">Email address</label>
+                    <input id="Email" name="Email" type="email" class="customers-input" maxlength="256"
+                           value="@Model.Email" autocomplete="email" placeholder="customer@example.com" required />
+                    @Html.ValidationMessageFor(m => m.Email, "", new { @class = "customers-error" })
+                </div>
+                <div class="customers-field">
+                    <label for="PhoneNumber">Phone number (optional)</label>
+                    <input id="PhoneNumber" name="PhoneNumber" type="tel" class="customers-input" maxlength="40"
+                           value="@Model.PhoneNumber" autocomplete="tel" placeholder="+8801XXXXXXXXX" />
+                    @Html.ValidationMessageFor(m => m.PhoneNumber, "", new { @class = "customers-error" })
+                </div>
+            </section>
+
+            <div class="customers-stack">
+                <section class="customers-panel">
+                    <div class="customers-panel-title"><span>02</span><div><h3>Account security</h3><p>@(editing ? "Leave blank to keep the current password." : "Set an initial password for the customer.")</p></div></div>
+                    <div class="customers-field">
+                        <label for="Password">@(editing ? "New password (optional)" : "Password")</label>
+                        <div class="customers-password-wrap">
+                            <input id="Password" name="Password" type="password" class="customers-input" minlength="6"
+                                   autocomplete="new-password" placeholder="Enter a strong password" />
+                            <button type="button" class="customers-show" data-password-toggle="Password" aria-label="Show or hide password"><i class="bi bi-eye"></i></button>
+                        </div>
+                        @Html.ValidationMessageFor(m => m.Password, "", new { @class = "customers-error" })
+                        <small>Use a strong password that meets your application's Identity rules.</small>
+                    </div>
+                    <div class="customers-field">
+                        <label for="ConfirmPassword">Confirm password</label>
+                        <div class="customers-password-wrap">
+                            <input id="ConfirmPassword" name="ConfirmPassword" type="password" class="customers-input"
+                                   autocomplete="new-password" placeholder="Repeat the password" />
+                            <button type="button" class="customers-show" data-password-toggle="ConfirmPassword" aria-label="Show or hide confirmation"><i class="bi bi-eye"></i></button>
+                        </div>
+                        @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "customers-error" })
+                    </div>
+                </section>
+                <section class="customers-panel">
+                    <div class="customers-panel-title"><span>03</span><div><h3>Access status</h3><p>Control whether this customer may sign in.</p></div></div>
+                    <label class="customers-toggle">
+                        <input name="IsActive" type="checkbox" value="true" checked="@Model.IsActive" />
+                        <span>Active customer account</span>
+                    </label>
+                    <input type="hidden" name="IsActive" value="false" />
+                    <p class="customers-hint">Inactive customer accounts cannot sign in until reactivated.</p>
+                </section>
+            </div>
+        </div>
+
+        <div class="customers-form-footer">
+            <span>Enter a unique email and valid password.</span>
+            <div>
+                <a href="/Admin/Customers" class="customers-btn customers-btn-light">Cancel</a>
+                <button type="submit" class="customers-btn customers-btn-dark"><i class="bi bi-check2-circle"></i> @(editing ? "Save changes" : "Create customer")</button>
+            </div>
+        </div>
+    </form>
+</div>
+@section Scripts {
+    <script>
+        document.querySelectorAll('[data-password-toggle]').forEach(button => {
+            button.addEventListener('click', () => {
+                const field = document.getElementById(button.dataset.passwordToggle);
+                if (field) field.type = field.type === 'password' ? 'text' : 'password';
+            });
+        });
+    </script>
+}

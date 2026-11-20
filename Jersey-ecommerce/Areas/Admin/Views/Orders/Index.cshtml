@@ -1,0 +1,119 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.OrdersIndexViewModel
+@using System
+@{
+    ViewData["Title"] = "Order Management";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    string BadgeClass(string? status) => (status ?? "").Trim().ToLowerInvariant() switch
+    {
+        "pending" => "po-badge-pending",
+        "confirmed" => "po-badge-confirmed",
+        "processing" => "po-badge-processing",
+        "shipped" => "po-badge-shipped",
+        "delivered" => "po-badge-delivered",
+        "cancelled" => "po-badge-cancelled",
+        "returned" => "po-badge-returned",
+        "refunded" => "po-badge-refunded",
+        _ => ""
+    };
+}
+@await Html.PartialAsync("_OrderStyles")
+
+<div class="po-page">
+    <header class="po-head">
+        <div>
+            <div class="po-crumb"><a href="/admin/dashboard">Dashboard</a><i class="bi bi-chevron-right"></i><span>Orders</span></div>
+            <div class="po-eyebrow">PANENKA / Sales operations</div>
+            <h1 class="po-title">Order management<span style="color:#b0b0b0">.</span></h1>
+            <p class="po-subtitle">Track orders, review payments, and move fulfillment through controlled stages.</p>
+        </div>
+        <div class="po-actions">
+            <a class="po-btn" href="@Url.Action("Index", "Orders", new { area = "Admin" })"><i class="bi bi-arrow-clockwise"></i> Refresh orders</a>
+        </div>
+    </header>
+
+    @if (TempData["Success"] is string success)
+    {
+        <div class="po-alert po-alert-success" role="status"><i class="bi bi-check-circle"></i> @success</div>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <div class="po-alert" role="alert"><i class="bi bi-exclamation-triangle"></i> @error</div>
+    }
+
+    <div class="po-stats">
+        <div class="po-stat"><div class="po-stat-label"><i class="bi bi-bag"></i> All orders</div><div class="po-stat-value">@Model.TotalCount.ToString("N0")</div><div class="po-stat-desc">All recorded orders</div></div>
+        <div class="po-stat"><div class="po-stat-label"><i class="bi bi-hourglass-split"></i> Pending</div><div class="po-stat-value">@Model.PendingCount.ToString("N0")</div><div class="po-stat-desc">Awaiting confirmation</div></div>
+        <div class="po-stat"><div class="po-stat-label"><i class="bi bi-gear"></i> Processing</div><div class="po-stat-value">@Model.ProcessingCount.ToString("N0")</div><div class="po-stat-desc">Being prepared</div></div>
+        <div class="po-stat"><div class="po-stat-label"><i class="bi bi-truck"></i> Shipped</div><div class="po-stat-value">@Model.ShippedCount.ToString("N0")</div><div class="po-stat-desc">In fulfillment</div></div>
+        <div class="po-stat"><div class="po-stat-label"><i class="bi bi-cash-stack"></i> Recorded value</div><div class="po-stat-value" style="font-size:24px">৳@Model.RecordedOrderValue.ToString("N2")</div><div class="po-stat-desc">All order totals; not settled revenue</div></div>
+    </div>
+
+    <section class="po-card">
+        <div class="po-card-h">
+            <div><h2 class="po-card-title">Orders overview</h2><p class="po-card-subtitle">Search by order number, customer, email or phone. Filter by status or date.</p></div>
+            <span class="po-tag">@Model.FilteredCount.ToString("N0") matching orders</span>
+        </div>
+        <div class="po-card-body po-hide-print">
+            <form method="get" action="@Url.Action("Index", "Orders", new { area = "Admin" })" class="po-filter">
+                <div><label class="po-label" for="orderSearch">Search</label><input class="po-input" id="orderSearch" type="search" name="search" value="@Model.Search" placeholder="Order number, customer, email..."></div>
+                <div><label class="po-label" for="orderStatus">Order status</label><select class="po-select" id="orderStatus" name="status"><option value="">All statuses</option>
+                    @foreach (var status in Model.StatusOptions)
+                    {
+                        <option value="@status" selected="@(Model.Status == status ? "selected" : null)">@status</option>
+                    }
+                </select></div>
+                <div><label class="po-label" for="from">From</label><input class="po-input" id="from" type="date" name="from" value="@Model.From?.ToString("yyyy-MM-dd")"></div>
+                <div><label class="po-label" for="to">To</label><input class="po-input" id="to" type="date" name="to" value="@Model.To?.ToString("yyyy-MM-dd")"></div>
+                <div class="po-filter-actions"><button class="po-btn po-btn-dark" type="submit"><i class="bi bi-funnel"></i> Apply</button><a class="po-btn" href="@Url.Action("Index", "Orders", new { area = "Admin" })" title="Clear filters"><i class="bi bi-x-lg"></i></a></div>
+            </form>
+        </div>
+
+        @if (Model.Orders.Count == 0)
+        {
+            <div class="po-empty"><i class="bi bi-inbox"></i><strong>No matching orders</strong><div>Try another search or clear your filters.</div></div>
+        }
+        else
+        {
+            <div class="po-table-scroll">
+                <table class="po-table">
+                    <thead><tr><th>Order</th><th>Customer</th><th>Placed</th><th>Items</th><th>Order status</th><th>Payment</th><th>Total (BDT)</th><th style="text-align:right">Action</th></tr></thead>
+                    <tbody>
+                    @foreach (var order in Model.Orders)
+                    {
+                        <tr>
+                            <td><a class="po-order-no" href="@Url.Action("Details", "Orders", new { area = "Admin", id = order.Id })">@order.OrderNumber</a><div class="po-muted">ID #@order.Id</div></td>
+                            <td><div class="po-strong">@order.CustomerName</div><div class="po-muted">@order.CustomerEmail</div></td>
+                            <td><div class="po-strong">@order.CreatedAt.ToString("dd MMM yyyy")</div><div class="po-muted">@order.CreatedAt.ToString("HH:mm") UTC</div></td>
+                            <td><span class="po-strong">@order.ItemCount</span></td>
+                            <td><span class="po-badge @BadgeClass(order.Status)">@order.Status</span></td>
+                            <td><span class="po-badge @BadgeClass(order.PaymentStatus)">@(order.PaymentStatus ?? "Not recorded")</span></td>
+                            <td><span class="po-strong">৳@order.TotalAmount.ToString("N2")</span></td>
+                            <td style="text-align:right"><a class="po-btn po-btn-sm" href="@Url.Action("Details", "Orders", new { area = "Admin", id = order.Id })"><i class="bi bi-eye"></i> View</a></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+        <div class="po-foot">
+            <span class="po-muted">Page @Model.Page of @Model.TotalPages · @Model.FilteredCount.ToString("N0") filtered results</span>
+            <nav class="po-pager" aria-label="Order pages">
+                @if (Model.Page > 1)
+                {
+                    <a href="@Url.Action("Index", new { area = "Admin", search = Model.Search, status = Model.Status, from = Model.From?.ToString("yyyy-MM-dd"), to = Model.To?.ToString("yyyy-MM-dd"), page = Model.Page - 1 })" aria-label="Previous page"><i class="bi bi-chevron-left"></i></a>
+                }
+                else { <span class="po-disabled"><i class="bi bi-chevron-left"></i></span> }
+                @for (var p = Math.Max(1, Model.Page - 2); p <= Math.Min(Model.TotalPages, Model.Page + 2); p++)
+                {
+                    if (p == Model.Page) { <span class="po-current" aria-current="page">@p</span> }
+                    else { <a href="@Url.Action("Index", new { area = "Admin", search = Model.Search, status = Model.Status, from = Model.From?.ToString("yyyy-MM-dd"), to = Model.To?.ToString("yyyy-MM-dd"), page = p })">@p</a> }
+                }
+                @if (Model.Page < Model.TotalPages)
+                {
+                    <a href="@Url.Action("Index", new { area = "Admin", search = Model.Search, status = Model.Status, from = Model.From?.ToString("yyyy-MM-dd"), to = Model.To?.ToString("yyyy-MM-dd"), page = Model.Page + 1 })" aria-label="Next page"><i class="bi bi-chevron-right"></i></a>
+                }
+                else { <span class="po-disabled"><i class="bi bi-chevron-right"></i></span> }
+            </nav>
+        </div>
+    </section>
+</div>

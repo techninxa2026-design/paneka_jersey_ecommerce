@@ -1,0 +1,150 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.ReviewsIndexViewModel
+@{
+    ViewData["Title"] = "Reviews";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    int first = Model.FilteredCount == 0 ? 0 : (Model.Page - 1) * Model.PageSize + 1;
+    int last = Math.Min(Model.Page * Model.PageSize, Model.FilteredCount);
+}
+<link rel="stylesheet" href="~/css/admin-reviews.css" asp-append-version="true" />
+
+<div class="rv-page">
+    <div class="rv-top">
+        <div>
+            <div class="rv-eyebrow">Customers / Feedback</div>
+            <h2>Product Reviews</h2>
+            <p>Manage customer feedback, ratings and review approvals.</p>
+        </div>
+        <div class="rv-top-count"><i class="bi bi-chat-square-text me-2"></i>@Model.TotalReviews Total Reviews</div>
+    </div>
+
+    @if (TempData["Success"] is string success)
+    {
+        <div role="status" class="alert alert-success rounded-0 mb-4">
+            <i class="bi bi-check-circle me-2"></i>@success
+        </div>
+    }
+
+    <div class="rv-stats">
+        <div class="rv-stat"><div class="rv-stat-icon"><i class="bi bi-chat-left-text"></i></div><strong>@Model.TotalReviews</strong><small>Total reviews</small></div>
+        <div class="rv-stat"><div class="rv-stat-icon"><i class="bi bi-check2-circle"></i></div><strong>@Model.ApprovedReviews</strong><small>Approved</small></div>
+        <div class="rv-stat"><div class="rv-stat-icon"><i class="bi bi-clock-history"></i></div><strong>@Model.PendingReviews</strong><small>Pending</small></div>
+        <div class="rv-stat"><div class="rv-stat-icon"><i class="bi bi-x-circle"></i></div><strong>@Model.RejectedReviews</strong><small>Rejected</small></div>
+        <div class="rv-stat"><div class="rv-stat-icon"><i class="bi bi-star"></i></div><strong>@Model.AverageRating.ToString("0.0")</strong><small>Average rating / 5</small></div>
+    </div>
+
+    <div class="rv-panel">
+        <div class="rv-panel-head">
+            <div><h3>Review Management</h3><div class="rv-sub">Moderate customer-submitted product reviews.</div></div>
+            <span class="rv-muted">@Model.FilteredCount matching reviews</span>
+        </div>
+
+        <form asp-area="Admin" asp-controller="Reviews" asp-action="Index" method="get" class="rv-filter">
+            <label class="rv-search"><i class="bi bi-search"></i><input type="search" name="search" value="@Model.Search" maxlength="100" placeholder="Search customer, product, review..." aria-label="Search reviews" /></label>
+            <select class="rv-select" name="status" aria-label="Review status">
+                <option value="all" selected="@(Model.Status == "all")">All statuses</option>
+                <option value="pending" selected="@(Model.Status == "pending")">Pending</option>
+                <option value="approved" selected="@(Model.Status == "approved")">Approved</option>
+                <option value="rejected" selected="@(Model.Status == "rejected")">Rejected</option>
+            </select>
+            <select class="rv-select" name="rating" aria-label="Rating">
+                <option value="">All ratings</option>
+                @for (int stars = 5; stars >= 1; stars--)
+                {
+                    <option value="@stars" selected="@(Model.Rating == stars)">@stars star@(stars == 1 ? "" : "s")</option>
+                }
+            </select>
+            <button type="submit" class="rv-btn rv-btn-dark"><i class="bi bi-funnel"></i>Apply</button>
+            <a asp-area="Admin" asp-controller="Reviews" asp-action="Index" class="rv-btn">Reset</a>
+        </form>
+
+        @if (Model.Reviews.Count > 0)
+        {
+            <div class="rv-table-scroll">
+                <table class="rv-table">
+                    <thead><tr><th>Customer</th><th>Product</th><th>Rating</th><th>Review</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+                    <tbody>
+                    @foreach (var review in Model.Reviews)
+                    {
+                        string reviewStatus = review.IsRejected ? "Rejected" : review.IsApproved ? "Approved" : "Pending";
+                        string statusCss = reviewStatus.ToLowerInvariant();
+                        int filled = Math.Clamp(review.Rating, 0, 5);
+                        string preview = review.Comment.Length > 85 ? review.Comment[..85] + "..." : review.Comment;
+                        <tr>
+                            <td>
+                                <div class="rv-customer">
+                                    <div class="rv-avatar">@(string.IsNullOrWhiteSpace(review.CustomerName) ? "C" : review.CustomerName[..1].ToUpperInvariant())</div>
+                                    <div><div class="rv-name">@review.CustomerName</div><div class="rv-muted">@review.Email</div></div>
+                                </div>
+                            </td>
+                            <td><div class="rv-product">@review.ProductName</div><div class="rv-muted">Product #@review.ProductId</div></td>
+                            <td><div class="rv-stars">@(new string('★', filled))<span class="rv-empty-star">@(new string('★', 5 - filled))</span></div><div class="rv-muted">@review.Rating / 5</div></td>
+                            <td><div class="rv-review"><div class="rv-review-title">@(string.IsNullOrWhiteSpace(review.Title) ? "Customer Feedback" : review.Title)</div><div class="rv-review-body">@preview</div></div></td>
+                            <td><span class="rv-status @statusCss">@reviewStatus</span></td>
+                            <td><span class="rv-muted">@review.CreatedAt.ToString("dd MMM yyyy")</span></td>
+                            <td>
+                                <div class="rv-actions">
+                                    <a class="rv-btn rv-btn-soft" asp-area="Admin" asp-controller="Reviews" asp-action="Details" asp-route-id="@review.Id" title="View review" aria-label="View review"><i class="bi bi-eye"></i></a>
+                                    @if (!review.IsApproved || review.IsRejected)
+                                    {
+                                        <form asp-area="Admin" asp-controller="Reviews" asp-action="Approve" asp-route-id="@review.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="search" value="@Model.Search" /><input type="hidden" name="status" value="@Model.Status" /><input type="hidden" name="rating" value="@Model.Rating" /><input type="hidden" name="page" value="@Model.Page" />
+                                            <button class="rv-btn rv-btn-success" type="submit" title="Approve review" aria-label="Approve review"><i class="bi bi-check-lg"></i></button>
+                                        </form>
+                                    }
+                                    @if (!review.IsRejected)
+                                    {
+                                        <form asp-area="Admin" asp-controller="Reviews" asp-action="Reject" asp-route-id="@review.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="search" value="@Model.Search" /><input type="hidden" name="status" value="@Model.Status" /><input type="hidden" name="rating" value="@Model.Rating" /><input type="hidden" name="page" value="@Model.Page" />
+                                            <button class="rv-btn rv-btn-danger" type="submit" title="Reject review" aria-label="Reject review"><i class="bi bi-x-lg"></i></button>
+                                        </form>
+                                    }
+                                    @if (review.IsApproved || review.IsRejected)
+                                    {
+                                        <form asp-area="Admin" asp-controller="Reviews" asp-action="Pending" asp-route-id="@review.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="search" value="@Model.Search" /><input type="hidden" name="status" value="@Model.Status" /><input type="hidden" name="rating" value="@Model.Rating" /><input type="hidden" name="page" value="@Model.Page" />
+                                            <button class="rv-btn" type="submit" title="Return to pending" aria-label="Return to pending"><i class="bi bi-arrow-counterclockwise"></i></button>
+                                        </form>
+                                    }
+                                    <form asp-area="Admin" asp-controller="Reviews" asp-action="Delete" asp-route-id="@review.Id" method="post" onsubmit="return confirm('Permanently delete this customer review?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="search" value="@Model.Search" /><input type="hidden" name="status" value="@Model.Status" /><input type="hidden" name="rating" value="@Model.Rating" /><input type="hidden" name="page" value="@Model.Page" />
+                                        <button class="rv-btn" type="submit" title="Delete review" aria-label="Delete review"><i class="bi bi-trash3"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="rv-empty"><i class="bi bi-chat-square-text"></i><h3>No reviews found</h3><p>New customer reviews will appear here. You can also clear your filters.</p><a class="rv-btn rv-btn-dark mt-2" asp-area="Admin" asp-controller="Reviews" asp-action="Index">Clear filters</a></div>
+        }
+
+        <div class="rv-footer">
+            <span class="rv-muted">Showing @first to @last of @Model.FilteredCount reviews</span>
+            @if (Model.TotalPages > 1)
+            {
+                <nav class="rv-pagination" aria-label="Review page navigation">
+                    @if (Model.Page > 1)
+                    {
+                        <a class="rv-page-link" asp-action="Index" asp-route-search="@Model.Search" asp-route-status="@Model.Status" asp-route-rating="@Model.Rating" asp-route-page="@(Model.Page - 1)" aria-label="Previous page"><i class="bi bi-chevron-left"></i></a>
+                    }
+                    @for (int p = Math.Max(1, Model.Page - 2); p <= Math.Min(Model.TotalPages, Model.Page + 2); p++)
+                    {
+                        <a class="rv-page-link @(p == Model.Page ? "current" : "")" aria-current="@(p == Model.Page ? "page" : null)" asp-action="Index" asp-route-search="@Model.Search" asp-route-status="@Model.Status" asp-route-rating="@Model.Rating" asp-route-page="@p">@p</a>
+                    }
+                    @if (Model.Page < Model.TotalPages)
+                    {
+                        <a class="rv-page-link" asp-action="Index" asp-route-search="@Model.Search" asp-route-status="@Model.Status" asp-route-rating="@Model.Rating" asp-route-page="@(Model.Page + 1)" aria-label="Next page"><i class="bi bi-chevron-right"></i></a>
+                    }
+                </nav>
+            }
+        </div>
+    </div>
+</div>

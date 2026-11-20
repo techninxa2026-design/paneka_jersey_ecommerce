@@ -1,0 +1,127 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.PaymentDetailsViewModel
+@{
+    var payment = Model.Payment;
+    var transactions = payment.Transactions.OrderByDescending(t => t.CreatedAt).ThenByDescending(t => t.Id).ToList();
+    var status = (payment.Status ?? "").ToLowerInvariant();
+    var badge = status switch
+    {
+        "pending" or "processing" or "initiated" => "pp-pending",
+        "paid" or "succeeded" or "completed" or "success" => "pp-success",
+        "failed" or "declined" or "cancelled" or "canceled" => "pp-failed",
+        "refunded" or "partiallyrefunded" or "partially refunded" => "pp-reversed",
+        _ => ""
+    };
+    ViewData["Title"] = $"Payment PAY-{payment.Id}";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+@await Html.PartialAsync("_PaymentStyles")
+
+<div class="pp-page">
+    <header class="pp-head">
+        <div>
+            <div class="pp-crumb"><a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })">Dashboard</a><i class="bi bi-chevron-right"></i><a href="@Url.Action("Index", "Payments", new { area = "Admin" })">Payments</a><i class="bi bi-chevron-right"></i><span>PAY-@payment.Id</span></div>
+            <div class="pp-kicker">PANENKA / PAYMENT RECORD</div>
+            <h1 class="pp-title">Payment PAY-@payment.Id</h1>
+            <p class="pp-subtitle">Provider references, transaction history and linked customer order. This is a read-only ledger view.</p>
+        </div>
+        <div class="pp-head-actions pp-no-print">
+            <a class="pp-btn" href="@Url.Action("Index", "Payments", new { area = "Admin" })"><i class="bi bi-arrow-left"></i> All payments</a>
+            <button class="pp-btn pp-btn-primary" type="button" onclick="window.print()"><i class="bi bi-printer"></i> Print record</button>
+        </div>
+    </header>
+
+    <div class="pp-highlight" style="margin-bottom:18px">
+        <div><div class="pp-h-label">Payment amount</div><div class="pp-h-value">@payment.Amount.ToString("N2") <span style="font-size:15px;font-weight:700;color:#bbb">@payment.Currency</span></div></div>
+        <div><div class="pp-h-label" style="margin-bottom:10px">Recorded status</div><span class="pp-badge @badge">@payment.Status</span></div>
+    </div>
+
+    <div class="pp-details-grid">
+        <main class="pp-stack">
+            <section class="pp-card">
+                <div class="pp-card-head"><div><h2 class="pp-card-title">Payment details</h2><p class="pp-card-desc">Gateway and internal identifiers recorded for this payment.</p></div><span class="pp-tx-label">READ ONLY</span></div>
+                <div class="pp-card-body pp-data-grid">
+                    <div><div class="pp-data-label">Payment ID</div><div class="pp-data-value">PAY-@payment.Id</div></div>
+                    <div><div class="pp-data-label">Method</div><div class="pp-data-value">@payment.Method</div></div>
+                    <div><div class="pp-data-label">Provider</div><div class="pp-data-value">@(string.IsNullOrWhiteSpace(payment.Provider) ? "Not recorded" : payment.Provider)</div></div>
+                    <div><div class="pp-data-label">Provider payment ID</div><div class="pp-data-value">@(string.IsNullOrWhiteSpace(payment.ProviderPaymentId) ? "—" : payment.ProviderPaymentId)</div></div>
+                    <div><div class="pp-data-label">Transaction reference</div><div class="pp-data-value">@(string.IsNullOrWhiteSpace(payment.TransactionReference) ? "—" : payment.TransactionReference)</div></div>
+                    <div><div class="pp-data-label">Currency</div><div class="pp-data-value">@payment.Currency</div></div>
+                    <div><div class="pp-data-label">Created</div><div class="pp-data-value">@payment.CreatedAt.ToString("dd MMM yyyy, hh:mm tt") UTC</div></div>
+                    <div><div class="pp-data-label">Reported paid at</div><div class="pp-data-value">@(payment.PaidAt?.ToString("dd MMM yyyy, hh:mm tt") ?? "—")</div></div>
+                    <div><div class="pp-data-label">Reported failed at</div><div class="pp-data-value">@(payment.FailedAt?.ToString("dd MMM yyyy, hh:mm tt") ?? "—")</div></div>
+                    <div><div class="pp-data-label">Transaction count</div><div class="pp-data-value">@transactions.Count</div></div>
+                </div>
+            </section>
+
+            <section class="pp-card">
+                <div class="pp-card-head"><div><h2 class="pp-card-title">Transaction history</h2><p class="pp-card-desc">Attempts, captures, refunds or provider events recorded by the backend.</p></div><span class="pp-muted">@transactions.Count entries</span></div>
+                @if (!transactions.Any())
+                {
+                    <div class="pp-empty"><i class="bi bi-clock-history"></i><strong>No transaction events yet</strong>A payment record can exist before a gateway event is stored.</div>
+                }
+                else
+                {
+                    <div class="pp-table-wrap"><table class="pp-table" style="min-width:720px"><thead><tr><th>Event</th><th>Status</th><th>Reference</th><th>Amount</th><th>Recorded</th></tr></thead><tbody>
+                    @foreach (var t in transactions)
+                    {
+                        var txState = (t.Status ?? "").ToLowerInvariant();
+                        var txBadge = txState switch
+                        {
+                            "pending" or "processing" => "pp-pending",
+                            "success" or "succeeded" or "completed" or "paid" => "pp-success",
+                            "failed" or "declined" => "pp-failed",
+                            "refunded" or "reversed" => "pp-reversed",
+                            _ => ""
+                        };
+                        <tr>
+                            <td><div class="pp-primary-text">@t.TransactionType</div><div class="pp-secondary-text">#@t.Id</div></td>
+                            <td><span class="pp-badge @txBadge">@t.Status</span></td>
+                            <td><div class="pp-primary-text">@(string.IsNullOrWhiteSpace(t.Reference) ? "—" : t.Reference)</div><div class="pp-secondary-text">@(string.IsNullOrWhiteSpace(t.ProviderTransactionId) ? "" : t.ProviderTransactionId)</div></td>
+                            <td><div class="pp-primary-text">@t.Amount.ToString("N2")</div><div class="pp-secondary-text">@payment.Currency</div></td>
+                            <td><div class="pp-primary-text">@t.CreatedAt.ToString("dd MMM yyyy")</div><div class="pp-secondary-text">@t.CreatedAt.ToString("HH:mm") UTC</div></td>
+                        </tr>
+                        @if (!string.IsNullOrWhiteSpace(t.FailureReason))
+                        {
+                            <tr><td colspan="5"><span class="pp-muted" style="color:#a54b40"><i class="bi bi-exclamation-triangle"></i> Failure reason: @t.FailureReason</span></td></tr>
+                        }
+                    }
+                    </tbody></table></div>
+                }
+            </section>
+
+            <div class="pp-note"><i class="bi bi-shield-check"></i> <strong>Payment integrity:</strong> recorded statuses do not necessarily mean funds have settled. Always reconcile payouts and refunds against your payment gateway and bank statements. This admin screen never changes financial records.</div>
+        </main>
+
+        <aside class="pp-stack">
+            <section class="pp-card">
+                <div class="pp-card-head"><div><h2 class="pp-card-title">Linked order</h2><p class="pp-card-desc">Customer and checkout reference.</p></div></div>
+                <div class="pp-card-body">
+                    <div class="pp-data-label">Order</div>
+                    <a class="pp-link" style="font-size:17px" href="@Url.Action("Details", "Orders", new { area = "Admin", id = payment.OrderId })">@payment.Order.OrderNumber <i class="bi bi-arrow-up-right"></i></a>
+                    <div class="pp-data-grid" style="margin-top:22px;grid-template-columns:1fr">
+                        <div><div class="pp-data-label">Customer</div><div class="pp-data-value">@payment.Order.CustomerName</div></div>
+                        <div><div class="pp-data-label">Email</div><div class="pp-data-value">@payment.Order.CustomerEmail</div></div>
+                        <div><div class="pp-data-label">Order status</div><div class="pp-data-value">@payment.Order.Status</div></div>
+                        <div><div class="pp-data-label">Order total</div><div class="pp-data-value">@payment.Order.TotalAmount.ToString("N2") @payment.Currency</div></div>
+                    </div>
+                    <a href="@Url.Action("Details", "Orders", new { area = "Admin", id = payment.OrderId })" class="pp-btn" style="width:100%;margin-top:22px"><i class="bi bi-bag"></i> Open order</a>
+                </div>
+            </section>
+
+            <section class="pp-card"><div class="pp-card-head"><h2 class="pp-card-title">Payment timeline</h2></div><div class="pp-card-body">
+                <ol class="pp-timeline">
+                    @foreach (var t in transactions)
+                    {
+                        <li class="pp-event"><div class="pp-event-name">@t.TransactionType — @t.Status</div><div class="pp-event-meta">@t.CreatedAt.ToString("dd MMM yyyy, hh:mm tt") UTC</div>
+                        @if (t.CompletedAt.HasValue) { <div class="pp-event-meta">Completed: @t.CompletedAt.Value.ToString("dd MMM yyyy, hh:mm tt") UTC</div> }
+                        @if (!string.IsNullOrWhiteSpace(t.FailureReason)) { <div class="pp-event-reason">@t.FailureReason</div> }
+                        </li>
+                    }
+                    <li class="pp-event"><div class="pp-event-name">Payment created</div><div class="pp-event-meta">@payment.CreatedAt.ToString("dd MMM yyyy, hh:mm tt") UTC</div></li>
+                </ol>
+            </div></section>
+
+            <a class="pp-btn pp-no-print" href="@Url.Action("Transactions", "Payments", new { area = "Admin" })"><i class="bi bi-journal-text"></i> View all transactions</a>
+        </aside>
+    </div>
+</div>

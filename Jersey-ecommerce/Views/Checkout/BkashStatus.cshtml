@@ -1,0 +1,20 @@
+@model Jersey_ecommerce.Controllers.BkashStatusModel
+@{ Layout = null; ViewData["Title"] = "bKash Payment | PANENKA"; }
+<!doctype html><html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>bKash Payment | PANENKA</title>
+<link rel="stylesheet" href="/css/panenka-checkout.css" />
+</head><body>
+@await Html.PartialAsync("_PanenkaCheckoutHeader")
+<main class="container intro" style="max-width:760px;min-height:58vh">
+<div class="kicker">PAYMENT STATUS</div><h1>Payment not yet confirmed.</h1>
+@if (!string.IsNullOrWhiteSpace(Model.Error)) { <div class="notice error" role="alert">@Model.Error</div> }
+<p class="lead">Order <strong>@Model.OrderNumber</strong> is saved. The bKash payment of
+<strong>৳@Model.Total.ToString("N2")</strong> is not currently verified as paid.</p>
+<p class="hint">If you already paid, check the bKash transaction first. Do not pay again until you have checked the current status.</p>
+<a class="primary" style="display:inline-flex;gap:14px" href="/Checkout/Bkash/Verify/@Model.OrderId">CHECK PAYMENT STATUS →</a>
+<p><a class="back" href="/Checkout/Bkash/Start/@Model.OrderId">Return to current bKash checkout (if still available)</a></p>
+<p><a class="back" href="/MyOrders">View my orders</a></p>
+</main>
+@await Html.PartialAsync("_PanenkaCheckoutFooter")
+</body></html>

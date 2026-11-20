@@ -1,0 +1,1004 @@
+﻿@model Jersey_ecommerce.Areas.Admin.ViewModels.CategoryFormViewModel
+
+@{
+    ViewData["Title"] = "Create Category";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<style>
+    .cat-page {
+        max-width: 1120px;
+        margin: 0 auto;
+        color: #181818;
+        font-size: 13px;
+    }
+
+        .cat-page * {
+            box-sizing: border-box;
+        }
+
+    .cat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 26px;
+    }
+
+    .cat-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 12px;
+        color: #888;
+        font-size: 11px;
+    }
+
+        .cat-breadcrumb a {
+            color: #666;
+            text-decoration: none;
+        }
+
+    .cat-title {
+        margin: 0;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -1px;
+    }
+
+    .cat-subtitle {
+        margin: 8px 0 0;
+        color: #777;
+        line-height: 1.7;
+    }
+
+    .cat-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        min-height: 44px;
+        padding: 0 18px;
+        border: 1px solid #dedede;
+        background: #fff;
+        color: #222;
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+        .cat-button:hover {
+            background: #f4f4f4;
+        }
+
+    .cat-button-primary {
+        background: #111;
+        border-color: #111;
+        color: white;
+    }
+
+        .cat-button-primary:hover {
+            background: #333;
+            color: white;
+        }
+
+    .cat-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 300px;
+        gap: 20px;
+        align-items: start;
+    }
+
+    .cat-main,
+    .cat-side {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        min-width: 0;
+    }
+
+    .cat-card {
+        background: white;
+        border: 1px solid #e8e8e8;
+        min-width: 0;
+    }
+
+    .cat-card-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 20px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .cat-step {
+        flex-shrink: 0;
+        width: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f2f2f2;
+        font-weight: 800;
+    }
+
+    .cat-card-title {
+        margin: 0 0 4px;
+        font-size: 14px;
+        font-weight: 800;
+    }
+
+    .cat-card-subtitle {
+        margin: 0;
+        color: #888;
+        font-size: 11px;
+        line-height: 1.6;
+    }
+
+    .cat-body {
+        padding: 21px;
+    }
+
+    .cat-field {
+        margin-bottom: 20px;
+    }
+
+        .cat-field:last-child {
+            margin-bottom: 0;
+        }
+
+    .cat-label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #333;
+    }
+
+    .cat-required {
+        color: #c0392b;
+    }
+
+    .cat-input,
+    .cat-textarea {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 0;
+        background: white;
+        color: #171717;
+        font-family: inherit;
+        font-size: 12px;
+        outline: none;
+    }
+
+    .cat-input {
+        min-height: 44px;
+    }
+
+        .cat-input:focus,
+        .cat-textarea:focus {
+            border-color: #555;
+        }
+
+    .cat-textarea {
+        min-height: 130px;
+        resize: vertical;
+        line-height: 1.7;
+    }
+
+    .cat-hint {
+        margin-top: 8px;
+        color: #888;
+        font-size: 10px;
+        line-height: 1.7;
+    }
+
+    .cat-error {
+        display: block;
+        margin-top: 6px;
+        color: #b42318;
+        font-size: 11px;
+    }
+
+    .cat-validation {
+        margin-bottom: 20px;
+        padding: 15px 18px;
+        background: #fff5f4;
+        border: 1px solid #f0ceca;
+        color: #b42318;
+        font-size: 12px;
+    }
+
+        .cat-validation.validation-summary-valid {
+            display: none;
+        }
+
+        .cat-validation ul {
+            margin: 8px 0 0;
+            padding-left: 18px;
+        }
+
+    .cat-file {
+        width: 100%;
+        padding: 12px;
+        border: 1px dashed #ccc;
+        background: #fafafa;
+        color: #444;
+        font-size: 11px;
+    }
+
+        .cat-file::file-selector-button {
+            margin-right: 10px;
+            padding: 8px 10px;
+            background: white;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+    .cat-preview {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        border: 1px solid #eee;
+        background: #f5f5f3;
+    }
+
+        .cat-preview img {
+            display: none;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+    .cat-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 20px;
+        color: #999;
+        text-align: center;
+    }
+
+        .cat-placeholder i {
+            font-size: 34px;
+        }
+
+        .cat-placeholder strong {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .cat-placeholder span {
+            font-size: 10px;
+            line-height: 1.7;
+        }
+
+    .cat-switch-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /*
+           NATIVE HTML CHECKBOX
+
+           This is a real checkbox, not a hidden
+           one controlled by JavaScript.
+        */
+    .cat-switch {
+        appearance: none;
+        -webkit-appearance: none;
+        position: relative;
+        display: inline-block;
+        flex-shrink: 0;
+        width: 44px;
+        height: 25px;
+        margin: 0;
+        border: 1px solid #ccc;
+        border-radius: 30px;
+        background: #d5d5d5;
+        cursor: pointer;
+        transition: background .2s;
+        vertical-align: middle;
+    }
+
+        .cat-switch::before {
+            content: "";
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 17px;
+            height: 17px;
+            background: white;
+            border-radius: 50%;
+            transition: transform .2s;
+        }
+
+        .cat-switch:checked {
+            background: #111;
+            border-color: #111;
+        }
+
+            .cat-switch:checked::before {
+                transform: translateX(19px);
+            }
+
+        .cat-switch:focus-visible {
+            outline: 2px solid #555;
+            outline-offset: 3px;
+        }
+
+    .cat-divider {
+        height: 1px;
+        margin: 18px 0;
+        background: #eee;
+    }
+
+    .cat-status {
+        color: #777;
+        font-size: 11px;
+    }
+
+    .cat-save {
+        padding: 20px;
+        border: 1px solid #e8e8e8;
+        background: white;
+    }
+
+        .cat-save h3 {
+            margin: 0 0 8px;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .cat-save p {
+            margin: 0 0 16px;
+            font-size: 11px;
+            color: #888;
+            line-height: 1.7;
+        }
+
+    .cat-actions {
+        display: grid;
+        gap: 10px;
+    }
+
+        .cat-actions .cat-button {
+            width: 100%;
+        }
+
+    .cat-tip {
+        padding: 15px;
+        border: 1px solid #eee;
+        background: #fafafa;
+        font-size: 11px;
+        color: #777;
+        line-height: 1.8;
+    }
+
+        .cat-tip strong {
+            color: #333;
+        }
+
+    @@media (max-width: 760px) {
+        .cat-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 500px) {
+        .cat-title {
+            font-size: 26px;
+        }
+
+        .cat-card-head,
+        .cat-body {
+            padding: 16px;
+        }
+
+        .cat-header > .cat-button {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="cat-page">
+
+    <!-- HEADER -->
+    <header class="cat-header">
+        <div>
+            <div class="cat-breadcrumb">
+
+                <a href="/admin/dashboard">
+                    Dashboard
+                </a>
+
+                <i class="bi bi-chevron-right"></i>
+
+                <a href="/admin/categories">
+                    Categories
+                </a>
+
+                <i class="bi bi-chevron-right"></i>
+
+                <span>Create</span>
+            </div>
+
+            <h1 class="cat-title">
+                Create category
+            </h1>
+
+            <p class="cat-subtitle">
+                Create a new category for your
+                PANENKA jersey storefront.
+            </p>
+        </div>
+
+        <a href="/admin/categories"
+           class="cat-button">
+            <i class="bi bi-arrow-left"></i>
+            Back to categories
+        </a>
+    </header>
+
+
+    <!--
+        IMPORTANT:
+        Native HTML form.
+
+        No asp-action / asp-controller Tag Helpers.
+        No JavaScript submit handler.
+    -->
+    <form action="@Url.Action("Create", "Categories", new { area = "Admin" })"
+          method="post"
+          enctype="multipart/form-data"
+          id="createCategoryForm"
+          novalidate>
+
+        @Html.AntiForgeryToken()
+
+        @Html.ValidationSummary(
+            false,
+            "Please fix the following errors:",
+            new { @class = "cat-validation" })
+
+        <div class="cat-grid">
+
+            <!-- LEFT COLUMN -->
+            <div class="cat-main">
+
+                <!-- CATEGORY INFORMATION -->
+                <section class="cat-card">
+
+                    <div class="cat-card-head">
+
+                        <div class="cat-step">01</div>
+
+                        <div>
+                            <h2 class="cat-card-title">
+                                Category information
+                            </h2>
+
+                            <p class="cat-card-subtitle">
+                                Name, URL and description.
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div class="cat-body">
+
+                        <!-- NAME -->
+                        <div class="cat-field">
+
+                            <label for="Name"
+                                   class="cat-label">
+                                Category name
+                                <span class="cat-required">*</span>
+                            </label>
+
+                            <input type="text"
+                                   name="Name"
+                                   id="Name"
+                                   value="@Model.Name"
+                                   class="cat-input"
+                                   maxlength="100"
+                                   placeholder="e.g. Home Jerseys" />
+
+                            @Html.ValidationMessage(
+                                "Name",
+                                "",
+                                new { @class = "cat-error" })
+
+                            <div class="cat-hint">
+                                Example: Home Jerseys,
+                                Away Jerseys, Retro Jerseys.
+                            </div>
+
+                        </div>
+
+                        <!-- SLUG -->
+                        <div class="cat-field">
+
+                            <label for="Slug"
+                                   class="cat-label">
+                                URL slug
+                            </label>
+
+                            <input type="text"
+                                   name="Slug"
+                                   id="Slug"
+                                   value="@Model.Slug"
+                                   class="cat-input"
+                                   maxlength="120"
+                                   placeholder="home-jerseys" />
+
+                            @Html.ValidationMessage(
+                                "Slug",
+                                "",
+                                new { @class = "cat-error" })
+
+                            <div class="cat-hint">
+                                Automatically generated from the
+                                category name. You may edit it.
+                            </div>
+
+                            <div class="cat-hint"
+                                 id="slugPreview"></div>
+
+                        </div>
+
+                        <!-- DESCRIPTION -->
+                        <div class="cat-field">
+
+                            <label for="Description"
+                                   class="cat-label">
+                                Description
+                            </label>
+
+                            <textarea name="Description"
+                                      id="Description"
+                                      class="cat-textarea"
+                                      maxlength="500"
+                                      placeholder="Describe this category...">@Model.Description</textarea>
+
+                            @Html.ValidationMessage(
+                                "Description",
+                                "",
+                                new { @class = "cat-error" })
+
+                            <div class="cat-hint">
+                                Optional. Maximum 500 characters.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- CATEGORY IMAGE -->
+                <section class="cat-card">
+
+                    <div class="cat-card-head">
+
+                        <div class="cat-step">02</div>
+
+                        <div>
+                            <h2 class="cat-card-title">
+                                Category image
+                            </h2>
+
+                            <p class="cat-card-subtitle">
+                                Upload an image for the category.
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div class="cat-body">
+
+                        <div class="cat-field">
+
+                            <label for="ImageFile"
+                                   class="cat-label">
+                                Upload image
+                                <span class="cat-required">*</span>
+                            </label>
+
+                            <!--
+                                Name MUST be ImageFile
+                                because the ViewModel property
+                                is named ImageFile.
+                            -->
+                            <input type="file"
+                                   name="ImageFile"
+                                   id="ImageFile"
+                                   class="cat-file"
+                                   accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
+
+                            @Html.ValidationMessage(
+                                "ImageFile",
+                                "",
+                                new { @class = "cat-error" })
+
+                            <div class="cat-hint">
+                                JPG, PNG, WEBP.
+                                Maximum file size: 5 MB.
+                            </div>
+
+                        </div>
+
+                        <div class="cat-preview">
+
+                            <img id="imagePreview"
+                                 alt="Selected category image" />
+
+                            <div class="cat-placeholder"
+                                 id="imagePlaceholder">
+
+                                <i class="bi bi-image"></i>
+
+                                <strong>No image selected</strong>
+
+                                <span>
+                                    Choose an image to see
+                                    its preview.
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="cat-hint"
+                             id="imageStatus"></div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+
+            <!-- RIGHT COLUMN -->
+            <aside class="cat-side">
+
+                <!-- ACTIVE / INACTIVE -->
+                <section class="cat-card">
+
+                    <div class="cat-card-head">
+
+                        <div>
+                            <h2 class="cat-card-title">
+                                Publishing
+                            </h2>
+
+                            <p class="cat-card-subtitle">
+                                Storefront visibility.
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div class="cat-body">
+
+                        <div class="cat-switch-row">
+
+                            <div>
+                                <label for="IsActive"
+                                       class="cat-label">
+                                    Active category
+                                </label>
+
+                                <p class="cat-card-subtitle">
+                                    Show this category
+                                    to shoppers.
+                                </p>
+                            </div>
+
+                            <!--
+                                This is a real checkbox.
+                                Works without JavaScript.
+                            -->
+                            <input type="checkbox"
+                                   name="IsActive"
+                                   id="IsActive"
+                                   value="true"
+                                   class="cat-switch"
+                                   checked="@(Model.IsActive ? "checked" : null)" />
+
+                            <!--
+                                Sends false when unchecked.
+                                ASP.NET model binder takes
+                                the first value when checked.
+                            -->
+                            <input type="hidden"
+                                   name="IsActive"
+                                   value="false" />
+
+                        </div>
+
+                        <div class="cat-divider"></div>
+
+                        <div id="statusPreview"
+                             class="cat-status">
+                            @(Model.IsActive ? "Status: Active" : "Status: Inactive")
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- DISPLAY ORDER -->
+                <section class="cat-card">
+
+                    <div class="cat-card-head">
+
+                        <div class="cat-step">03</div>
+
+                        <div>
+                            <h2 class="cat-card-title">
+                                Organization
+                            </h2>
+
+                            <p class="cat-card-subtitle">
+                                Category position.
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div class="cat-body">
+
+                        <div class="cat-field">
+
+                            <label for="DisplayOrder"
+                                   class="cat-label">
+                                Display order
+                            </label>
+
+                            <input type="number"
+                                   name="DisplayOrder"
+                                   id="DisplayOrder"
+                                   value="@Model.DisplayOrder"
+                                   min="0"
+                                   class="cat-input" />
+
+                            @Html.ValidationMessage(
+                                "DisplayOrder",
+                                "",
+                                new { @class = "cat-error" })
+
+                            <div class="cat-hint">
+                                Lower numbers appear first.
+                                Default: 0.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- HELP -->
+                <section class="cat-tip">
+
+                    <strong>
+                        <i class="bi bi-lightbulb"></i>
+                        Category tips
+                    </strong>
+
+                    <div>
+                        Use descriptive categories such as
+                        Home Jerseys, Away Jerseys,
+                        Training Kits or Retro Jerseys.
+                    </div>
+
+                </section>
+
+
+                <!-- ACTIONS -->
+                <section class="cat-save">
+
+                    <h3>Create category</h3>
+
+                    <p>
+                        Save your new category
+                        to the product catalog.
+                    </p>
+
+                    <div class="cat-actions">
+
+                        <!--
+                            Native submit button.
+                            No JS can disable it.
+                        -->
+                        <button type="submit"
+                                class="cat-button cat-button-primary"
+                                id="createButton">
+
+                            <i class="bi bi-plus-lg"></i>
+                            Create category
+
+                        </button>
+
+                        <a href="/admin/categories"
+                           class="cat-button">
+                            Cancel
+                        </a>
+
+                    </div>
+
+                </section>
+
+            </aside>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<script>
+    (() => {
+
+        /*
+           Only visual features:
+           - Slug generation
+           - Image preview
+           - Active status text
+
+           NO SUBMIT EVENT.
+           NO preventDefault().
+           NO button disabling.
+        */
+
+        const nameInput =
+            document.getElementById('Name');
+
+        const slugInput =
+            document.getElementById('Slug');
+
+        const slugPreview =
+            document.getElementById('slugPreview');
+
+        const imageInput =
+            document.getElementById('ImageFile');
+
+        const imagePreview =
+            document.getElementById('imagePreview');
+
+        const imagePlaceholder =
+            document.getElementById('imagePlaceholder');
+
+        const imageStatus =
+            document.getElementById('imageStatus');
+
+        const activeInput =
+            document.getElementById('IsActive');
+
+        const statusPreview =
+            document.getElementById('statusPreview');
+
+
+        // SLUG GENERATION
+        let manuallyEdited =
+            slugInput.value.trim().length > 0;
+
+        function generateSlug(value) {
+            return value
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .substring(0, 120)
+                .replace(/-+$/g, '');
+        }
+
+        function updateSlugPreview() {
+
+            const value = slugInput.value.trim();
+
+            slugPreview.textContent = value
+                ? 'Preview: /category/' + value
+                : 'Preview: Enter a category name';
+        }
+
+        nameInput.addEventListener('input', () => {
+
+            if (!manuallyEdited) {
+                slugInput.value =
+                    generateSlug(nameInput.value);
+            }
+
+            updateSlugPreview();
+        });
+
+        slugInput.addEventListener('input', () => {
+
+            manuallyEdited =
+                slugInput.value.trim().length > 0;
+
+            updateSlugPreview();
+        });
+
+        updateSlugPreview();
+
+
+        // ACTIVE / INACTIVE
+        function updateStatus() {
+
+            statusPreview.textContent =
+                activeInput.checked
+                    ? 'Status: Active'
+                    : 'Status: Inactive';
+        }
+
+        activeInput.addEventListener(
+            'change',
+            updateStatus
+        );
+
+        updateStatus();
+
+
+        // IMAGE PREVIEW
+        let currentPreviewUrl = null;
+
+        imageInput.addEventListener('change', () => {
+
+            const selected =
+                imageInput.files?.[0];
+
+            if (currentPreviewUrl) {
+                URL.revokeObjectURL(currentPreviewUrl);
+                currentPreviewUrl = null;
+            }
+
+            if (!selected) {
+
+                imagePreview.style.display = 'none';
+                imagePreview.removeAttribute('src');
+
+                imagePlaceholder.style.display = 'flex';
+                imageStatus.textContent = '';
+
+                return;
+            }
+
+            currentPreviewUrl =
+                URL.createObjectURL(selected);
+
+            imagePreview.onload = () => {
+
+                imagePreview.style.display = 'block';
+                imagePlaceholder.style.display = 'none';
+            };
+
+            imagePreview.onerror = () => {
+
+                imagePreview.style.display = 'none';
+                imagePlaceholder.style.display = 'flex';
+            };
+
+            imagePreview.src = currentPreviewUrl;
+
+            imageStatus.textContent =
+                'Selected: ' + selected.name;
+        });
+
+    })();
+</script>

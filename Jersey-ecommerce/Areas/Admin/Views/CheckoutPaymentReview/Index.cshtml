@@ -1,0 +1,15 @@
+@model IEnumerable<Jersey_ecommerce.Models.Orders.Payment>
+@{ Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Manual Payment Review"; }
+<div style="padding:25px;max-width:1180px;margin:auto">
+<h1>Manual advance payments</h1><p>Verify payment outside this website before confirming. A customer's transaction reference is not proof of payment.</p>
+@if (TempData["Error"] is string error) { <p style="color:#b91c1c">@error</p> }
+@if (TempData["Success"] is string success) { <p>@success</p> }
+<table style="width:100%;border-collapse:collapse"><thead><tr><th>Order</th><th>Customer</th><th>Reference</th><th>Amount</th><th>Review</th></tr></thead><tbody>
+@foreach(var payment in Model){<tr style="border-bottom:1px solid #ddd">
+<td>@payment.Order.OrderNumber</td><td>@payment.Order.CustomerName</td><td>@payment.TransactionReference</td><td>৳@payment.Amount.ToString("N2")</td>
+<td><form method="post" action="/Admin/CheckoutPaymentReview/Confirm/@payment.Id">@Html.AntiForgeryToken()
+<input name="verificationNote" maxlength="160" required minlength="10" placeholder="External verification details" style="padding:9px;min-width:230px" />
+<button type="submit" onclick="return confirm('Payment independently verified?')">Mark paid</button></form></td></tr>}
+</tbody></table>
+@if (!Model.Any()) { <p>No advance payments pending verification.</p> }
+</div>

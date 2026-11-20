@@ -1,0 +1,349 @@
+﻿@model Jersey_ecommerce.Areas.Admin.ViewModels.CustomersIndexViewModel
+
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Customers";
+
+    var createUrl = Url.Content("~/Admin/Customers/Create");
+    var indexUrl = Url.Content("~/Admin/Customers");
+    var currentStatus = Model.Status ?? "all";
+}
+
+<link rel="stylesheet"
+      href="@Url.Content("~/css/admin-customers.css")" />
+
+<div class="customers-page">
+
+    <!-- PAGE HEADER -->
+    <div class="customers-heading">
+        <div>
+            <span class="customers-eyebrow">
+                ADMIN / CUSTOMER MANAGEMENT
+            </span>
+
+            <h2>
+                Customers<span class="customers-dot">.</span>
+            </h2>
+
+            <p>
+                Manage customer accounts, view shopping activity,
+                and control account access.
+            </p>
+        </div>
+
+        <a href="@createUrl"
+           class="customers-btn customers-btn-dark">
+            <i class="bi bi-person-plus"></i>
+            Add Customer
+        </a>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="customers-alert customers-alert-success"
+             role="status">
+            <i class="bi bi-check-circle"></i>
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="customers-alert customers-alert-error"
+             role="alert">
+            <i class="bi bi-exclamation-circle"></i>
+            @TempData["Error"]
+        </div>
+    }
+
+    <!-- STATISTICS -->
+    <div class="customers-stats">
+
+        <div class="customers-stat">
+            <small>TOTAL CUSTOMERS</small>
+
+            <strong>@Model.TotalCustomers</strong>
+
+            <span>Registered shoppers</span>
+        </div>
+
+        <div class="customers-stat">
+            <small>ACTIVE ACCOUNTS</small>
+
+            <strong>@Model.ActiveCustomers</strong>
+
+            <span>Allowed to sign in</span>
+        </div>
+
+        <div class="customers-stat">
+            <small>INACTIVE ACCOUNTS</small>
+
+            <strong>@Model.InactiveCustomers</strong>
+
+            <span>Access suspended</span>
+        </div>
+
+    </div>
+
+    <!-- CUSTOMER MANAGEMENT -->
+    <section class="customers-panel customers-list-panel">
+
+        <!-- SEARCH & FILTER -->
+        <form action="@indexUrl"
+              method="get"
+              class="customers-filter">
+
+            <input type="text"
+                   name="search"
+                   value="@Model.Search"
+                   class="customers-input"
+                   placeholder="Search by name, email or phone..." />
+
+            <select name="status" class="customers-input">
+
+                <option value="all"
+                        selected="@(currentStatus == "all")">
+                    All Accounts
+                </option>
+
+                <option value="active"
+                        selected="@(currentStatus == "active")">
+                    Active
+                </option>
+
+                <option value="inactive"
+                        selected="@(currentStatus == "inactive")">
+                    Inactive
+                </option>
+
+            </select>
+
+            <button type="submit"
+                    class="customers-btn customers-btn-dark">
+                <i class="bi bi-search"></i>
+                Search
+            </button>
+
+            <a href="@indexUrl"
+               class="customers-btn customers-btn-light">
+                Clear
+            </a>
+
+        </form>
+
+        <!-- CUSTOMER TABLE -->
+        <div class="customers-table-scroll">
+
+            <table class="customers-table">
+
+                <thead>
+                    <tr>
+                        <th>CUSTOMER</th>
+                        <th>CONTACT</th>
+                        <th>ORDERS</th>
+                        <th>TOTAL SPENT</th>
+                        <th>STATUS</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @if (Model.Customers == null ||
+                         !Model.Customers.Any())
+                    {
+                        <tr>
+                            <td colspan="6"
+                                class="customers-empty">
+
+                                <div style="padding:35px 15px; text-align:center;">
+
+                                    <i class="bi bi-people"
+                                       style="font-size:36px;"></i>
+
+                                    <h4 style="margin-top:15px;">
+                                        No Customers Found
+                                    </h4>
+
+                                    <p>
+                                        No customer accounts match your search.
+                                    </p>
+
+                                    <a href="@createUrl"
+                                       class="customers-btn customers-btn-dark">
+                                        <i class="bi bi-person-plus"></i>
+                                        Create First Customer
+                                    </a>
+
+                                </div>
+
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var customer in Model.Customers)
+                        {
+                            var detailsUrl = Url.Action(
+                                "Details",
+                                "Customers",
+                                new
+                                {
+                                    area = "Admin",
+                                    id = customer.Id
+                                });
+
+                            var editUrl = Url.Action(
+                                "Edit",
+                                "Customers",
+                                new
+                                {
+                                    area = "Admin",
+                                    id = customer.Id
+                                });
+
+                            <tr>
+
+                                <!-- CUSTOMER -->
+                                <td>
+                                    <div class="customers-avatar-line">
+
+                                        <span class="customers-avatar">
+                                            @(string.IsNullOrWhiteSpace(customer.FullName)
+                                                ? "?"
+                                                : customer.FullName.Substring(0, 1).ToUpperInvariant())
+                                        </span>
+
+                                        <div>
+                                            <strong>
+                                                @customer.FullName
+                                            </strong>
+
+                                            <small>
+                                                Joined @customer.CreatedAt.ToString("dd MMM yyyy")
+                                            </small>
+                                        </div>
+
+                                    </div>
+                                </td>
+
+                                <!-- CONTACT -->
+                                <td>
+                                    <strong>
+                                        @customer.Email
+                                    </strong>
+
+                                    <small>
+                                        @(customer.PhoneNumber ?? "No phone number")
+                                    </small>
+                                </td>
+
+                                <!-- ORDERS -->
+                                <td>
+                                    @customer.OrderCount
+                                </td>
+
+                                <!-- SPENT -->
+                                <td>
+                                    ৳@customer.TotalSpent.ToString("N2")
+                                </td>
+
+                                <!-- STATUS -->
+                                <td>
+                                    <span class="customers-pill @(customer.IsActive ? "on" : "off")">
+                                        @(customer.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+
+                                <!-- ACTIONS -->
+                                <td>
+                                    <div style="display:flex; align-items:center; gap:14px;">
+
+                                        <a href="@detailsUrl"
+                                           class="customers-link"
+                                           title="View Customer">
+                                            <i class="bi bi-eye"></i>
+                                            View
+                                        </a>
+
+                                        <a href="@editUrl"
+                                           class="customers-link"
+                                           title="Edit Customer">
+                                            <i class="bi bi-pencil-square"></i>
+                                            Edit
+                                        </a>
+
+                                    </div>
+                                </td>
+
+                            </tr>
+                        }
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <!-- PAGINATION -->
+        @if (Model.TotalPages > 1)
+        {
+            <div class="customers-pagination">
+
+                <span>
+                    Page @Model.Page of @Model.TotalPages
+                    · @Model.TotalFiltered results
+                </span>
+
+                <div style="display:flex; gap:8px;">
+
+                    @if (Model.Page > 1)
+                    {
+                        var previousUrl = Url.Action(
+                            "Index",
+                            "Customers",
+                            new
+                            {
+                                area = "Admin",
+                                page = Model.Page - 1,
+                                search = Model.Search,
+                                status = currentStatus
+                            });
+
+                        <a href="@previousUrl"
+                           class="customers-btn customers-btn-light">
+                            <i class="bi bi-chevron-left"></i>
+                            Previous
+                        </a>
+                    }
+
+                    @if (Model.Page < Model.TotalPages)
+                    {
+                        var nextUrl = Url.Action(
+                            "Index",
+                            "Customers",
+                            new
+                            {
+                                area = "Admin",
+                                page = Model.Page + 1,
+                                search = Model.Search,
+                                status = currentStatus
+                            });
+
+                        <a href="@nextUrl"
+                           class="customers-btn customers-btn-light">
+                            Next
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    }
+
+                </div>
+
+            </div>
+        }
+
+    </section>
+
+</div>

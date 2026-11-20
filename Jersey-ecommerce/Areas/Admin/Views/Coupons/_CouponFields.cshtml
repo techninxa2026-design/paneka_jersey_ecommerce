@@ -1,0 +1,56 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.CouponFormViewModel
+
+<div asp-validation-summary="All" class="cp-validation"></div>
+<div class="cp-form-grid">
+    <section class="cp-panel cp-form-main">
+        <div class="cp-panel-heading"><div><h2>Coupon details</h2><p>Set the code customers enter at checkout.</p></div><span class="cp-step">01</span></div>
+        <div class="cp-fields">
+            <div class="cp-field"><label asp-for="Code">Coupon code <span>*</span></label><input asp-for="Code" class="cp-input cp-uppercase" placeholder="EXAMPLE: SAVE20" maxlength="50" autocomplete="off" /><span asp-validation-for="Code" class="cp-error"></span><small>3–50 characters. Letters, numbers, - and _ only.</small></div>
+            <div class="cp-field"><label asp-for="Description">Description</label><textarea asp-for="Description" class="cp-input" rows="3" placeholder="Example: Special discount for returning customers" maxlength="500"></textarea><span asp-validation-for="Description" class="cp-error"></span></div>
+        </div>
+        <div class="cp-section-divider"></div>
+        <div class="cp-panel-heading cp-subhead"><div><h2>Discount settings</h2><p>Choose how the promotion reduces the cart total.</p></div><span class="cp-step">02</span></div>
+        <div class="cp-fields">
+            <div class="cp-two-col">
+                <div class="cp-field"><label asp-for="DiscountType">Discount type <span>*</span></label><select asp-for="DiscountType" class="cp-input" id="couponDiscountType"><option value="Percentage">Percentage (%)</option><option value="Fixed">Fixed amount (৳)</option></select><span asp-validation-for="DiscountType" class="cp-error"></span></div>
+                <div class="cp-field"><label asp-for="DiscountValue">Discount value <span>*</span></label><input asp-for="DiscountValue" class="cp-input" type="number" min="0.01" step="0.01" placeholder="10" /><span asp-validation-for="DiscountValue" class="cp-error"></span></div>
+            </div>
+            <div class="cp-two-col">
+                <div class="cp-field"><label asp-for="MinimumOrderAmount">Minimum order amount (৳)</label><input asp-for="MinimumOrderAmount" class="cp-input" type="number" min="0" step="0.01" /><span asp-validation-for="MinimumOrderAmount" class="cp-error"></span><small>0 = no minimum order amount.</small></div>
+                <div class="cp-field" id="couponMaxDiscountField"><label asp-for="MaximumDiscountAmount">Maximum discount (৳)</label><input asp-for="MaximumDiscountAmount" class="cp-input" type="number" min="0.01" step="0.01" placeholder="Optional" /><span asp-validation-for="MaximumDiscountAmount" class="cp-error"></span><small>Cap for percentage discounts; leave empty for none.</small></div>
+            </div>
+        </div>
+    </section>
+
+    <aside class="cp-form-sidebar">
+        <section class="cp-panel"><div class="cp-panel-heading"><div><h2>Availability</h2><p>Define when this code works.</p></div><span class="cp-step">03</span></div>
+            <div class="cp-fields">
+                <div class="cp-field"><label asp-for="StartsAt">Start time (UTC)</label><input asp-for="StartsAt" asp-format="{0:yyyy-MM-ddTHH:mm}" class="cp-input" type="datetime-local" /><span asp-validation-for="StartsAt" class="cp-error"></span><small>Leave blank to start immediately.</small></div>
+                <div class="cp-field"><label asp-for="ExpiresAt">Expiry time (UTC)</label><input asp-for="ExpiresAt" asp-format="{0:yyyy-MM-ddTHH:mm}" class="cp-input" type="datetime-local" /><span asp-validation-for="ExpiresAt" class="cp-error"></span><small>Leave blank to run indefinitely.</small></div>
+            </div>
+        </section>
+        <section class="cp-panel"><div class="cp-panel-heading"><div><h2>Usage limits</h2><p>Optional redemption restrictions.</p></div><span class="cp-step">04</span></div>
+            <div class="cp-fields">
+                <div class="cp-field"><label asp-for="UsageLimit">Total uses</label><input asp-for="UsageLimit" class="cp-input" type="number" min="1" step="1" placeholder="Unlimited" /><span asp-validation-for="UsageLimit" class="cp-error"></span><small>Maximum times this code can be used overall.</small></div>
+                <div class="cp-field"><label asp-for="UsageLimitPerUser">Uses per customer</label><input asp-for="UsageLimitPerUser" class="cp-input" type="number" min="1" step="1" placeholder="Unlimited" /><span asp-validation-for="UsageLimitPerUser" class="cp-error"></span><small>Requires enforcing limits at checkout.</small></div>
+            </div>
+        </section>
+        <section class="cp-panel cp-visibility"><div><strong>Enable coupon</strong><span>Customers can use it when all other conditions are met.</span></div><label class="cp-toggle"><input asp-for="IsActive" type="checkbox" /><span class="cp-toggle-slider"></span></label></section>
+    </aside>
+</div>
+
+<script>
+(function () {
+    const type = document.getElementById('couponDiscountType');
+    const maxField = document.getElementById('couponMaxDiscountField');
+    const maxInput = document.getElementById('MaximumDiscountAmount');
+    function updateType() {
+        const fixed = type && type.value === 'Fixed';
+        if (maxField) maxField.style.display = fixed ? 'none' : '';
+        if (fixed && maxInput) maxInput.value = '';
+    }
+    if (type) { type.addEventListener('change', updateType); updateType(); }
+    const code = document.getElementById('Code');
+    if (code) code.addEventListener('input', () => { code.value = code.value.toUpperCase(); });
+})();
+</script>

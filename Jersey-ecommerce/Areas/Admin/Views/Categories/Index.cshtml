@@ -1,0 +1,434 @@
+﻿@model IEnumerable<Jersey_ecommerce.Models.Catalog.Category>
+
+@{
+    ViewData["Title"] = "Categories";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+
+    var categories = Model?.ToList()
+        ?? new List<Jersey_ecommerce.Models.Catalog.Category>();
+
+    var search = ViewData["Search"]?.ToString() ?? "";
+}
+
+<style>
+    .cat-page {
+        color: #171717;
+    }
+
+    .cat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .cat-muted {
+        color: #777;
+        font-size: 13px;
+    }
+
+    .cat-btn, .cat-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: #fff;
+        color: #171717;
+        text-decoration: none;
+        cursor: pointer;
+        font: inherit;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .cat-btn-dark {
+        background: #171717;
+        color: #fff;
+        border-color: #171717;
+    }
+
+        .cat-btn-dark:hover {
+            background: #333;
+            color: #fff;
+        }
+
+    .cat-card {
+        background: #fff;
+        border: 1px solid #e8e8e8;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .cat-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 18px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .cat-search {
+        display: flex;
+        gap: 8px;
+        width: min(100%, 430px);
+    }
+
+        .cat-search input {
+            min-width: 0;
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+    .cat-table-wrap {
+        overflow-x: auto;
+    }
+
+    .cat-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .cat-table th {
+            background: #fafafa;
+            color: #777;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            white-space: nowrap;
+        }
+
+        .cat-table th, .cat-table td {
+            padding: 15px 18px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .cat-table td {
+            font-size: 13px;
+        }
+
+    .cat-name {
+        font-weight: 600;
+    }
+
+    .cat-slug {
+        color: #777;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+
+    .cat-thumb {
+        width: 44px;
+        height: 44px;
+        object-fit: cover;
+        border: 1px solid #eee;
+        border-radius: 7px;
+        flex-shrink: 0;
+    }
+
+    .cat-status {
+        display: inline-block;
+        padding: 5px 9px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .cat-active {
+        background: #e9f7ef;
+        color: #197443;
+    }
+
+    .cat-inactive {
+        background: #f1f1f1;
+        color: #666;
+    }
+
+    .cat-actions {
+        display: flex;
+        gap: 7px;
+        align-items: center;
+    }
+
+    .cat-action {
+        padding: 7px 10px;
+    }
+
+    .cat-delete {
+        color: #b42318;
+    }
+
+        .cat-delete:hover {
+            background: #fff0ef;
+        }
+
+    .cat-actions form {
+        margin: 0;
+    }
+
+    .category-alert {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 15px 17px;
+        margin-bottom: 22px;
+        border: 1px solid;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .category-alert-success {
+        background: #f0faf3;
+        border-color: #b8e4c4;
+        color: #176534;
+    }
+
+    .category-alert-error {
+        background: #fff4f2;
+        border-color: #f0c5bf;
+        color: #a52b21;
+    }
+
+    .category-alert span {
+        flex: 1;
+        line-height: 1.6;
+    }
+
+    .category-alert-close {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font-size: 22px;
+        cursor: pointer;
+    }
+
+    .cat-alert {
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 14px;
+        font-size: 13px;
+    }
+
+    .cat-success {
+        background: #e9f7ef;
+        color: #197443;
+    }
+
+    .cat-error {
+        background: #fff0ef;
+        color: #b42318;
+    }
+
+    .cat-empty {
+        text-align: center !important;
+        padding: 45px !important;
+        color: #777;
+    }
+
+    @@media (max-width: 650px) {
+        .cat-header, .cat-toolbar {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .cat-search {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="cat-page">
+    <div class="cat-header">
+        <div>
+            <h2 style="margin:0 0 6px;font-size:25px;">Categories</h2>
+            <div class="cat-muted">
+                Manage your product categories.
+            </div>
+        </div>
+
+        <a href="/admin/categories/create" class="cat-btn cat-btn-dark">
+            <i class="bi bi-plus-lg"></i>
+            Add Category
+        </a>
+    </div>
+    @if (TempData["Success"] is string successMessage)
+    {
+        <div class="category-alert category-alert-success"
+             role="status"
+             id="categorySuccessMessage">
+            <i class="bi bi-check-circle-fill"></i>
+            <span>@successMessage</span>
+            <button type="button"
+                    class="category-alert-close"
+                    onclick="this.parentElement.remove()"
+                    aria-label="Dismiss message">
+                &times;
+            </button>
+        </div>
+    }
+
+    @if (TempData["Error"] is string errorMessage)
+    {
+        <div class="category-alert category-alert-error"
+             role="alert">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            <span>@errorMessage</span>
+            <button type="button"
+                    class="category-alert-close"
+                    onclick="this.parentElement.remove()"
+                    aria-label="Dismiss message">
+                &times;
+            </button>
+        </div>
+    }
+  
+
+    <div class="cat-card">
+        <div class="cat-toolbar">
+            <div>
+                <strong>All Categories</strong>
+                <div class="cat-muted">
+                    @categories.Count @(categories.Count == 1 ? "category" : "categories") found
+                </div>
+            </div>
+
+            <form action="/admin/categories"
+                  method="get"
+                  class="cat-search">
+                <input type="search"
+                       name="search"
+                       value="@search"
+                       placeholder="Search name, slug or description..."
+                       aria-label="Search categories" />
+
+                <button class="cat-btn" type="submit">
+                    <i class="bi bi-search"></i> Search
+                </button>
+
+                @if (!string.IsNullOrWhiteSpace(search))
+                {
+                    <a href="/admin/categories" class="cat-btn">
+                        Clear
+                    </a>
+                }
+            </form>
+        </div>
+
+        <div class="cat-table-wrap">
+            <table class="cat-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Display Order</th>
+                        <th>Products</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (categories.Count > 0)
+                    {
+                        @foreach (var category in categories)
+                        {
+                            <tr>
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:12px;">
+                                        @if (!string.IsNullOrWhiteSpace(category.ImageUrl))
+                                        {
+                                            <img class="cat-thumb"
+                                                 src="@category.ImageUrl"
+                                                 alt="@category.Name" />
+                                        }
+                                        else
+                                        {
+                                            <div class="cat-thumb"
+                                                 style="display:grid;place-items:center;background:#f5f5f5;">
+                                                <i class="bi bi-image text-secondary"></i>
+                                            </div>
+                                        }
+
+                                        <div>
+                                            <div class="cat-name">@category.Name</div>
+                                            <div class="cat-slug">@category.Slug</div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>@category.DisplayOrder</td>
+                                <td>@(category.Products?.Count ?? 0)</td>
+
+                                <td>
+                                    <span class="cat-status @(category.IsActive ? "cat-active" : "cat-inactive")">
+                                        @(category.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @category.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")
+                                </td>
+
+                                <td>
+                                    <div class="cat-actions">
+                                        <a href="/admin/categories/edit/@category.Id"
+                                           class="cat-action"
+                                           title="Edit category">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </a>
+
+                                        <form action="/admin/categories/delete/@category.Id"
+                                              method="post"
+                                              onsubmit="return confirm('Delete this category? This action cannot be undone.');">
+                                            @Html.AntiForgeryToken()
+
+                                            <button type="submit"
+                                                    class="cat-action cat-delete"
+                                                    title="Delete category">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="cat-empty">
+                                <i class="bi bi-folder2-open"
+                                   style="font-size:32px;"></i>
+
+                                <div style="margin-top:12px;">
+                                    <strong>No categories found.</strong>
+                                </div>
+
+                                <div class="cat-muted" style="margin:8px 0 15px;">
+                                    Add your first category or try another search.
+                                </div>
+
+                                <a href="/admin/categories/create"
+                                   class="cat-btn cat-btn-dark">
+                                    <i class="bi bi-plus-lg"></i>
+                                    Add Category
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="cat-muted mt-3">
+        Showing @categories.Count categories.
+    </div>
+</div>

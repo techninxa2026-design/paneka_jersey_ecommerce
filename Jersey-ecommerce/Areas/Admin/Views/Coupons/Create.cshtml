@@ -1,0 +1,16 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.CouponFormViewModel
+@{
+    ViewData["Title"] = "Create Coupon";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+@section Styles { <link rel="stylesheet" href="@Url.Content("~/css/admin-coupons.css")" /> }
+<main class="cp-page cp-form-page">
+    <div class="cp-crumb"><a href="/admin/dashboard">Dashboard</a><i class="bi bi-chevron-right"></i><a href="@Url.Content("~/admin/coupons")">Coupons</a><i class="bi bi-chevron-right"></i>Create</div>
+    <header class="cp-header"><div><div class="cp-kicker">PROMOTIONS / NEW CAMPAIGN</div><h1>Create coupon<span class="cp-dot">.</span></h1><p>Set up a discount that shoppers can apply at checkout.</p></div><a href="@Url.Content("~/admin/coupons")" class="cp-button cp-button-light"><i class="bi bi-arrow-left"></i> Back to coupons</a></header>
+    <form action="@Url.Content("~/admin/coupons/create")" method="post">
+        @Html.AntiForgeryToken()
+        @await Html.PartialAsync("_CouponFields", Model)
+        <div class="cp-form-footer"><div><strong>Ready to publish?</strong><span>Check the discount and date rules before saving.</span></div><div class="cp-footer-actions"><a class="cp-button cp-button-light" href="@Url.Content("~/admin/coupons")">Cancel</a><button type="submit" class="cp-button cp-button-dark"><i class="bi bi-check2"></i> Create coupon</button></div></div>
+    </form>
+</main>
+

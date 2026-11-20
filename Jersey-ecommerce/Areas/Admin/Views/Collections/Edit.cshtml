@@ -1,0 +1,29 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.CollectionFormViewModel
+@{
+    ViewData["Title"] = "Edit Collection";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+@await Html.PartialAsync("_CollectionStyles")
+<div class="pc-page">
+    <div class="pc-top">
+        <div>
+            <div class="pc-crumb"><a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })">Dashboard</a><i class="bi bi-chevron-right"></i>
+                <a href="@Url.Action("Index", "Collections", new { area = "Admin" })">Collections</a><i class="bi bi-chevron-right"></i><span>Edit</span></div>
+            <div class="pc-eyebrow">PANENKA / CURATION</div>
+            <h1>Edit collection<span style="color:#a6a6a6">.</span></h1>
+            <p class="pc-subtitle">Update the artwork, details and visibility of your collection.</p>
+        </div>
+        <a class="pc-btn" href="@Url.Action("Index", "Collections", new { area = "Admin" })"><i class="bi bi-arrow-left"></i> Back to collections</a>
+    </div>
+
+    <form action="@Url.Action("Edit", "Collections", new { area = "Admin", id = Model.Id })" method="post" enctype="multipart/form-data" novalidate>
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Id" value="@Model.Id" />
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="pc-alert pc-validation">@Html.ValidationSummary(false, "Please check the details below:")</div>
+        }
+        @await Html.PartialAsync("_CollectionForm", Model)
+    </form>
+</div>
+@await Html.PartialAsync("_CollectionFormScripts", Model)

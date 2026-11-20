@@ -1,0 +1,29 @@
+@model Dictionary<string,string?>
+@{
+    Layout = null;
+    string? email = Model.GetValueOrDefault("contact.email");
+    string? phone = Model.GetValueOrDefault("contact.phone");
+    string? address = Model.GetValueOrDefault("contact.address");
+    string? whatsapp = Model.GetValueOrDefault("contact.whatsapp");
+    string? instagram = Model.GetValueOrDefault("social.instagram");
+    var brand = Model.GetValueOrDefault("general.store_name") ?? "PANENKA";
+    var whatsappDigits = new string((whatsapp ?? "").Where(char.IsDigit).ToArray());
+    var safeInstagram = Uri.TryCreate(instagram, UriKind.Absolute, out var instUrl) && instUrl.Scheme == "https" ? instagram : null;
+}
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact | PANENKA</title><meta name="description" content="Contact the PANENKA customer support team.">
+<link rel="icon" href="/assets/brands/panekalogo.jpeg"><link rel="stylesheet" href="/css/panenka-checkout.css">
+<style>.contact{max-width:850px;margin:0 auto;padding:84px 24px 120px}.contact .intro{font-size:11px;letter-spacing:.25em;color:#888;font-weight:800}.contact h1{font-size:clamp(44px,7vw,90px);letter-spacing:-.07em;line-height:1;margin:20px 0 18px}.contact p{color:#777;line-height:1.8}.contact-links{margin-top:45px;display:grid;gap:14px}.contact-item{padding:21px;border:1px solid #e3e3e3;display:grid;gap:10px}.contact-item span{font-size:10px;letter-spacing:.16em;color:#858585;text-transform:uppercase;font-weight:800}.contact-item a{font-size:18px;color:#111;text-decoration:underline;text-underline-offset:5px;overflow-wrap:anywhere}.contact-item strong{font-size:18px;font-weight:500;white-space:pre-wrap}.backshop{display:inline-block;margin-top:40px;text-decoration:underline;text-underline-offset:6px}</style>
+</head><body>
+@await Html.PartialAsync("_PanenkaCheckoutHeader")
+<main class="contact"><div class="intro">@brand / CUSTOMER SUPPORT</div><h1>LET'S TALK.</h1><p>Have a question about sizing, your order, or delivery? Contact the store using the details below. These details are maintained through the administration settings.</p>
+<div class="contact-links">
+@if(!string.IsNullOrWhiteSpace(email)) { <div class="contact-item"><span>Email</span><a href="mailto:@email">@email</a></div> }
+@if(!string.IsNullOrWhiteSpace(phone)) { <div class="contact-item"><span>Phone</span><a href="tel:@phone">@phone</a></div> }
+@if(!string.IsNullOrWhiteSpace(address)) { <div class="contact-item"><span>Store address</span><strong>@address</strong></div> }
+@if(!string.IsNullOrWhiteSpace(whatsappDigits)) { <div class="contact-item"><span>WhatsApp</span><a href="https://wa.me/@whatsappDigits" target="_blank" rel="noopener noreferrer">Message us on WhatsApp ↗</a></div> }
+@if(!string.IsNullOrWhiteSpace(safeInstagram)) { <div class="contact-item"><span>Instagram</span><a href="@safeInstagram" target="_blank" rel="noopener noreferrer">Find us on Instagram ↗</a></div> }
+@if(string.IsNullOrWhiteSpace(email)&&string.IsNullOrWhiteSpace(phone)&&string.IsNullOrWhiteSpace(address)&&string.IsNullOrWhiteSpace(whatsappDigits)&&string.IsNullOrWhiteSpace(safeInstagram)) { <div class="contact-item"><strong>Customer support contact details have not been configured yet.</strong><p>Please check again after the store administrator updates the contact settings.</p></div> }
+</div><a class="backshop" href="/shop">← BACK TO THE SHOP</a>
+</main>@await Html.PartialAsync("_PanenkaCheckoutFooter")
+</body></html>

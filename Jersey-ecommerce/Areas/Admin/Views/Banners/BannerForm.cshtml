@@ -1,0 +1,91 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.BannerFormViewModel
+@{
+    bool editing = Model.Id > 0;
+    ViewData["Title"] = editing ? "Edit Banner" : "Create Banner";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+<link rel="stylesheet" href="@Url.Content("~/css/admin-banners.css")" />
+<div class="mc-page mc-editor-page">
+    <div class="mc-heading">
+        <div>
+            <a href="@Url.Content("~/Admin/Banners")" class="mc-back"><i class="bi bi-arrow-left"></i> BACK TO BANNERS &amp; SLIDES</a>
+            <span class="mc-eyebrow">PANENKA / CAMPAIGNS</span>
+            <h1>@(editing ? "Edit Banner" : "Create Banner")</h1>
+            <p>Promote collections, new arrivals, offers and featured products.</p>
+        </div>
+    </div>
+    <form action="@(editing ? Url.Content("~/Admin/Banners/EditBanner") : Url.Content("~/Admin/Banners/CreateBanner"))" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input name="Id" type="hidden" value="@Model.Id" />
+        @Html.ValidationSummary(false, "", new { @class = "mc-validation-summary", role = "alert" })
+        <div class="mc-editor-grid">
+            <div class="mc-editor-main">
+                <section class="mc-form-card">
+                    <div class="mc-form-header"><span>01</span><div><h2>Banner Information</h2><p>Name, supporting text, and click-through destination.</p></div></div>
+                    <div class="mc-form-fields">
+                        <div class="mc-field"><label for="Title">Banner title</label><input name="Title" id="Title" value="@Model.Title" maxlength="200" required class="mc-input" placeholder="e.g. MATCH DAY SPECIAL" />@Html.ValidationMessageFor(m => m.Title, "", new { @class = "mc-field-error" })</div>
+                        <div class="mc-field"><label for="Subtitle">Subtitle</label><textarea name="Subtitle" id="Subtitle" class="mc-input mc-textarea" rows="3" placeholder="Limited-time offers on selected jerseys.">@Model.Subtitle</textarea>@Html.ValidationMessageFor(m => m.Subtitle, "", new { @class = "mc-field-error" })</div>
+                        <div class="mc-field"><label for="LinkUrl">Banner destination URL</label><input name="LinkUrl" id="LinkUrl" value="@Model.LinkUrl" class="mc-input" placeholder="/shop or https://..." />@Html.ValidationMessageFor(m => m.LinkUrl, "", new { @class = "mc-field-error" })</div>
+                        <div class="mc-field">
+                            <label for="Placement">Placement</label>
+                            <select name="Placement" id="Placement" class="mc-input" required>
+                                <option value="Home" selected="@(Model.Placement == "Home" ? "selected" : null)">Home</option>
+                                <option value="HomeTop" selected="@(Model.Placement == "HomeTop" ? "selected" : null)">Home top</option>
+                                <option value="HomeMiddle" selected="@(Model.Placement == "HomeMiddle" ? "selected" : null)">Home middle</option>
+                                <option value="Shop" selected="@(Model.Placement == "Shop" ? "selected" : null)">Shop</option>
+                                <option value="Category" selected="@(Model.Placement == "Category" ? "selected" : null)">Category</option>
+                                <option value="Footer" selected="@(Model.Placement == "Footer" ? "selected" : null)">Footer</option>
+                            </select>
+                            @Html.ValidationMessageFor(m => m.Placement, "", new { @class = "mc-field-error" })
+                            <small>The storefront chooses where to display banners by this value.</small>
+                        </div>
+                    </div>
+                </section>
+                <section class="mc-form-card">
+                    <div class="mc-form-header"><span>02</span><div><h2>Banner Artwork</h2><p>JPG, PNG or WebP, up to 5 MB.</p></div></div>
+                    <div class="mc-form-fields">
+                        <div class="mc-field">
+                            <label for="ImageFile">Promotional image <em>@(editing ? "(replace optional)" : "(required)")</em></label>
+                            <div class="mc-image-drop">
+                                <img id="bannerPreview" src="@(Model.CurrentImageUrl ?? "")" alt="Banner preview" class="mc-large-preview @(string.IsNullOrWhiteSpace(Model.CurrentImageUrl) ? "is-hidden" : "")" />
+                                <div class="mc-image-label"><i class="bi bi-image"></i><strong>Choose banner image</strong><small>Recommended: 1600 × 600 px</small></div>
+                                <input name="ImageFile" id="ImageFile" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="mc-file" data-preview="bannerPreview" />
+                            </div>
+                            @Html.ValidationMessageFor(m => m.ImageFile, "", new { @class = "mc-field-error" })
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <aside class="mc-editor-aside">
+                <section class="mc-form-card">
+                    <div class="mc-form-header"><span>03</span><div><h2>Visibility</h2><p>Set priority and active status.</p></div></div>
+                    <div class="mc-form-fields">
+                        <label class="mc-switch-row"><span><strong>Active banner</strong><small>Enabled for storefront display</small></span><input name="IsActive" id="IsActive" value="true" checked="@(Model.IsActive ? "checked" : null)" type="checkbox" class="mc-switch" /><input type="hidden" name="IsActive" value="false" /></label>
+                        <div class="mc-field"><label for="DisplayOrder">Display order</label><input name="DisplayOrder" id="DisplayOrder" value="@Model.DisplayOrder" max="99999" class="mc-input" type="number" min="0" />@Html.ValidationMessageFor(m => m.DisplayOrder, "", new { @class = "mc-field-error" })<small>Smaller numbers appear first.</small></div>
+                    </div>
+                </section>
+                <section class="mc-form-card">
+                    <div class="mc-form-header"><span>04</span><div><h2>Schedule</h2><p>Optional campaign dates.</p></div></div>
+                    <div class="mc-form-fields">
+                        <div class="mc-field"><label for="StartsAt">Start date and time (Bangladesh)</label><input name="StartsAt" id="StartsAt" value="@(Model.StartsAt?.ToString("yyyy-MM-ddTHH:mm"))" type="datetime-local" class="mc-input" />@Html.ValidationMessageFor(m => m.StartsAt, "", new { @class = "mc-field-error" })</div>
+                        <div class="mc-field"><label for="EndsAt">End date and time (Bangladesh)</label><input name="EndsAt" id="EndsAt" value="@(Model.EndsAt?.ToString("yyyy-MM-ddTHH:mm"))" type="datetime-local" class="mc-input" />@Html.ValidationMessageFor(m => m.EndsAt, "", new { @class = "mc-field-error" })</div>
+                        <p class="mc-note">Leave blank for no time limit. Times use Bangladesh time (UTC+6).</p>
+                    </div>
+                </section>
+                <div class="mc-submit-panel"><button class="mc-btn mc-btn-dark mc-submit" type="submit"><i class="bi bi-check-lg"></i> @(editing ? "Save Changes" : "Create Banner")</button><a href="@Url.Content("~/Admin/Banners")" class="mc-cancel">Cancel</a></div>
+            </aside>
+        </div>
+    </form>
+</div>
+<script>
+    document.querySelectorAll('.mc-file[data-preview]').forEach(input => {
+        input.addEventListener('change', () => {
+            const target = document.getElementById(input.dataset.preview);
+            if (!input.files || !input.files[0] || !target) return;
+            const url = URL.createObjectURL(input.files[0]);
+            target.onload = () => URL.revokeObjectURL(url);
+            target.src = url;
+            target.classList.remove('is-hidden');
+        });
+    });
+</script>

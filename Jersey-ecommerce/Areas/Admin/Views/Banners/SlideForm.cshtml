@@ -1,0 +1,97 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.HeroSlideFormViewModel
+@{
+    bool editing = Model.Id > 0;
+    ViewData["Title"] = editing ? "Edit Hero Slide" : "Create Hero Slide";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+<link rel="stylesheet" href="@Url.Content("~/css/admin-banners.css")" />
+<div class="mc-page mc-editor-page">
+    <div class="mc-heading">
+        <div>
+            <a href="@Url.Content("~/Admin/Banners")" class="mc-back"><i class="bi bi-arrow-left"></i> BACK TO BANNERS &amp; SLIDES</a>
+            <span class="mc-eyebrow">PANENKA / HERO CAROUSEL</span>
+            <h1>@(editing ? "Edit Hero Slide" : "Create Hero Slide")</h1>
+            <p>Feature collections, latest drops, and important storefront stories.</p>
+        </div>
+    </div>
+
+    <form action="@(editing ? Url.Content("~/Admin/Banners/EditSlide") : Url.Content("~/Admin/Banners/CreateSlide"))" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input name="Id" type="hidden" value="@Model.Id" />
+        @Html.ValidationSummary(false, "", new { @class = "mc-validation-summary", role = "alert" })
+        <div class="mc-editor-grid">
+            <div class="mc-editor-main">
+                <section class="mc-form-card">
+                    <div class="mc-form-header"><span>01</span><div><h2>Slide Details</h2><p>Text over the visual and optional destination link.</p></div></div>
+                    <div class="mc-form-fields">
+                        <div class="mc-field"><label for="Title">Slide title</label><input name="Title" id="Title" value="@Model.Title" maxlength="200" required class="mc-input" placeholder="e.g. THE NEW SEASON" />@Html.ValidationMessageFor(m => m.Title, "", new { @class = "mc-field-error" })</div>
+                        <div class="mc-field"><label for="Subtitle">Subtitle</label><textarea name="Subtitle" id="Subtitle" class="mc-input mc-textarea" rows="3" placeholder="Discover the latest football jerseys and gear.">@Model.Subtitle</textarea>@Html.ValidationMessageFor(m => m.Subtitle, "", new { @class = "mc-field-error" })</div>
+                        <div class="mc-field-row">
+                            <div class="mc-field"><label for="ButtonText">Button label</label><input name="ButtonText" id="ButtonText" value="@Model.ButtonText" class="mc-input" placeholder="SHOP NOW" />@Html.ValidationMessageFor(m => m.ButtonText, "", new { @class = "mc-field-error" })</div>
+                            <div class="mc-field"><label for="ButtonUrl">Button destination URL</label><input name="ButtonUrl" id="ButtonUrl" value="@Model.ButtonUrl" class="mc-input" placeholder="/shop or https://..." />@Html.ValidationMessageFor(m => m.ButtonUrl, "", new { @class = "mc-field-error" })</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mc-form-card">
+                    <div class="mc-form-header"><span>02</span><div><h2>Visual Assets</h2><p>JPG, PNG or WebP, up to 5 MB per image.</p></div></div>
+                    <div class="mc-form-fields">
+                        <div class="mc-field">
+                            <label for="ImageFile">Desktop hero image <em>@(editing ? "(replace optional)" : "(required)")</em></label>
+                            <div class="mc-image-drop">
+                                <img id="desktopPreview" src="@(Model.CurrentImageUrl ?? "")" alt="Desktop slide preview" class="mc-large-preview @(string.IsNullOrWhiteSpace(Model.CurrentImageUrl) ? "is-hidden" : "")" />
+                                <div class="mc-image-label"><i class="bi bi-image"></i><strong>Choose desktop image</strong><small>Recommended: 1920 × 750 px</small></div>
+                                <input name="ImageFile" id="ImageFile" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="mc-file" data-preview="desktopPreview" />
+                            </div>
+                            @Html.ValidationMessageFor(m => m.ImageFile, "", new { @class = "mc-field-error" })
+                        </div>
+                        <div class="mc-field">
+                            <label for="MobileImageFile">Mobile image <em>(optional)</em></label>
+                            <div class="mc-image-drop mc-image-drop-mobile">
+                                <img id="mobilePreview" src="@(Model.CurrentMobileImageUrl ?? "")" alt="Mobile slide preview" class="mc-large-preview @(string.IsNullOrWhiteSpace(Model.CurrentMobileImageUrl) ? "is-hidden" : "")" />
+                                <div class="mc-image-label"><i class="bi bi-phone"></i><strong>Choose mobile image</strong><small>Recommended: 750 × 950 px</small></div>
+                                <input name="MobileImageFile" id="MobileImageFile" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="mc-file" data-preview="mobilePreview" />
+                            </div>
+                            @Html.ValidationMessageFor(m => m.MobileImageFile, "", new { @class = "mc-field-error" })
+                            @if (editing && !string.IsNullOrWhiteSpace(Model.CurrentMobileImageUrl))
+                            {
+                                <label class="mc-checkline"><input name="RemoveMobileImage" id="RemoveMobileImage" value="true" checked="@(Model.RemoveMobileImage ? "checked" : null)" type="checkbox" /><input type="hidden" name="RemoveMobileImage" value="false" /> Remove current mobile image</label>
+                            }
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="mc-editor-aside">
+                <section class="mc-form-card">
+                    <div class="mc-form-header"><span>03</span><div><h2>Visibility</h2><p>Control order and publishing.</p></div></div>
+                    <div class="mc-form-fields">
+                        <label class="mc-switch-row"><span><strong>Active slide</strong><small>Enable this slide on the storefront</small></span><input name="IsActive" id="IsActive" value="true" checked="@(Model.IsActive ? "checked" : null)" type="checkbox" class="mc-switch" /><input type="hidden" name="IsActive" value="false" /></label>
+                        <div class="mc-field"><label for="DisplayOrder">Display order</label><input name="DisplayOrder" id="DisplayOrder" value="@Model.DisplayOrder" max="99999" type="number" min="0" class="mc-input" />@Html.ValidationMessageFor(m => m.DisplayOrder, "", new { @class = "mc-field-error" })<small>Smaller numbers appear first.</small></div>
+                    </div>
+                </section>
+                <section class="mc-form-card">
+                    <div class="mc-form-header"><span>04</span><div><h2>Schedule</h2><p>Optional campaign dates.</p></div></div>
+                    <div class="mc-form-fields">
+                        <div class="mc-field"><label for="StartsAt">Start date and time (Bangladesh)</label><input name="StartsAt" id="StartsAt" value="@(Model.StartsAt?.ToString("yyyy-MM-ddTHH:mm"))" type="datetime-local" class="mc-input" />@Html.ValidationMessageFor(m => m.StartsAt, "", new { @class = "mc-field-error" })</div>
+                        <div class="mc-field"><label for="EndsAt">End date and time (Bangladesh)</label><input name="EndsAt" id="EndsAt" value="@(Model.EndsAt?.ToString("yyyy-MM-ddTHH:mm"))" type="datetime-local" class="mc-input" />@Html.ValidationMessageFor(m => m.EndsAt, "", new { @class = "mc-field-error" })</div>
+                        <p class="mc-note">Leave both blank for no time limit. Times entered here use Bangladesh time (UTC+6).</p>
+                    </div>
+                </section>
+                <div class="mc-submit-panel"><button type="submit" class="mc-btn mc-btn-dark mc-submit"><i class="bi bi-check-lg"></i> @(editing ? "Save Changes" : "Create Slide")</button><a href="@Url.Content("~/Admin/Banners")" class="mc-cancel">Cancel</a></div>
+            </aside>
+        </div>
+    </form>
+</div>
+<script>
+    document.querySelectorAll('.mc-file[data-preview]').forEach(input => {
+        input.addEventListener('change', () => {
+            const target = document.getElementById(input.dataset.preview);
+            if (!input.files || !input.files[0] || !target) return;
+            const url = URL.createObjectURL(input.files[0]);
+            target.onload = () => URL.revokeObjectURL(url);
+            target.src = url;
+            target.classList.remove('is-hidden');
+        });
+    });
+</script>

@@ -1,0 +1,11 @@
+@model Jersey_ecommerce.Models.Orders.Order
+@{ Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Delivery Details"; }
+<div style="max-width:970px;margin:24px auto;padding:30px;background:white;border:1px solid #dedede">
+<h1>Delivery · @Model.OrderNumber</h1><p>Customer: <strong>@Model.CustomerName</strong></p>
+<p>Phone: @Model.CustomerPhone · Email: @Model.CustomerEmail</p>
+<p>Address: @Model.ShippingAddressLine1 @Model.ShippingAddressLine2, @Model.ShippingCity, @Model.ShippingDistrict, @Model.ShippingPostalCode, @Model.ShippingCountry</p>
+<p>Notes: @Model.CustomerNote</p>
+<p>Order: @Model.Status · Shipment: @(Model.Shipment?.Status ?? "Pending") · Payment: @(Model.Payment?.Status ?? "Pending")</p>
+@if (TempData["OrderInfo"] is string notice) { <p>@notice</p> }
+<a asp-area="Admin" asp-controller="Orders" asp-action="Details" asp-route-id="@Model.Id">Back to order</a>
+</div>

@@ -1,0 +1,117 @@
+@model Jersey_ecommerce.ViewModels.Checkout.PaymentPageViewModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = null;
+    ViewData["Title"] = "Payment | PANENKA";
+    bool codAvailable = Model.AllowCashOnDelivery; // ALL Bangladesh, when enabled in admin
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Payment | PANENKA</title>
+    <link rel="icon" href="/assets/brands/panekalogo.jpeg" />
+    <link rel="stylesheet" href="/css/panenka-checkout.css" />
+</head>
+<body>
+@await Html.PartialAsync("_PanenkaCheckoutHeader")
+<section class="container intro">
+    <div class="kicker">CHECKOUT / PAYMENT</div>
+    <h1>One last step.</h1>
+    <p class="lead">Choose how you would like to pay. bKash payments are processed securely through the bKash website.</p>
+    <div class="stepper">
+        <div class="step done"><b>01</b> Bag</div><span class="bar"></span>
+        <div class="step done"><b>02</b> Delivery</div><span class="bar"></span>
+        <div class="step active"><b>03</b> Payment</div>
+    </div>
+</section>
+<main class="container checkout-layout">
+    <div>
+        <h2 class="panel-heading">Payment method</h2>
+        <p class="hint">Both locations can choose cash on delivery when the store has enabled it.</p>
+        @if (TempData["CheckoutError"] is string error)
+        {
+            <div class="notice error" role="alert">@error</div>
+        }
+        <form asp-controller="Checkout" asp-action="Payment" method="post" id="paymentForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="SubmissionToken" value="@Model.SubmissionToken" />
+
+            @if (codAvailable)
+            {
+                <label class="pay-choice">
+                    <input type="radio" name="PaymentMethod" value="COD" checked required />
+                    <span><strong>Cash on delivery</strong>
+                        <small>Pay in cash when your parcel arrives — available inside and outside Dhaka.</small>
+                    </span>
+                </label>
+            }
+            <label class="pay-choice">
+                <input type="radio" name="PaymentMethod" value="Bkash" checked="@(!codAvailable)" required />
+                <span><strong>bKash online payment</strong>
+                    <small>Pay securely on the official bKash payment page.</small>
+                </span>
+            </label>
+
+            <div id="bkashInfo" class="notice" style="display:@(codAvailable ? "none" : "block")">
+                <strong>Online payment via bKash</strong>
+                <p>You will be redirected to the bKash payment page. Your order is marked paid only after the server verifies the completed transaction.</p>
+            </div>
+
+            <hr class="sep" />
+            <h2 class="panel-heading">Deliver to</h2>
+            <p class="hint"><strong>@Model.Delivery.FullName</strong> — @Model.Delivery.Phone<br />
+                @Model.Delivery.AddressLine1, @Model.Delivery.City, @Model.Delivery.District<br />
+                @(Model.Delivery.Region == "Dhaka" ? "Inside Dhaka" : "Outside Dhaka")</p>
+
+            <button type="submit" class="primary" id="placeOrder">
+                <span id="buttonText">@(codAvailable ? "PLACE ORDER" : "PAY WITH BKASH") — ৳@Model.GrandTotal.ToString("N2")</span>
+                <span>→</span>
+            </button>
+            <a class="back" href="/Checkout/Delivery">← Edit delivery details</a>
+            <p class="agree">The order is based on live database prices, discounts, and your selected delivery region.</p>
+        </form>
+    </div>
+    <aside class="summary">
+        <h2>Final summary</h2>
+        <div class="summary-row"><span>Subtotal</span><strong>৳@Model.Cart.Subtotal.ToString("N2")</strong></div>
+        <div class="summary-row"><span>Discount</span><strong>−৳@Model.Cart.DiscountAmount.ToString("N2")</strong></div>
+        <div class="summary-row"><span>Delivery</span><strong>৳@Model.ShippingCost.ToString("N2")</strong></div>
+        <div class="summary-total"><span>Order total</span><strong>৳@Model.GrandTotal.ToString("N2")</strong></div>
+        <div class="order-lines">
+            @foreach (var item in Model.Cart.Items)
+            {
+                <div class="tiny-line">
+                    <span>@item.Name (@item.Size / @item.Color) × @item.Quantity</span>
+                    <strong>৳@((item.Price * item.Quantity).ToString("N2"))</strong>
+                </div>
+            }
+        </div>
+    </aside>
+</main>
+@await Html.PartialAsync("_PanenkaCheckoutFooter")
+<script>
+(() => {
+    'use strict';
+    const form = document.getElementById('paymentForm');
+    const button = document.getElementById('placeOrder');
+    const text = document.getElementById('buttonText');
+    const info = document.getElementById('bkashInfo');
+    const total = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.GrandTotal.ToString("N2")));
+    function update() {
+        const isBkash = document.querySelector('input[name="PaymentMethod"]:checked')?.value === 'Bkash';
+        info.style.display = isBkash ? 'block' : 'none';
+        text.textContent = (isBkash ? 'PAY WITH BKASH' : 'PLACE ORDER') + ' — ৳' + total;
+    }
+    form.querySelectorAll('input[name="PaymentMethod"]').forEach(x => x.addEventListener('change', update));
+    form.addEventListener('submit', e => {
+        if (!form.checkValidity()) return;
+        button.disabled = true;
+        text.textContent = 'PROCESSING ORDER…';
+    });
+    update();
+})();
+</script>
+</body>
+</html>

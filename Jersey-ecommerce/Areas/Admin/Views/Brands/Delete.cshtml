@@ -1,0 +1,40 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.BrandDeleteViewModel
+@{
+    ViewData["Title"] = "Delete Brand";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+<link rel="stylesheet" href="@Url.Content("~/css/admin-brands.css")" />
+
+<main class="pb-page">
+    <header class="pb-header">
+        <div>
+            <div class="pb-crumb"><a href="/admin/dashboard">Dashboard</a> <i class="bi bi-chevron-right"></i> <a href="/admin/brands">Brands</a> <i class="bi bi-chevron-right"></i> Delete</div>
+            <p class="pb-eyebrow">PANENKA / CATALOG</p>
+            <h1 class="pb-title">Delete brand</h1>
+            <p class="pb-subtitle">Review the brand and confirm this permanent action.</p>
+        </div>
+        <a class="pb-btn" href="@Url.Action("Index", "Brands", new { area = "Admin" })"><i class="bi bi-arrow-left"></i> Back to brands</a>
+    </header>
+    <section class="pb-delete-box">
+        <span class="pb-delete-label">Brand #@Model.Id</span>
+        <h2 class="pb-delete-name">@Model.Name</h2>
+        <div class="pb-code">@Model.Slug</div>
+        @if (Model.ProductCount > 0)
+        {
+            <div class="pb-danger-note"><i class="bi bi-exclamation-triangle-fill"></i> This brand is linked to <strong>@Model.ProductCount</strong> product(s). You cannot delete it until those products are reassigned to another brand (or cleared).</div>
+            <a class="pb-btn pb-btn-dark" href="@Url.Action("Index", "Brands", new { area = "Admin" })">Return to brands</a>
+        }
+        else
+        {
+            <p class="pb-delete-copy" style="margin-top:20px">Deleting this brand will permanently remove its database record and its uploaded logo (if any). This action cannot be undone.</p>
+            <div class="pb-danger-note"><i class="bi bi-exclamation-triangle-fill"></i> Make sure this is the correct brand before continuing.</div>
+            <form method="post" action="@Url.Action("Delete", "Brands", new { area = "Admin", id = Model.Id })">
+                @Html.AntiForgeryToken()
+                <div class="pb-delete-actions">
+                    <button class="pb-btn pb-btn-danger" type="submit"><i class="bi bi-trash"></i> Permanently delete brand</button>
+                    <a class="pb-btn" href="@Url.Action("Index", "Brands", new { area = "Admin" })">Cancel</a>
+                </div>
+            </form>
+        }
+    </section>
+</main>

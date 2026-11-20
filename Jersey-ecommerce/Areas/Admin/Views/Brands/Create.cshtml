@@ -1,0 +1,24 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.BrandFormViewModel
+@{
+    ViewData["Title"] = "Create Brand";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+<link rel="stylesheet" href="@Url.Content("~/css/admin-brands.css")" />
+
+<main class="pb-page">
+    <header class="pb-header">
+        <div>
+            <div class="pb-crumb"><a href="/admin/dashboard">Dashboard</a> <i class="bi bi-chevron-right"></i> <a href="/admin/brands">Brands</a> <i class="bi bi-chevron-right"></i> Create</div>
+            <p class="pb-eyebrow">PANENKA / CATALOG</p>
+            <h1 class="pb-title">Create brand</h1>
+            <p class="pb-subtitle">Add a brand name, optional logo, and storefront status.</p>
+        </div>
+        <a class="pb-btn" href="@Url.Action("Index", "Brands", new { area = "Admin" })"><i class="bi bi-arrow-left"></i> Back to brands</a>
+    </header>
+
+    <form method="post" action="@Url.Action("Create", "Brands", new { area = "Admin" })" enctype="multipart/form-data" novalidate>
+        @Html.AntiForgeryToken()
+        @Html.ValidationSummary(false, "Please correct the following errors:", new { @class = "pb-validation" })
+        @await Html.PartialAsync("_BrandForm", Model)
+    </form>
+</main>

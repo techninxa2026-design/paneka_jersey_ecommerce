@@ -1,0 +1,72 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.ReviewRowViewModel
+@{
+    ViewData["Title"] = "Review Details";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    string status = Model.IsRejected ? "Rejected" : Model.IsApproved ? "Approved" : "Pending";
+    int filled = Math.Clamp(Model.Rating, 0, 5);
+}
+<link rel="stylesheet" href="~/css/admin-reviews.css" asp-append-version="true" />
+
+<div class="rv-page rv-detail">
+    <a class="rv-back" asp-area="Admin" asp-controller="Reviews" asp-action="Index"><i class="bi bi-arrow-left"></i>Back to Reviews</a>
+    <div class="rv-top">
+        <div><div class="rv-eyebrow">Customers / Feedback</div><h2>Review Details</h2><p>Review #@Model.Id · Customer product feedback</p></div>
+        <span class="rv-status @status.ToLowerInvariant()">@status</span>
+    </div>
+
+    <section class="rv-detail-card">
+        <div class="rv-detail-card-header"><i class="bi bi-person-circle me-2"></i>Reviewer information</div>
+        <div class="rv-detail-card-body">
+            <div class="rv-detail-grid">
+                <div><div class="rv-detail-label">Customer</div><div class="rv-detail-value">@Model.CustomerName</div></div>
+                <div><div class="rv-detail-label">Email</div><div class="rv-detail-value">@(Model.Email ?? "Not available")</div></div>
+                <div><div class="rv-detail-label">Product</div><div class="rv-detail-value">@Model.ProductName (ID #@Model.ProductId)</div></div>
+                <div><div class="rv-detail-label">Submitted</div><div class="rv-detail-value">@Model.CreatedAt.ToString("dd MMM yyyy, hh:mm tt") UTC</div></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="rv-detail-card">
+        <div class="rv-detail-card-header"><i class="bi bi-star me-2"></i>Customer review</div>
+        <div class="rv-detail-card-body">
+            <div class="rv-detail-label">Rating</div>
+            <div class="rv-detail-stars">@(new string('★', filled))<span class="rv-empty-star">@(new string('★', 5-filled))</span></div>
+            <div class="rv-muted">@Model.Rating out of 5 stars</div>
+            <h3 class="rv-detail-title">@(string.IsNullOrWhiteSpace(Model.Title) ? "Customer Feedback" : Model.Title)</h3>
+            <div class="rv-detail-comment">@Model.Comment</div>
+        </div>
+    </section>
+
+    <section class="rv-detail-card">
+        <div class="rv-detail-card-header"><i class="bi bi-shield-check me-2"></i>Moderation actions</div>
+        <div class="rv-detail-card-body">
+            <div class="rv-detail-actions">
+                @if (!Model.IsApproved || Model.IsRejected)
+                {
+                    <form asp-area="Admin" asp-controller="Reviews" asp-action="Approve" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="rv-btn rv-btn-dark"><i class="bi bi-check-circle"></i>Approve review</button>
+                    </form>
+                }
+                @if (!Model.IsRejected)
+                {
+                    <form asp-area="Admin" asp-controller="Reviews" asp-action="Reject" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="rv-btn rv-btn-danger"><i class="bi bi-x-circle"></i>Reject review</button>
+                    </form>
+                }
+                @if (Model.IsApproved || Model.IsRejected)
+                {
+                    <form asp-area="Admin" asp-controller="Reviews" asp-action="Pending" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="rv-btn"><i class="bi bi-arrow-counterclockwise"></i>Move to pending</button>
+                    </form>
+                }
+                <form asp-area="Admin" asp-controller="Reviews" asp-action="Delete" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Permanently delete this customer review?');">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="rv-btn rv-btn-danger"><i class="bi bi-trash3"></i>Delete permanently</button>
+                </form>
+            </div>
+        </div>
+    </section>
+</div>

@@ -1,0 +1,99 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.CouponsIndexViewModel
+@{
+    ViewData["Title"] = "Coupons";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="@Url.Content("~/css/admin-coupons.css")" />
+}
+
+<main class="cp-page">
+    <div class="cp-crumb"><a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })">Dashboard</a><i class="bi bi-chevron-right"></i><span>Coupons</span></div>
+    <header class="cp-header">
+        <div>
+            <div class="cp-kicker">CUSTOMERS & MARKETING / PROMOTIONS</div>
+            <h1>Discount coupons<span class="cp-dot">.</span></h1>
+            <p>Create promotional codes, monitor usage and control your store offers.</p>
+        </div>
+        <a class="cp-button cp-button-dark" href="@Url.Content("~/admin/coupons/create")"><i class="bi bi-plus-lg"></i> Create coupon</a>
+    </header>
+
+    @if (TempData["Success"] is string success)
+    {
+        <div class="cp-alert cp-alert-success"><i class="bi bi-check-circle"></i><span>@success</span></div>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <div class="cp-alert cp-alert-error"><i class="bi bi-exclamation-triangle"></i><span>@error</span></div>
+    }
+
+    <div class="cp-stats">
+        <div class="cp-stat"><div class="cp-stat-label">TOTAL COUPONS</div><div class="cp-stat-num">@Model.Total</div><span>Created promotions</span></div>
+        <div class="cp-stat"><div class="cp-stat-label">LIVE NOW</div><div class="cp-stat-num">@Model.Active</div><span>Available to shoppers</span></div>
+        <div class="cp-stat"><div class="cp-stat-label">REDEMPTIONS</div><div class="cp-stat-num">@Model.TotalRedemptions</div><span>Recorded coupon uses</span></div>
+        <div class="cp-stat"><div class="cp-stat-label">EXPIRED</div><div class="cp-stat-num">@Model.Expired</div><span>Past their end date</span></div>
+    </div>
+
+    <section class="cp-panel">
+        <div class="cp-panel-heading">
+            <div><h2>All coupons</h2><p>Manage every campaign from one place.</p></div>
+            <span class="cp-count">@Model.Coupons.Count RESULT(S)</span>
+        </div>
+        <form method="get" action="@Url.Content("~/admin/coupons")" class="cp-filters">
+            <div class="cp-search"><i class="bi bi-search"></i><input name="search" value="@Model.Search" placeholder="Search code or description..." aria-label="Search coupon codes" /></div>
+            <select name="status" aria-label="Filter status">
+                <option value="all" selected="@(Model.Status == "all")">All statuses</option>
+                <option value="active" selected="@(Model.Status == "active")">Active</option>
+                <option value="scheduled" selected="@(Model.Status == "scheduled")">Scheduled</option>
+                <option value="expired" selected="@(Model.Status == "expired")">Expired</option>
+                <option value="exhausted" selected="@(Model.Status == "exhausted")">Usage limit reached</option>
+                <option value="inactive" selected="@(Model.Status == "inactive")">Inactive</option>
+            </select>
+            <button class="cp-button cp-button-dark" type="submit">Filter</button>
+            <a class="cp-button cp-button-light" href="@Url.Content("~/admin/coupons")">Reset</a>
+        </form>
+
+        <div class="cp-table-scroll">
+            <table class="cp-table">
+                <thead><tr><th>COUPON</th><th>DISCOUNT</th><th>RULES</th><th>VALIDITY (UTC)</th><th>USED</th><th>STATUS</th><th class="cp-right">ACTIONS</th></tr></thead>
+                <tbody>
+                @foreach (var row in Model.Coupons)
+                {
+                    var c = row.Coupon;
+                    <tr>
+                        <td>
+                            <div class="cp-code"><i class="bi bi-ticket-perforated"></i>@c.Code</div>
+                            <div class="cp-muted cp-descrip">@(string.IsNullOrWhiteSpace(c.Description) ? "No description" : c.Description)</div>
+                        </td>
+                        <td><strong class="cp-discount">@((c.DiscountType == "Percentage") ? $"{c.DiscountValue:0.##}%" : $"৳{c.DiscountValue:N2}")</strong><div class="cp-muted">@(c.DiscountType == "Percentage" ? "Percentage" : "Fixed amount")</div></td>
+                        <td><div>Min: ৳@c.MinimumOrderAmount.ToString("N2")</div><div class="cp-muted">Cap: @(c.MaximumDiscountAmount.HasValue ? $"৳{c.MaximumDiscountAmount.Value:N2}" : "None")</div></td>
+                        <td><div>@(c.StartsAt.HasValue ? c.StartsAt.Value.ToString("dd MMM yyyy, HH:mm") : "Immediately")</div><div class="cp-muted">to @(c.ExpiresAt.HasValue ? c.ExpiresAt.Value.ToString("dd MMM yyyy, HH:mm") : "No expiry")</div></td>
+                        <td><strong>@c.UsageCount</strong> / @(c.UsageLimit?.ToString() ?? "∞")<div class="cp-muted">Per customer: @(c.UsageLimitPerUser?.ToString() ?? "∞")</div></td>
+                        <td><span class="cp-status cp-status-@row.Status"><span class="cp-status-dot"></span>@row.Status</span></td>
+                        <td>
+                            <div class="cp-actions">
+                                <a class="cp-icon-btn" href="@Url.Action("Usage", "Coupons", new { area = "Admin", id = c.Id })" title="Redemption history" aria-label="Redemption history"><i class="bi bi-clock-history"></i></a>
+                                <a class="cp-icon-btn" href="@Url.Action("Edit", "Coupons", new { area = "Admin", id = c.Id })" title="Edit coupon" aria-label="Edit coupon"><i class="bi bi-pencil-square"></i></a>
+                                <form method="post" action="@Url.Action("Toggle", "Coupons", new { area = "Admin", id = c.Id })">
+                                    @Html.AntiForgeryToken()
+                                    <button class="cp-icon-btn" type="submit" title="@(c.IsActive ? "Deactivate" : "Activate")" aria-label="@(c.IsActive ? "Deactivate" : "Activate")"><i class="bi @(c.IsActive ? "bi-pause-circle" : "bi-play-circle")"></i></button>
+                                </form>
+                                <form method="post" action="@Url.Action("Delete", "Coupons", new { area = "Admin", id = c.Id })" onsubmit="return confirm('Permanently delete this unused coupon?');">
+                                    @Html.AntiForgeryToken()
+                                    <button class="cp-icon-btn cp-danger" type="submit" title="Delete coupon" aria-label="Delete coupon"><i class="bi bi-trash3"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (Model.Coupons.Count == 0)
+                {
+                    <tr><td colspan="7" class="cp-empty"><i class="bi bi-ticket-perforated"></i><strong>No coupons found</strong><span>Create a new coupon or change your search filters.</span><a href="@Url.Content("~/admin/coupons/create")">Create coupon <i class="bi bi-arrow-right"></i></a></td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="cp-foot">Showing @Model.Coupons.Count coupon(s) · Times shown in UTC.</div>
+    </section>
+</main>

@@ -1,0 +1,72 @@
+@model Jersey_ecommerce.ViewModels.Account.ProfileViewModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "My profile";
+}
+
+<div class="profile-shell">
+    <div class="profile-header">
+        <div>
+            <span class="form-overline">YOUR ACCOUNT</span>
+            <h1>My profile<span class="accent-text">.</span></h1>
+            <p>Update your details and profile picture.</p>
+        </div>
+        <form asp-controller="Account" asp-action="Logout" method="post">
+            <button type="submit" class="secondary-action profile-logout">Sign out →</button>
+        </form>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin:18px 0 25px">
+        <a class="secondary-action" href="/MyOrders">My orders →</a>
+        <a class="secondary-action" href="/Wishlist">Saved jerseys →</a>
+        <a class="secondary-action" href="/MyAddresses">Delivery addresses →</a>
+        <a class="secondary-action" href="/shop">Continue shopping →</a>
+    </div>
+    @if (TempData["Success"] is string successMessage)
+    {
+        <div class="success-alert" role="status">@successMessage</div>
+    }
+
+    <form asp-controller="Account" asp-action="Profile" method="post" enctype="multipart/form-data" class="auth-form profile-form">
+        <div asp-validation-summary="ModelOnly" class="form-alert" role="alert"></div>
+        <div class="photo-upload profile-upload">
+            <div class="photo-circle big-photo" data-preview-wrapper>
+                @if (!string.IsNullOrWhiteSpace(Model.CurrentImageUrl))
+                {
+                    <img src="@Model.CurrentImageUrl" alt="Your profile picture" data-image-preview />
+                    <span class="photo-placeholder" data-preview-placeholder hidden>+</span>
+                }
+                else
+                {
+                    <img alt="Your profile picture" data-image-preview hidden />
+                    <span class="photo-placeholder" data-preview-placeholder>+</span>
+                }
+            </div>
+            <div>
+                <label asp-for="ProfileImage" class="photo-label">Change profile picture</label>
+                <input asp-for="ProfileImage" type="file" accept="image/png,image/jpeg,image/webp" data-image-input />
+                <span asp-validation-for="ProfileImage" class="field-error"></span>
+                <small class="muted">JPG, PNG or WEBP · up to 2 MB</small>
+            </div>
+        </div>
+
+        <div class="field">
+            <label asp-for="FullName"></label>
+            <input asp-for="FullName" autocomplete="name" />
+            <span asp-validation-for="FullName" class="field-error"></span>
+        </div>
+        <div class="field-grid">
+            <div class="field">
+                <label asp-for="Email"></label>
+                <input asp-for="Email" type="email" readonly />
+                <small class="muted">Email changes require verification and are not supported on this page.</small>
+            </div>
+            <div class="field">
+                <label asp-for="PhoneNumber"></label>
+                <input asp-for="PhoneNumber" type="tel" autocomplete="tel" />
+                <span asp-validation-for="PhoneNumber" class="field-error"></span>
+            </div>
+        </div>
+        <button class="auth-submit" type="submit">Save changes <span aria-hidden="true">→</span></button>
+    </form>
+</div>

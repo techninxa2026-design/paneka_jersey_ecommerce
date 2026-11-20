@@ -1,0 +1,37 @@
+@{
+    var title = ViewData["Title"]?.ToString() ?? "Account";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Customer account - Jersey Ecommerce" />
+    <title>@title | PANENKA Ecommerce</title>
+    <link rel="icon" type="image/png" href="~/images/favicon.png" />
+    <link rel="stylesheet" href="~/css/account.css" asp-append-version="true" />
+</head>
+<body class="auth-page">
+    <header class="auth-header">
+        <div class="auth-header-inner">
+            <a class="auth-logo" asp-area="" asp-controller="Home" asp-action="Index" aria-label="Jersey Ecommerce home">
+                <span class="auth-logo-mark">P</span>
+                <span>PANENKA<span class="accent-text">.</span></span>
+            </a>
+            <a class="auth-back" asp-area="" asp-controller="Home" asp-action="Index">
+                <span aria-hidden="true">←</span> Back to store
+            </a>
+        </div>
+    </header>
+    </header>
+
+    <main class="auth-main">@RenderBody()</main>
+
+    <footer class="auth-footer">
+        <span>© @DateTime.UtcNow.Year Jersey Ecommerce. All rights reserved.</span>
+        <span>Secure customer accounts</span>
+    </footer>
+    <script src="~/js/account.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

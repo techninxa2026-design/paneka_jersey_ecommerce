@@ -1,0 +1,23 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.CouponUsageViewModel
+@{
+    ViewData["Title"] = "Coupon Usage";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+@section Styles { <link rel="stylesheet" href="@Url.Content("~/css/admin-coupons.css")" /> }
+<main class="cp-page">
+    <div class="cp-crumb"><a href="/admin/dashboard">Dashboard</a><i class="bi bi-chevron-right"></i><a href="@Url.Content("~/admin/coupons")">Coupons</a><i class="bi bi-chevron-right"></i>Usage history</div>
+    <header class="cp-header"><div><div class="cp-kicker">PROMOTIONS / REDEMPTION HISTORY</div><h1>@Model.Coupon.Code<span class="cp-dot">.</span></h1><p>See when this coupon was redeemed and which order used it.</p></div><div class="cp-footer-actions"><a href="@Url.Action("Edit", "Coupons", new { area = "Admin", id = Model.Coupon.Id })" class="cp-button cp-button-light"><i class="bi bi-pencil"></i> Edit</a><a href="@Url.Content("~/admin/coupons")" class="cp-button cp-button-dark"><i class="bi bi-arrow-left"></i> All coupons</a></div></header>
+    <div class="cp-stats cp-usage-stats"><div class="cp-stat"><div class="cp-stat-label">REDEMPTIONS</div><div class="cp-stat-num">@Model.Usages.Count</div><span>Recorded orders</span></div><div class="cp-stat"><div class="cp-stat-label">TOTAL DISCOUNT</div><div class="cp-stat-num">৳@Model.Usages.Sum(u => u.DiscountAmount).ToString("N2")</div><span>Given to customers</span></div><div class="cp-stat"><div class="cp-stat-label">USAGE LIMIT</div><div class="cp-stat-num">@(Model.Coupon.UsageLimit?.ToString() ?? "∞")</div><span>Configured total limit</span></div></div>
+    <section class="cp-panel"><div class="cp-panel-heading"><div><h2>Redemption records</h2><p>Historical entries are read-only to protect your order audit trail.</p></div><span class="cp-count">@Model.Usages.Count RECORD(S)</span></div>
+        <div class="cp-table-scroll"><table class="cp-table"><thead><tr><th>DATE (UTC)</th><th>CUSTOMER</th><th>ORDER</th><th>DISCOUNT GIVEN</th></tr></thead><tbody>
+        @foreach (var u in Model.Usages)
+        {
+            <tr><td>@u.UsedAt.ToString("dd MMM yyyy, HH:mm")</td><td><strong>@(u.User?.Email ?? u.UserId)</strong></td><td>#@u.OrderId</td><td><strong>৳@u.DiscountAmount.ToString("N2")</strong></td></tr>
+        }
+        @if (Model.Usages.Count == 0)
+        {
+            <tr><td colspan="4" class="cp-empty"><i class="bi bi-clock-history"></i><strong>No redemptions yet</strong><span>Usage records will appear here when the checkout flow records coupon redemptions.</span></td></tr>
+        }
+        </tbody></table></div>
+    </section>
+</main>

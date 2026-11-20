@@ -1,0 +1,124 @@
+@model Jersey_ecommerce.Models.Orders.Shipment
+@using Jersey_ecommerce.Areas.Admin.ViewModels
+@{
+    ViewData["Title"] = "Shipment Details";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+
+    var indexUrl = Url.Action("Index", "Shipments", new { area = "Admin" });
+    var editUrl = Url.Action("Edit", "Shipments", new { area = "Admin", id = Model.Id });
+    var deleteUrl = Url.Action("Delete", "Shipments", new { area = "Admin", id = Model.Id });
+    var canDelete = Model.Status is "Pending" or "Packed" or "Cancelled";
+    var statusClass = "ship-status-" + (Model.Status ?? "").ToLowerInvariant();
+    var validTrackingLink = Uri.TryCreate(Model.TrackingUrl, UriKind.Absolute, out var parsedTrackingUrl) &&
+        (parsedTrackingUrl.Scheme == Uri.UriSchemeHttp || parsedTrackingUrl.Scheme == Uri.UriSchemeHttps);
+}
+
+<link rel="stylesheet" href="@Url.Content("~/css/admin-shipments.css")" />
+
+<div class="ship-page">
+    <header class="ship-head">
+        <div>
+            <div class="ship-kicker">SALES / SHIPMENTS / DETAILS</div>
+            <h2 class="ship-title">SHP-@Model.Id.ToString("D5")<span class="ship-title-dot">.</span></h2>
+            <p class="ship-subtitle">Order @Model.Order.OrderNumber · @Model.Order.CustomerName</p>
+        </div>
+        <div class="ship-top-actions">
+            <a href="@indexUrl" class="ship-btn ship-btn-light"><i class="bi bi-arrow-left"></i> All shipments</a>
+            <a href="@editUrl" class="ship-btn"><i class="bi bi-pencil-square"></i> Edit shipment</a>
+        </div>
+    </header>
+
+    @if (TempData["Success"] is string success)
+    {
+        <div class="ship-alert" role="status"><i class="bi bi-check-circle"></i> @success</div>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <div class="ship-alert ship-alert-error" role="alert"><i class="bi bi-exclamation-triangle"></i> @error</div>
+    }
+
+    <div class="ship-stats ship-details-stats">
+        <div class="ship-stat"><div class="ship-stat-label">CURRENT STATUS</div><div class="ship-stat-value"><span class="ship-status @statusClass">@ShipmentStatuses.Label(Model.Status)</span></div><div class="ship-stat-foot">Shipment progress</div></div>
+        <div class="ship-stat"><div class="ship-stat-label">COURIER</div><div class="ship-stat-value ship-text-value">@(string.IsNullOrWhiteSpace(Model.CourierName) ? "Not assigned" : Model.CourierName)</div><div class="ship-stat-foot">Delivery service</div></div>
+        <div class="ship-stat"><div class="ship-stat-label">ESTIMATED DELIVERY</div><div class="ship-stat-value ship-text-value">@(Model.EstimatedDeliveryAt?.ToString("dd MMM yyyy") ?? "Not set")</div><div class="ship-stat-foot">Expected arrival date</div></div>
+    </div>
+
+    <div class="ship-detail-grid">
+        <div class="ship-detail-main">
+            <section class="ship-card">
+                <div class="ship-card-head"><h3 class="ship-card-title">Shipment information</h3></div>
+                <dl class="ship-dl">
+                    <div><dt>Shipment ID</dt><dd>SHP-@Model.Id.ToString("D5")</dd></div>
+                    <div><dt>Order number</dt><dd>@Model.Order.OrderNumber</dd></div>
+                    <div><dt>Customer</dt><dd>@Model.Order.CustomerName</dd></div>
+                    <div><dt>Customer email</dt><dd>@(string.IsNullOrWhiteSpace(Model.Order.CustomerEmail) ? "Not provided" : Model.Order.CustomerEmail)</dd></div>
+                    <div><dt>Courier / delivery company</dt><dd>@(string.IsNullOrWhiteSpace(Model.CourierName) ? "Not assigned" : Model.CourierName)</dd></div>
+                    <div><dt>Tracking number</dt><dd>@(string.IsNullOrWhiteSpace(Model.TrackingNumber) ? "Not provided" : Model.TrackingNumber)</dd></div>
+                    <div>
+                        <dt>Tracking URL</dt>
+                        <dd>
+                            @if (validTrackingLink)
+                            {
+                                <a href="@Model.TrackingUrl" target="_blank" rel="noopener noreferrer">Open tracking <i class="bi bi-box-arrow-up-right"></i></a>
+                            }
+                            else
+                            {
+                                <span>Not provided</span>
+                            }
+                        </dd>
+                    </div>
+                    <div><dt>Estimated delivery</dt><dd>@(Model.EstimatedDeliveryAt?.ToString("dd MMM yyyy") ?? "Not set")</dd></div>
+                    <div><dt>Created (UTC)</dt><dd>@Model.CreatedAt.ToString("dd MMM yyyy, HH:mm")</dd></div>
+                    <div><dt>Shipped (UTC)</dt><dd>@(Model.ShippedAt?.ToString("dd MMM yyyy, HH:mm") ?? "Not yet")</dd></div>
+                    <div><dt>Delivered (UTC)</dt><dd>@(Model.DeliveredAt?.ToString("dd MMM yyyy, HH:mm") ?? "Not yet")</dd></div>
+                </dl>
+            </section>
+
+            <section class="ship-card">
+                <div class="ship-card-head"><h3 class="ship-card-title">Internal notes</h3></div>
+                <div class="ship-note">@(string.IsNullOrWhiteSpace(Model.Notes) ? "No internal notes added." : Model.Notes)</div>
+            </section>
+        </div>
+
+        <aside class="ship-detail-side">
+            <section class="ship-card">
+                <div class="ship-card-head"><h3 class="ship-card-title">Delivery timeline</h3></div>
+                <div class="ship-timeline">
+                    <div class="ship-step done">
+                        <div class="ship-step-label">Shipment created</div>
+                        <div class="ship-step-date">@Model.CreatedAt.ToString("dd MMM yyyy, HH:mm") UTC</div>
+                    </div>
+                    <div class="ship-step @(Model.ShippedAt.HasValue ? "done" : "")">
+                        <div class="ship-step-label">Dispatched</div>
+                        <div class="ship-step-date">@(Model.ShippedAt?.ToString("dd MMM yyyy, HH:mm") ?? "Waiting for dispatch")</div>
+                    </div>
+                    <div class="ship-step @(Model.DeliveredAt.HasValue ? "done" : "")">
+                        <div class="ship-step-label">Delivered</div>
+                        <div class="ship-step-date">@(Model.DeliveredAt?.ToString("dd MMM yyyy, HH:mm") ?? "Not yet delivered")</div>
+                    </div>
+                </div>
+            </section>
+
+            @if (canDelete)
+            {
+                <section class="ship-card">
+                    <div class="ship-card-head"><h3 class="ship-card-title">Manage record</h3></div>
+                    <div class="ship-hint">
+                        <p>Delete this record only if it was created by mistake. The associated order is not deleted.</p>
+                        <form action="@deleteUrl" method="post" onsubmit="return confirm('Permanently delete this shipment record?');">
+                            @Html.AntiForgeryToken()
+                            <button class="ship-btn ship-btn-danger" type="submit"><i class="bi bi-trash"></i> Delete shipment</button>
+                        </form>
+                    </div>
+                </section>
+            }
+            else
+            {
+                <section class="ship-card">
+                    <div class="ship-card-head"><h3 class="ship-card-title">Record protection</h3></div>
+                    <div class="ship-hint"><p>This shipment has been dispatched. Your controller prevents deletion to preserve delivery history.</p></div>
+                </section>
+            }
+        </aside>
+    </div>
+</div>

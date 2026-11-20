@@ -1,0 +1,113 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.VariantOptionsIndexViewModel
+@{
+    ViewData["Title"] = "Sizes & Colors";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    bool showSizes = Model.Tab != "colors";
+    bool showColors = Model.Tab != "sizes";
+}
+@await Html.PartialAsync("_VariantStyles")
+<div class="vo-page">
+    <header class="vo-head">
+        <div>
+            <div class="vo-crumb"><a href="/admin/dashboard">Dashboard</a><i class="bi bi-chevron-right"></i><span>Catalog</span><i class="bi bi-chevron-right"></i><span>Sizes &amp; Colors</span></div>
+            <div class="vo-eyebrow">PANENKA / Catalog attributes</div>
+            <h1 class="vo-title">Sizes &amp; colors<span style="color:#aaa">.</span></h1>
+            <p class="vo-subtitle">Build reusable jersey sizes and color options. Assign these attributes to product variants to manage individual SKUs and inventory.</p>
+        </div>
+        <div class="vo-head-actions">
+            <a class="vo-btn" href="@Url.Action("CreateSize", "Variants", new { area = "Admin" })"><i class="bi bi-plus-lg"></i> Add size</a>
+            <a class="vo-btn vo-btn-primary" href="@Url.Action("CreateColor", "Variants", new { area = "Admin" })"><i class="bi bi-palette"></i> Add color</a>
+        </div>
+    </header>
+
+    @if (TempData["Success"] is string success)
+    {
+        <div class="vo-alert vo-alert-success"><i class="bi bi-check-circle"></i> @success</div>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <div class="vo-alert"><i class="bi bi-exclamation-triangle"></i> @error</div>
+    }
+
+    <section class="vo-kpis">
+        <div class="vo-kpi"><div class="vo-kpi-label">Total sizes <i class="bi bi-rulers"></i></div><div class="vo-kpi-value">@Model.TotalSizes</div><div class="vo-kpi-note">Available size definitions</div></div>
+        <div class="vo-kpi"><div class="vo-kpi-label">Total colors <i class="bi bi-palette"></i></div><div class="vo-kpi-value">@Model.TotalColors</div><div class="vo-kpi-note">Available color definitions</div></div>
+        <div class="vo-kpi"><div class="vo-kpi-label">Sizes in use <i class="bi bi-boxes"></i></div><div class="vo-kpi-value">@Model.UsedSizes</div><div class="vo-kpi-note">Linked to product variants</div></div>
+        <div class="vo-kpi"><div class="vo-kpi-label">Colors in use <i class="bi bi-grid-3x3-gap"></i></div><div class="vo-kpi-value">@Model.UsedColors</div><div class="vo-kpi-note">Linked to product variants</div></div>
+    </section>
+
+    <section class="vo-toolbar">
+        <form action="@Url.Action("Index", "Variants", new { area = "Admin" })" method="get" style="display:flex;gap:10px;flex:1;flex-wrap:wrap;align-items:center">
+            <input type="hidden" name="tab" value="@Model.Tab" />
+            <div class="vo-search"><i class="bi bi-search"></i><input class="vo-input" name="search" value="@Model.Search" placeholder="Search sizes or colors..." /></div>
+            <button type="submit" class="vo-btn"><i class="bi bi-funnel"></i> Search</button>
+        </form>
+        <div class="vo-tabs">
+            <a class="vo-tab @(Model.Tab == "all" ? "vo-tab-active" : "")" href="@Url.Action("Index", "Variants", new { area = "Admin", tab = "all", search = Model.Search })">All</a>
+            <a class="vo-tab @(Model.Tab == "sizes" ? "vo-tab-active" : "")" href="@Url.Action("Index", "Variants", new { area = "Admin", tab = "sizes", search = Model.Search })">Sizes</a>
+            <a class="vo-tab @(Model.Tab == "colors" ? "vo-tab-active" : "")" href="@Url.Action("Index", "Variants", new { area = "Admin", tab = "colors", search = Model.Search })">Colors</a>
+        </div>
+    </section>
+
+    <div class="vo-sections @(showSizes && showColors ? "" : "vo-sections-one")">
+        @if (showSizes)
+        {
+            <section class="vo-panel">
+                <header class="vo-panel-header">
+                    <div class="vo-panel-head-left"><span class="vo-panel-icon"><i class="bi bi-rulers"></i></span><div><h2>Size management</h2><div class="vo-panel-note">@Model.Sizes.Count matching sizes</div></div></div>
+                    <a href="@Url.Action("CreateSize", "Variants", new { area = "Admin" })" class="vo-btn vo-btn-mini" title="Add size" aria-label="Add size"><i class="bi bi-plus-lg"></i></a>
+                </header>
+                @if (Model.Sizes.Any())
+                {
+                    <div class="vo-table-scroll"><table class="vo-table"><thead><tr><th>Size</th><th>Used in</th><th>Visibility</th><th style="text-align:right">Actions</th></tr></thead>
+                    <tbody>
+                    @foreach (var size in Model.Sizes)
+                    {
+                        <tr>
+                            <td><div class="vo-opt"><span class="vo-size-chip">@((size.Name.Length > 3 ? size.Name[..3] : size.Name).ToUpperInvariant())</span><span><span class="vo-opt-name">@size.Name</span><span class="vo-opt-sub">@(size.DisplayOrder.HasValue ? $"Order {size.DisplayOrder}" : $"ID #{size.Id}")</span></span></div></td>
+                            <td><span class="vo-pill @(size.VariantCount > 0 ? "vo-pill-used" : "")">@size.VariantCount variants</span></td>
+                            <td><span class="vo-pill">@(size.IsActive.HasValue ? (size.IsActive.Value ? "Active" : "Inactive") : "Available")</span></td>
+                            <td><div class="vo-row-actions"><a class="vo-btn vo-btn-mini" title="Edit" aria-label="Edit @size.Name" href="@Url.Action("EditSize", "Variants", new { area = "Admin", id = size.Id })"><i class="bi bi-pencil"></i></a><a class="vo-btn vo-btn-mini vo-btn-danger" title="Delete" aria-label="Delete @size.Name" href="@Url.Action("DeleteSize", "Variants", new { area = "Admin", id = size.Id })"><i class="bi bi-trash3"></i></a></div></td>
+                        </tr>
+                    }
+                    </tbody></table></div>
+                }
+                else
+                {
+                    <div class="vo-empty"><i class="bi bi-rulers"></i><strong>No sizes found</strong><span>Create the first size or adjust your search.</span></div>
+                }
+                <div class="vo-footer">Sizes in use cannot be deleted until their variants are reassigned or removed.</div>
+            </section>
+        }
+
+        @if (showColors)
+        {
+            <section class="vo-panel">
+                <header class="vo-panel-header">
+                    <div class="vo-panel-head-left"><span class="vo-panel-icon"><i class="bi bi-palette"></i></span><div><h2>Color management</h2><div class="vo-panel-note">@Model.Colors.Count matching colors</div></div></div>
+                    <a href="@Url.Action("CreateColor", "Variants", new { area = "Admin" })" class="vo-btn vo-btn-mini" title="Add color" aria-label="Add color"><i class="bi bi-plus-lg"></i></a>
+                </header>
+                @if (Model.Colors.Any())
+                {
+                    <div class="vo-table-scroll"><table class="vo-table"><thead><tr><th>Color</th><th>Used in</th><th>Visibility</th><th style="text-align:right">Actions</th></tr></thead>
+                    <tbody>
+                    @foreach (var color in Model.Colors)
+                    {
+                        <tr>
+                            <td><div class="vo-opt"><span class="vo-swatch" style="background-color:@color.SafeSwatch"></span><span><span class="vo-opt-name">@color.Name</span><span class="vo-opt-sub">@(color.HexCode ?? (color.DisplayOrder.HasValue ? $"Order {color.DisplayOrder}" : $"ID #{color.Id}"))</span></span></div></td>
+                            <td><span class="vo-pill @(color.VariantCount > 0 ? "vo-pill-used" : "")">@color.VariantCount variants</span></td>
+                            <td><span class="vo-pill">@(color.IsActive.HasValue ? (color.IsActive.Value ? "Active" : "Inactive") : "Available")</span></td>
+                            <td><div class="vo-row-actions"><a class="vo-btn vo-btn-mini" title="Edit" aria-label="Edit @color.Name" href="@Url.Action("EditColor", "Variants", new { area = "Admin", id = color.Id })"><i class="bi bi-pencil"></i></a><a class="vo-btn vo-btn-mini vo-btn-danger" title="Delete" aria-label="Delete @color.Name" href="@Url.Action("DeleteColor", "Variants", new { area = "Admin", id = color.Id })"><i class="bi bi-trash3"></i></a></div></td>
+                        </tr>
+                    }
+                    </tbody></table></div>
+                }
+                else
+                {
+                    <div class="vo-empty"><i class="bi bi-palette"></i><strong>No colors found</strong><span>Create your first color or adjust your search.</span></div>
+                }
+                <div class="vo-footer">Deleting a color never deletes products; used colors are protected.</div>
+            </section>
+        }
+    </div>
+</div>

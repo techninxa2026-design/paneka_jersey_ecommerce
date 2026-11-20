@@ -1,0 +1,17 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.CouponFormViewModel
+@{
+    ViewData["Title"] = "Edit Coupon";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+@section Styles { <link rel="stylesheet" href="@Url.Content("~/css/admin-coupons.css")" /> }
+<main class="cp-page cp-form-page">
+    <div class="cp-crumb"><a href="/admin/dashboard">Dashboard</a><i class="bi bi-chevron-right"></i><a href="@Url.Content("~/admin/coupons")">Coupons</a><i class="bi bi-chevron-right"></i>Edit</div>
+    <header class="cp-header"><div><div class="cp-kicker">PROMOTIONS / MANAGE CAMPAIGN</div><h1>Edit coupon<span class="cp-dot">.</span></h1><p>Update the rules for <strong>@Model.Code</strong>. Existing usage history will be preserved.</p></div><a href="@Url.Content("~/admin/coupons")" class="cp-button cp-button-light"><i class="bi bi-arrow-left"></i> Back to coupons</a></header>
+    <form action="@Url.Action("Edit", "Coupons", new { area = "Admin", id = Model.Id })" method="post">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        @await Html.PartialAsync("_CouponFields", Model)
+        <div class="cp-form-footer"><div><strong>Save changes</strong><span>Any updated rules take effect for future redemptions.</span></div><div class="cp-footer-actions"><a class="cp-button cp-button-light" href="@Url.Content("~/admin/coupons")">Cancel</a><button type="submit" class="cp-button cp-button-dark"><i class="bi bi-check2"></i> Save changes</button></div></div>
+    </form>
+</main>
+

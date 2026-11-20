@@ -1,0 +1,293 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.StoreSettingsViewModel
+@{
+    ViewData["Title"] = "Store Settings";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/admin-settings.css" asp-append-version="true" />
+}
+
+<div class="st-page" id="settingsPage">
+    <div class="st-top">
+        <div>
+            <div class="st-breadcrumb"><a asp-area="Admin" asp-controller="Dashboard" asp-action="Index">Dashboard</a><i class="bi bi-chevron-right"></i><span>Store settings</span></div>
+            <div class="st-eyebrow">SYSTEM / CONFIGURATION</div>
+            <h1>Store settings<span class="st-dot">.</span></h1>
+            <p>Manage your store identity, contact details, operations, and search presence.</p>
+        </div>
+        <div class="st-top-actions">
+            <a class="st-btn st-btn-outline" asp-area="" asp-controller="Home" asp-action="Index" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> View store</a>
+            <button type="submit" form="storeSettingsForm" class="st-btn st-btn-dark"><i class="bi bi-check2-circle"></i> Save changes</button>
+        </div>
+    </div>
+
+    @if (TempData["SettingsSuccess"] is string success)
+    {
+        <div class="st-alert st-success" role="status"><i class="bi bi-check-circle"></i><span>@success</span><button type="button" data-dismiss-alert aria-label="Dismiss"><i class="bi bi-x-lg"></i></button></div>
+    }
+
+    <form asp-area="Admin" asp-controller="Settings" asp-action="Index" method="post" enctype="multipart/form-data" id="storeSettingsForm">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="st-validation" role="alert"></div>
+        <div class="st-layout">
+            <nav class="st-nav" aria-label="Settings sections">
+                <div class="st-nav-kicker">SETTINGS MENU</div>
+                <button type="button" class="st-nav-link active" data-settings-tab="general" aria-current="page"><i class="bi bi-shop-window"></i> General <i class="bi bi-chevron-right st-nav-arrow"></i></button>
+                <button type="button" class="st-nav-link" data-settings-tab="branding"><i class="bi bi-palette2"></i> Branding <i class="bi bi-chevron-right st-nav-arrow"></i></button>
+                <button type="button" class="st-nav-link" data-settings-tab="contact"><i class="bi bi-headset"></i> Contact details <i class="bi bi-chevron-right st-nav-arrow"></i></button>
+                <button type="button" class="st-nav-link" data-settings-tab="operations"><i class="bi bi-sliders"></i> Store operations <i class="bi bi-chevron-right st-nav-arrow"></i></button>
+                <button type="button" class="st-nav-link" data-settings-tab="social"><i class="bi bi-share"></i> Social media <i class="bi bi-chevron-right st-nav-arrow"></i></button>
+                <button type="button" class="st-nav-link" data-settings-tab="seo"><i class="bi bi-search"></i> SEO &amp; metadata <i class="bi bi-chevron-right st-nav-arrow"></i></button>
+                <div class="st-nav-foot"><i class="bi bi-database-check"></i> Stored in your existing settings database</div>
+            </nav>
+
+            <main class="st-panels">
+                <!-- GENERAL -->
+                <section class="st-pane" id="settings-general" data-settings-pane="general">
+                    <div class="st-card">
+                        <div class="st-card-heading"><span class="st-section-no">01</span><div><h2>General information</h2><p>Basic store identity and regional preferences.</p></div></div>
+                        <div class="st-card-body">
+                            <div class="st-field"><label asp-for="StoreName"></label><input asp-for="StoreName" class="st-input" placeholder="PANENKA" /><span asp-validation-for="StoreName" class="st-error"></span><small>This name can be displayed in your storefront header and emails.</small></div>
+                            <div class="st-field"><label asp-for="Tagline">Brand tagline</label><input asp-for="Tagline" class="st-input" placeholder="Built for the game." /><span asp-validation-for="Tagline" class="st-error"></span></div>
+                            <div class="st-grid-two">
+                                <div class="st-field"><label asp-for="CurrencyCode">Currency code</label><input asp-for="CurrencyCode" class="st-input" maxlength="3" placeholder="BDT" style="text-transform:uppercase" /><span asp-validation-for="CurrencyCode" class="st-error"></span><small>Display preference; connect it to price formatting separately.</small></div>
+                                <div class="st-field"><label asp-for="Country">Country / region</label><input asp-for="Country" class="st-input" placeholder="Bangladesh" /><span asp-validation-for="Country" class="st-error"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="st-info-strip"><i class="bi bi-info-circle"></i> Store name and currency are saved as settings. Your storefront templates must read them to reflect changes publicly.</div>
+                </section>
+
+                <!-- BRANDING -->
+                <section class="st-pane" id="settings-branding" data-settings-pane="branding">
+                    <div class="st-card">
+                        <div class="st-card-heading"><span class="st-section-no">02</span><div><h2>Brand identity</h2><p>Upload your logo and favicon to give the store a consistent look.</p></div></div>
+                        <div class="st-card-body">
+                            <div class="st-upload-grid">
+                                <div class="st-upload-group">
+                                    <div class="st-upload-title"><strong>Store logo</strong><small>PNG, JPG, WebP / up to 3 MB</small></div>
+                                    <div class="st-image-preview st-logo-preview" id="logoPreviewBox">
+                                        @if (!string.IsNullOrWhiteSpace(Model.LogoUrl))
+                                        {
+                                            <img id="logoPreview" src="@Model.LogoUrl" alt="Current store logo" />
+                                        }
+                                        else
+                                        {
+                                            <img id="logoPreview" alt="Logo preview" hidden />
+                                        }
+                                        <div class="st-preview-placeholder" id="logoPlaceholder" style="@(string.IsNullOrWhiteSpace(Model.LogoUrl) ? "" : "display:none")"><i class="bi bi-image"></i><span>NO LOGO UPLOADED</span></div>
+                                    </div>
+                                    <input asp-for="LogoFile" class="st-upload-input" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" />
+                                    <span asp-validation-for="LogoFile" class="st-error"></span>
+                                    <label class="st-remove"><input asp-for="RemoveLogo" /> Remove current logo</label>
+                                </div>
+                                <div class="st-upload-group">
+                                    <div class="st-upload-title"><strong>Favicon</strong><small>PNG, JPG, WebP, ICO / up to 1 MB</small></div>
+                                    <div class="st-image-preview st-favicon-preview">
+                                        @if (!string.IsNullOrWhiteSpace(Model.FaviconUrl))
+                                        {
+                                            <img id="faviconPreview" src="@Model.FaviconUrl" alt="Current favicon" />
+                                        }
+                                        else
+                                        {
+                                            <img id="faviconPreview" alt="Favicon preview" hidden />
+                                        }
+                                        <div class="st-preview-placeholder" id="faviconPlaceholder" style="@(string.IsNullOrWhiteSpace(Model.FaviconUrl) ? "" : "display:none")"><i class="bi bi-app-indicator"></i><span>NO FAVICON</span></div>
+                                    </div>
+                                    <input asp-for="FaviconFile" class="st-upload-input" type="file" accept=".png,.jpg,.jpeg,.webp,.ico,image/x-icon,image/png,image/jpeg,image/webp" />
+                                    <span asp-validation-for="FaviconFile" class="st-error"></span>
+                                    <label class="st-remove"><input asp-for="RemoveFavicon" /> Remove current favicon</label>
+                                </div>
+                            </div>
+                            <div class="st-divider"></div>
+                            <div class="st-field"><label asp-for="AccentColor">Storefront accent color</label><div class="st-color-row"><input asp-for="AccentColor" type="color" class="st-color-picker" aria-label="Choose accent color" /><input type="text" id="accentHex" class="st-input" value="@Model.AccentColor" maxlength="7" placeholder="#111111" aria-label="Hex accent color" /></div><span asp-validation-for="AccentColor" class="st-error"></span><small>Stored for storefront use; admin remains black and white.</small></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- CONTACT -->
+                <section class="st-pane" id="settings-contact" data-settings-pane="contact">
+                    <div class="st-card">
+                        <div class="st-card-heading"><span class="st-section-no">03</span><div><h2>Contact &amp; support</h2><p>Help your customers reach the right team.</p></div></div>
+                        <div class="st-card-body">
+                            <div class="st-grid-two">
+                                <div class="st-field"><label asp-for="SupportEmail">Support email</label><div class="st-input-with-icon"><i class="bi bi-envelope"></i><input asp-for="SupportEmail" class="st-input" placeholder="support@example.com" /></div><span asp-validation-for="SupportEmail" class="st-error"></span></div>
+                                <div class="st-field"><label asp-for="ContactPhone">Phone number</label><div class="st-input-with-icon"><i class="bi bi-telephone"></i><input asp-for="ContactPhone" class="st-input" placeholder="+880 1XXXXXXXXX" /></div><span asp-validation-for="ContactPhone" class="st-error"></span></div>
+                            </div>
+                            <div class="st-field"><label asp-for="WhatsAppNumber">WhatsApp number</label><div class="st-input-with-icon"><i class="bi bi-whatsapp"></i><input asp-for="WhatsAppNumber" class="st-input" placeholder="+880 1XXXXXXXXX" /></div><span asp-validation-for="WhatsAppNumber" class="st-error"></span></div>
+                            <div class="st-field"><label asp-for="StoreAddress">Business address</label><textarea asp-for="StoreAddress" class="st-input st-textarea" rows="4" placeholder="Street address, city, country"></textarea><span asp-validation-for="StoreAddress" class="st-error"></span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- OPERATIONS -->
+                <section class="st-pane" id="settings-operations" data-settings-pane="operations">
+                    <div class="st-card">
+                        <div class="st-card-heading"><span class="st-section-no">04</span><div><h2>Store operations</h2><p>Shipping amounts and operational preferences.</p></div></div>
+                        <div class="st-card-body">
+                            <h3 class="st-subheading">Shipping preferences</h3>
+                            <div class="st-grid-two">
+                                <div class="st-field"><label asp-for="StandardShippingFee">Standard delivery fee (@Model.CurrencyCode)</label><input asp-for="StandardShippingFee" type="number" min="0" step="0.01" class="st-input" /><span asp-validation-for="StandardShippingFee" class="st-error"></span></div>
+                                <div class="st-field"><label asp-for="FreeShippingThreshold">Free shipping from (@Model.CurrencyCode)</label><input asp-for="FreeShippingThreshold" type="number" min="0" step="0.01" class="st-input" /><span asp-validation-for="FreeShippingThreshold" class="st-error"></span><small>Set to zero to disable the threshold.</small></div>
+                            </div>
+                            <div class="st-divider"></div>
+                            <h3 class="st-subheading">Checkout and notifications</h3>
+                            @* The asp-for checkbox keeps the MVC true/false hidden fallback for reliable POST binding.
+                               Only the visible checkbox receives switch styles; never target the hidden fallback. *@
+                            <label class="st-toggle-row" for="AllowCashOnDelivery">
+                                <span class="st-toggle-copy">
+                                    <strong>Cash on delivery</strong>
+                                    <small>Allow cash on delivery as a checkout preference.</small>
+                                </span>
+                                <span class="st-toggle-control">
+                                    <span class="st-switch-state" data-switch-state="AllowCashOnDelivery">@(Model.AllowCashOnDelivery ? "ON" : "OFF")</span>
+                                    <span class="st-switch">
+                                        <input asp-for="AllowCashOnDelivery" type="checkbox" class="st-switch-checkbox" />
+                                        <span class="st-switch-track" aria-hidden="true"></span>
+                                    </span>
+                                </span>
+                            </label>
+                            <label class="st-toggle-row" for="SendOrderNotifications">
+                                <span class="st-toggle-copy">
+                                    <strong>Order notifications</strong>
+                                    <small>Store the preference to send order notification messages.</small>
+                                </span>
+                                <span class="st-toggle-control">
+                                    <span class="st-switch-state" data-switch-state="SendOrderNotifications">@(Model.SendOrderNotifications ? "ON" : "OFF")</span>
+                                    <span class="st-switch">
+                                        <input asp-for="SendOrderNotifications" type="checkbox" class="st-switch-checkbox" />
+                                        <span class="st-switch-track" aria-hidden="true"></span>
+                                    </span>
+                                </span>
+                            </label>
+                            <label class="st-toggle-row st-maintenance" for="IsMaintenanceMode">
+                                <span class="st-toggle-copy">
+                                    <strong>Maintenance mode</strong>
+                                    <small>Mark the public storefront as under maintenance.</small>
+                                </span>
+                                <span class="st-toggle-control">
+                                    <span class="st-switch-state" data-switch-state="IsMaintenanceMode">@(Model.IsMaintenanceMode ? "ON" : "OFF")</span>
+                                    <span class="st-switch">
+                                        <input asp-for="IsMaintenanceMode" type="checkbox" class="st-switch-checkbox" />
+                                        <span class="st-switch-track" aria-hidden="true"></span>
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="st-info-strip"><i class="bi bi-exclamation-circle"></i> These preferences are saved to the database. Your checkout, shipping calculation, notification system, and maintenance middleware must read them before they affect shoppers.</div>
+                </section>
+
+                <!-- SOCIAL -->
+                <section class="st-pane" id="settings-social" data-settings-pane="social">
+                    <div class="st-card"><div class="st-card-heading"><span class="st-section-no">05</span><div><h2>Social accounts</h2><p>Add full, public URLs to your brand's social profiles.</p></div></div>
+                        <div class="st-card-body">
+                            <div class="st-field"><label asp-for="FacebookUrl">Facebook</label><div class="st-input-with-icon"><i class="bi bi-facebook"></i><input asp-for="FacebookUrl" class="st-input" placeholder="https://facebook.com/yourstore" /></div><span asp-validation-for="FacebookUrl" class="st-error"></span></div>
+                            <div class="st-field"><label asp-for="InstagramUrl">Instagram</label><div class="st-input-with-icon"><i class="bi bi-instagram"></i><input asp-for="InstagramUrl" class="st-input" placeholder="https://instagram.com/yourstore" /></div><span asp-validation-for="InstagramUrl" class="st-error"></span></div>
+                            <div class="st-field"><label asp-for="TikTokUrl">TikTok</label><div class="st-input-with-icon"><i class="bi bi-tiktok"></i><input asp-for="TikTokUrl" class="st-input" placeholder="https://www.tiktok.com/@@yourstore" /></div><span asp-validation-for="TikTokUrl" class="st-error"></span></div>
+                            <div class="st-field"><label asp-for="YouTubeUrl">YouTube</label><div class="st-input-with-icon"><i class="bi bi-youtube"></i><input asp-for="YouTubeUrl" class="st-input" placeholder="https://youtube.com/@@yourstore" /></div><span asp-validation-for="YouTubeUrl" class="st-error"></span></div>
+                            <div class="st-field"><label asp-for="XUrl">X / Twitter</label><div class="st-input-with-icon"><i class="bi bi-twitter-x"></i><input asp-for="XUrl" class="st-input" placeholder="https://x.com/yourstore" /></div><span asp-validation-for="XUrl" class="st-error"></span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SEO -->
+                <section class="st-pane" id="settings-seo" data-settings-pane="seo">
+                    <div class="st-card"><div class="st-card-heading"><span class="st-section-no">06</span><div><h2>Search engine optimization</h2><p>Set the homepage metadata that can appear in search results.</p></div></div>
+                        <div class="st-card-body">
+                            <div class="st-field"><label asp-for="SeoTitle">Homepage meta title</label><input asp-for="SeoTitle" class="st-input" maxlength="160" placeholder="PANENKA — Premium Football Jerseys" /><span asp-validation-for="SeoTitle" class="st-error"></span><div class="st-field-meta">Suggested length: 50–60 characters · <span id="seoTitleCount">0</span> / 160</div></div>
+                            <div class="st-field"><label asp-for="SeoDescription">Meta description</label><textarea asp-for="SeoDescription" class="st-input st-textarea" rows="4" maxlength="500" placeholder="Shop football jerseys, kits and accessories online..."></textarea><span asp-validation-for="SeoDescription" class="st-error"></span><div class="st-field-meta">Suggested length: 140–160 characters · <span id="seoDescriptionCount">0</span> / 500</div></div>
+                            <div class="st-field"><label asp-for="SeoKeywords">Meta keywords</label><input asp-for="SeoKeywords" class="st-input" placeholder="football jerseys, kits, sportswear" /><span asp-validation-for="SeoKeywords" class="st-error"></span><small>Comma-separated; most major search engines do not use meta keywords for ranking.</small></div>
+                            <div class="st-serp-preview"><div class="st-preview-label">SEARCH PREVIEW / ILLUSTRATIVE</div><div class="st-serp-title" id="seoPreviewTitle">@(string.IsNullOrWhiteSpace(Model.SeoTitle) ? "PANENKA — Football Jerseys" : Model.SeoTitle)</div><div class="st-serp-url">your-store-domain.com</div><div class="st-serp-desc" id="seoPreviewDescription">@(string.IsNullOrWhiteSpace(Model.SeoDescription) ? "Your homepage description will appear here when configured." : Model.SeoDescription)</div></div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="st-bottom-actions"><div><strong>Ready to publish your changes?</strong><span>Changes are saved to your existing database.</span></div><button type="submit" class="st-btn st-btn-dark"><i class="bi bi-check2-circle"></i> Save all settings</button></div>
+            </main>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const root = document.getElementById('settingsPage');
+            const tabs = [...root.querySelectorAll('[data-settings-tab]')];
+            const panes = [...root.querySelectorAll('[data-settings-pane]')];
+            root.classList.add('st-js');
+            function showTab(id) {
+                tabs.forEach(tab => {
+                    const active = tab.dataset.settingsTab === id;
+                    tab.classList.toggle('active', active);
+                    if (active) tab.setAttribute('aria-current', 'page');
+                    else tab.removeAttribute('aria-current');
+                });
+                panes.forEach(pane => pane.classList.toggle('active', pane.dataset.settingsPane === id));
+            }
+            tabs.forEach(tab => tab.addEventListener('click', () => showTab(tab.dataset.settingsTab)));
+            const firstError = root.querySelector('.field-validation-error, .input-validation-error');
+            const errorPane = firstError && firstError.closest('[data-settings-pane]');
+            showTab(errorPane ? errorPane.dataset.settingsPane : 'general');
+
+            // Keep visible ON/OFF indicators in sync with real checkbox state.
+            // Label clicks and keyboard Space work natively without custom click handlers.
+            root.querySelectorAll('.st-switch-checkbox').forEach(checkbox => {
+                const status = root.querySelector(`[data-switch-state="${checkbox.id}"]`);
+                const refresh = () => {
+                    if (status) status.textContent = checkbox.checked ? 'ON' : 'OFF';
+                };
+                checkbox.addEventListener('change', refresh);
+                refresh();
+            });
+
+            const accent = document.getElementById('AccentColor');
+            const hex = document.getElementById('accentHex');
+            accent?.addEventListener('input', () => { hex.value = accent.value.toUpperCase(); });
+            hex?.addEventListener('input', () => {
+                if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) accent.value = hex.value;
+                // Use the actual asp-for field for form binding.
+            });
+            hex?.addEventListener('blur', () => { hex.value = accent.value.toUpperCase(); });
+
+            function preview(fileId, imageId, placeholderId) {
+                const input = document.getElementById(fileId);
+                const image = document.getElementById(imageId);
+                const placeholder = document.getElementById(placeholderId);
+                input?.addEventListener('change', () => {
+                    const file = input.files && input.files[0];
+                    if (!file) return;
+                    const url = URL.createObjectURL(file);
+                    image.onload = () => URL.revokeObjectURL(url);
+                    image.src = url;
+                    image.hidden = false;
+                    placeholder.style.display = 'none';
+                });
+            }
+            preview('LogoFile', 'logoPreview', 'logoPlaceholder');
+            preview('FaviconFile', 'faviconPreview', 'faviconPlaceholder');
+            root.querySelectorAll('[data-dismiss-alert]').forEach(button => button.addEventListener('click', () => button.closest('.st-alert')?.remove()));
+
+            [['SeoTitle', 'seoTitleCount', 'seoPreviewTitle', 'PANENKA — Football Jerseys'],
+             ['SeoDescription', 'seoDescriptionCount', 'seoPreviewDescription', 'Your homepage description will appear here when configured.']]
+                .forEach(([fieldId, counterId, previewId, fallback]) => {
+                    const field = document.getElementById(fieldId);
+                    const counter = document.getElementById(counterId);
+                    const output = document.getElementById(previewId);
+                    if (!field) return;
+                    const update = () => { counter.textContent = field.value.length; output.textContent = field.value.trim() || fallback; };
+                    field.addEventListener('input', update);
+                    update();
+                });
+
+            const form = document.getElementById('storeSettingsForm');
+            form?.addEventListener('submit', () => {
+                const buttons = form.querySelectorAll('button[type="submit"]');
+                buttons.forEach(b => { b.disabled = true; });
+                const topButton = document.querySelector('button[form="storeSettingsForm"]');
+                if (topButton) topButton.disabled = true;
+            });
+        })();
+    </script>
+}

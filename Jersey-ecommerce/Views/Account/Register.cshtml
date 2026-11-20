@@ -1,0 +1,91 @@
+@model Jersey_ecommerce.ViewModels.Account.RegisterViewModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Create an account";
+}
+
+<div class="auth-shell">
+    <aside class="auth-story">
+        <span class="story-eyebrow"><span class="story-dot"></span> JERSEY MEMBERS</span>
+        <div>
+            <div class="
+">P<span>.</span></div>
+            <h1>Wear your<br /><em>game.</em></h1>
+            <p>Create your account for faster checkout, order tracking, and a personalized jersey collection.</p>
+            <div class="story-highlights">
+                <span>01 / Easy checkout</span>
+                <span>02 / Order tracking</span>
+                <span>03 / Your wishlist</span>
+            </div>
+        </div>
+        <span class="story-bottom">BUILT FOR THE LOVE OF THE GAME — 2026</span>
+    </aside>
+
+    <section class="auth-form-panel">
+        <div class="auth-form-inner">
+            <div class="form-overline">JOIN THE COMMUNITY</div>
+            <h2>Create your account<span class="accent-text">.</span></h2>
+            <p class="form-subtitle">Already have an account? <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Model.ReturnUrl">Sign in</a></p>
+
+            <form asp-area="" asp-controller="Account" asp-action="Register" method="post" enctype="multipart/form-data" class="auth-form">
+                <input asp-for="ReturnUrl" type="hidden" />
+                <div asp-validation-summary="ModelOnly" class="form-alert" role="alert"></div>
+
+                <div class="photo-upload">
+                    <div class="photo-circle" data-preview-wrapper>
+                        <span class="photo-placeholder" data-preview-placeholder>+</span>
+                        <img alt="Selected profile preview" data-image-preview hidden />
+                    </div>
+                    <div>
+                        <label asp-for="ProfileImage" class="photo-label">Add a profile picture <span>(optional)</span></label>
+                        <input asp-for="ProfileImage" type="file" accept="image/png,image/jpeg,image/webp" data-image-input />
+                        <span asp-validation-for="ProfileImage" class="field-error"></span>
+                        <small class="muted">JPG, PNG or WEBP · up to 2 MB</small>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label asp-for="FullName"></label>
+                    <input asp-for="FullName" placeholder="e.g. Alex Morgan" autocomplete="name" />
+                    <span asp-validation-for="FullName" class="field-error"></span>
+                </div>
+
+                <div class="field-grid">
+                    <div class="field">
+                        <label asp-for="Email"></label>
+                        <input asp-for="Email" type="email" placeholder="you@example.com" autocomplete="email" />
+                        <span asp-validation-for="Email" class="field-error"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="PhoneNumber"></label>
+                        <input asp-for="PhoneNumber" type="tel" placeholder="+880 1XXXXXXXXX" autocomplete="tel" />
+                        <span asp-validation-for="PhoneNumber" class="field-error"></span>
+                    </div>
+                </div>
+
+                <div class="field-grid">
+                    <div class="field">
+                        <label asp-for="Password"></label>
+                        <div class="password-wrap">
+                            <input asp-for="Password" type="password" placeholder="Create password" autocomplete="new-password" />
+                            <button type="button" class="password-toggle" data-toggle-password aria-label="Show password">Show</button>
+                        </div>
+                        <span asp-validation-for="Password" class="field-error"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="ConfirmPassword"></label>
+                        <div class="password-wrap">
+                            <input asp-for="ConfirmPassword" type="password" placeholder="Confirm password" autocomplete="new-password" />
+                            <button type="button" class="password-toggle" data-toggle-password aria-label="Show password">Show</button>
+                        </div>
+                        <span asp-validation-for="ConfirmPassword" class="field-error"></span>
+                    </div>
+                </div>
+
+                <p class="password-hint">Use at least 8 characters with uppercase, lowercase, a number, and a symbol.</p>
+                <button class="auth-submit" type="submit">Create my account <span aria-hidden="true">→</span></button>
+                <p class="form-disclaimer">By creating an account, you agree to the store's applicable policies.</p>
+            </form>
+        </div>
+    </section>
+</div>

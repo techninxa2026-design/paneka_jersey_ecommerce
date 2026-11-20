@@ -1,0 +1,39 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.CollectionListItemViewModel
+@{
+    ViewData["Title"] = "Delete Collection";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+@await Html.PartialAsync("_CollectionStyles")
+<div class="pc-page" style="max-width:800px">
+    <div class="pc-top">
+        <div>
+            <div class="pc-crumb"><a href="@Url.Action("Index", "Collections", new { area = "Admin" })">Collections</a><i class="bi bi-chevron-right"></i>Delete</div>
+            <div class="pc-eyebrow">PANENKA / COLLECTION MANAGEMENT</div>
+            <h1>Delete collection<span style="color:#a6a6a6">.</span></h1>
+            <p class="pc-subtitle">Confirm removal of this collection from your catalog.</p>
+        </div>
+        <a class="pc-btn" href="@Url.Action("Index", "Collections", new { area = "Admin" })"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+
+    <div class="pc-card" style="margin-bottom:18px">
+        <div class="pc-card-body" style="display:flex;align-items:center;gap:18px">
+            <div class="pc-thumb" style="width:124px;height:94px">
+                @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
+                { <img src="@Model.ImageUrl" alt="@Model.Name" /> }
+                else { <i class="bi bi-image" style="font-size:30px;color:#aaa"></i> }
+            </div>
+            <div><strong style="font-size:20px;color:#111">@Model.Name</strong><p class="pc-muted" style="margin-top:7px">/@Model.Slug</p>
+                <p class="pc-muted" style="margin-top:8px"><b>@Model.ProductCount</b> linked product(s)</p></div>
+        </div>
+    </div>
+
+    <div class="pc-danger-panel">
+        <h2><i class="bi bi-exclamation-triangle"></i> Permanently delete this collection?</h2>
+        <p>The collection and its product assignments will be removed. <strong>The actual products are preserved</strong> and remain available under Products. This action cannot be undone.</p>
+        <form method="post" action="@Url.Action("Delete", "Collections", new { area = "Admin", id = Model.Id })" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:21px">
+            @Html.AntiForgeryToken()
+            <button class="pc-btn pc-btn-danger" type="submit"><i class="bi bi-trash3"></i> Yes, delete collection</button>
+            <a class="pc-btn" href="@Url.Action("Index", "Collections", new { area = "Admin" })">Cancel</a>
+        </form>
+    </div>
+</div>

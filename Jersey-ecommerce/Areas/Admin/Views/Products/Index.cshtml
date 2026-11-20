@@ -1,0 +1,63 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.Products.ProductIndexViewModel
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Products";
+    ViewData["ActivePage"] = "Products";
+    var firstRow = Model.MatchingCount == 0 ? 0 : ((Model.Page - 1) * 12 + 1);
+    var lastRow = Math.Min(Model.MatchingCount, Model.Page * 12);
+}
+<link rel="stylesheet" href="~/css/admin-products.css" asp-append-version="true" />
+<div class="pp-page">
+    <div class="pp-heading pp-heading-flex">
+        <div><div class="pp-eyebrow">CATALOG / PRODUCT MANAGEMENT</div><h1>Products</h1>
+            <p>Manage your PANENKA catalog, inventory, colorways and publication status.</p></div>
+        <a asp-area="Admin" asp-controller="Products" asp-action="Create" class="pp-btn pp-btn-dark"><i class="bi bi-plus-lg"></i> Add product</a>
+    </div>
+    @if (TempData["Success"] is string success) { <div class="pp-alert pp-alert-success"><i class="bi bi-check-circle"></i> @success</div> }
+    @if (TempData["Error"] is string error) { <div class="pp-alert pp-alert-error"><i class="bi bi-exclamation-circle"></i> @error</div> }
+    <div class="pp-stats">
+        <div class="pp-stat"><div><span>TOTAL PRODUCTS</span><i class="bi bi-box-seam"></i></div><strong>@Model.TotalProducts</strong><small>Every product in catalog</small></div>
+        <div class="pp-stat"><div><span>PUBLISHED</span><i class="bi bi-check2-circle"></i></div><strong>@Model.PublishedProducts</strong><small>@Model.DraftProducts draft items</small></div>
+        <div class="pp-stat"><div><span>AVAILABLE UNITS</span><i class="bi bi-boxes"></i></div><strong>@Model.TotalAvailableUnits.ToString("N0")</strong><small>Sum of active variant stock</small></div>
+        <div class="pp-stat"><div><span>OUT OF STOCK</span><i class="bi bi-exclamation-triangle"></i></div><strong>@Model.OutOfStockProducts</strong><small>Products with no available units</small></div>
+    </div>
+    <div class="pp-panel">
+        <div class="pp-panel-header pp-panel-header-wrap"><div><div class="pp-eyebrow">INVENTORY DIRECTORY</div><h2>All products <span class="pp-muted">(@Model.MatchingCount)</span></h2></div></div>
+        <form asp-area="Admin" asp-controller="Products" asp-action="Index" method="get" class="pp-filters">
+            <label class="pp-search"><i class="bi bi-search"></i><input name="search" value="@Model.Search" placeholder="Search name, SKU or slug..." aria-label="Search products" /></label>
+            <select name="categoryId" aria-label="Filter by category"><option value="">All categories</option>
+                @foreach(var c in Model.Categories) { if (Model.CategoryId?.ToString() == c.Value) { <option value="@c.Value" selected>@c.Text</option> } else { <option value="@c.Value">@c.Text</option> } }</select>
+            <select name="status" aria-label="Filter by publication"><option value="all" selected="@(Model.Status == "all")">All statuses</option><option value="published" selected="@(Model.Status == "published")">Published</option><option value="draft" selected="@(Model.Status == "draft")">Draft</option></select>
+            <button class="pp-btn pp-btn-dark" type="submit">Apply filters</button>
+            @if(!string.IsNullOrEmpty(Model.Search) || Model.CategoryId.HasValue || Model.Status != "all") { <a asp-action="Index" class="pp-btn pp-btn-light">Clear</a> }
+        </form>
+        <div class="pp-table-scroll"><table class="pp-table">
+            <thead><tr><th>PRODUCT</th><th>CATEGORY / BRAND</th><th>PRICE</th><th>STOCK</th><th>STATUS</th><th>ADDED</th><th class="pp-text-right">ACTIONS</th></tr></thead>
+            <tbody>
+            @foreach(var p in Model.Products)
+            {
+                <tr>
+                    <td><div class="pp-product-cell"><div class="pp-thumb">@if(!string.IsNullOrWhiteSpace(p.ImageUrl)) { <img src="@p.ImageUrl" alt="@p.Name" loading="lazy" /> } else { <i class="bi bi-image"></i> }</div>
+                        <div class="pp-product-meta"><a asp-action="Details" asp-route-id="@p.Id" class="pp-item-title">@p.Name</a><div class="pp-mono">@(p.SKU ?? p.Slug)</div>@if(p.IsFeatured) { <span class="pp-mini-flag">FEATURED</span> }</div></div></td>
+                    <td><strong class="pp-table-body">@p.CategoryName</strong><div class="pp-muted pp-sm">@(p.BrandName ?? "No brand")</div></td>
+                    <td class="pp-money">৳@p.Price.ToString("N2")</td>
+                    <td><span class="pp-stock @(p.AvailableQuantity == 0 ? "pp-stock-zero" : p.AvailableQuantity <= 5 ? "pp-stock-low" : "")">@p.AvailableQuantity</span><div class="pp-muted pp-sm">@p.VariantCount combinations</div></td>
+                    <td>@if(p.IsPublished) { <span class="pp-tag pp-tag-published"><span></span> Published</span> } else { <span class="pp-tag"><span></span> Draft</span> }</td>
+                    <td class="pp-muted pp-sm">@p.CreatedAt.ToString("dd MMM yyyy")</td>
+                    <td><div class="pp-row-actions">
+                        <a asp-action="Details" asp-route-id="@p.Id" class="pp-icon-btn" title="Details" aria-label="Details"><i class="bi bi-eye"></i></a>
+                        <a asp-action="Edit" asp-route-id="@p.Id" class="pp-icon-btn" title="Edit" aria-label="Edit"><i class="bi bi-pencil-square"></i></a>
+                        <form asp-action="Delete" asp-route-id="@p.Id" method="post" class="pp-inline" onsubmit="return confirm('Delete this product permanently? This cannot be undone.');">
+                            @Html.AntiForgeryToken()<button type="submit" class="pp-icon-btn pp-icon-danger" title="Delete" aria-label="Delete"><i class="bi bi-trash"></i></button></form>
+                    </div></td>
+                </tr>
+            }
+            @if(!Model.Products.Any()) { <tr><td colspan="7"><div class="pp-empty"><i class="bi bi-box-seam"></i><h3>No products found</h3><p>Try different filters or add your first catalog item.</p><a asp-action="Create" class="pp-btn pp-btn-dark">Create product</a></div></td></tr> }
+            </tbody></table></div>
+        <div class="pp-panel-footer"><span>Showing @firstRow–@lastRow of @Model.MatchingCount</span><div class="pp-pagination">
+            @if(Model.Page > 1) { <a asp-action="Index" asp-route-page="@(Model.Page-1)" asp-route-search="@Model.Search" asp-route-categoryId="@Model.CategoryId" asp-route-status="@Model.Status" class="pp-btn pp-btn-light">&larr; Previous</a> }
+            <span>Page @Model.Page / @Model.TotalPages</span>
+            @if(Model.Page < Model.TotalPages) { <a asp-action="Index" asp-route-page="@(Model.Page+1)" asp-route-search="@Model.Search" asp-route-categoryId="@Model.CategoryId" asp-route-status="@Model.Status" class="pp-btn pp-btn-light">Next &rarr;</a> }
+        </div></div>
+    </div>
+</div>

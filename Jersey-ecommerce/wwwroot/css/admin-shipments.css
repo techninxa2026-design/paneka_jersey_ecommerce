@@ -1,0 +1,80 @@
+/* PANENKA Admin · Shipments */
+.ship-page{max-width:1440px;margin:0 auto;color:#111}
+.ship-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:23px}
+.ship-kicker{font-size:11px;font-weight:800;letter-spacing:2px;color:#8a8a8a;text-transform:uppercase;margin-bottom:6px}
+.ship-title{font-weight:900;font-size:26px;letter-spacing:-1.1px;line-height:1.2;margin:0}
+.ship-subtitle{color:#777;margin:7px 0 0;font-size:13px}
+.ship-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 16px;font-weight:750;font-size:12px;border:1px solid #151515;background:#151515;color:#fff;border-radius:9px;text-decoration:none;transition:.16s}
+.ship-btn:hover{background:#343434;border-color:#343434;color:#fff}
+.ship-btn-light{background:#fff;color:#111;border-color:#dedede}
+.ship-btn-light:hover{background:#f6f6f6;color:#111;border-color:#b7b7b7}
+.ship-btn-danger{color:#b42318;background:#fff;border-color:#f1d1ce}
+.ship-btn-danger:hover{color:#fff;background:#b42318;border-color:#b42318}
+.ship-btn-sm{min-height:33px;padding:0 11px;font-size:11px}
+.ship-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.ship-stat{background:#fff;border:1px solid #e7e7e7;border-radius:13px;padding:19px 19px 16px;position:relative;overflow:hidden}
+.ship-stat-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:800;color:#858585}
+.ship-stat-number{font-size:30px;line-height:1.2;font-weight:900;letter-spacing:-1.4px;margin-top:10px}
+.ship-stat-icon{position:absolute;right:18px;top:18px;color:#8a8a8a;font-size:20px}
+.ship-card{background:white;border:1px solid #e5e5e5;border-radius:13px;overflow:hidden;margin-bottom:18px}
+.ship-card-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 20px;border-bottom:1px solid #eee}
+.ship-card-title{font-size:15px;font-weight:850;letter-spacing:-.4px;margin:0}
+.ship-muted{color:#828282;font-size:12px}
+.ship-filters{display:flex;flex-wrap:wrap;align-items:end;gap:11px;padding:17px 20px}
+.ship-field{display:flex;flex-direction:column;gap:7px}
+.ship-field-grow{flex:1;min-width:200px}
+.ship-field label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#5f5f5f}
+.ship-input,.ship-select,.ship-textarea{border:1px solid #dedede;border-radius:8px;background:#fff;padding:11px 12px;color:#151515;outline:none;font:inherit;width:100%;min-height:42px}
+.ship-input:focus,.ship-select:focus,.ship-textarea:focus{border-color:#333;box-shadow:0 0 0 3px rgba(0,0,0,.06)}
+.ship-textarea{min-height:110px;resize:vertical}
+.ship-table-wrap{width:100%;overflow-x:auto}
+.ship-table{border-collapse:collapse;width:100%;min-width:850px}
+.ship-table th{background:#fafafa;color:#858585;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.7px;text-align:left;padding:15px 18px;border-bottom:1px solid #ededed;white-space:nowrap}
+.ship-table td{padding:16px 18px;border-bottom:1px solid #f0f0f0;vertical-align:middle;font-size:12px}
+.ship-table tr:last-child td{border-bottom:0}
+.ship-table tbody tr:hover{background:#fdfdfd}
+.ship-strong{font-weight:800;color:#111}
+.ship-secondary{color:#888;font-size:11px;margin-top:4px;overflow-wrap:anywhere}
+.ship-status{display:inline-block;border-radius:25px;padding:6px 11px;font-weight:800;font-size:10px;letter-spacing:.15px;white-space:nowrap;background:#f2f2f2;color:#555}
+.ship-status-pending,.ship-status-packed{background:#f4f4f4;color:#555}
+.ship-status-shipped,.ship-status-intransit,.ship-status-outfordelivery{background:#e9f0ff;color:#204fa4}
+.ship-status-delivered{background:#e6f5ec;color:#187448}
+.ship-status-failed,.ship-status-returned,.ship-status-cancelled{background:#fff0ef;color:#a33d35}
+.ship-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end}
+.ship-icon-btn{display:inline-flex;width:32px;height:32px;align-items:center;justify-content:center;border:1px solid #e6e6e6;border-radius:7px;color:#333;background:#fff;text-decoration:none}
+.ship-icon-btn:hover{color:#fff;border-color:#151515;background:#151515}
+.ship-pager{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:16px 20px;border-top:1px solid #f0f0f0;flex-wrap:wrap}
+.ship-pages{display:flex;gap:6px}
+.ship-empty{padding:65px 16px;text-align:center;color:#888}
+.ship-empty i{font-size:34px;color:#a1a1a1}
+.ship-empty h3{font-size:17px;font-weight:850;color:#111;margin:13px 0 5px}
+.ship-alert{padding:13px 16px;border-radius:8px;font-size:13px;margin-bottom:15px;border:1px solid #d5e8d9;background:#f0f9f3;color:#25603a}
+.ship-alert-error{border-color:#f3d5d2;background:#fff2f1;color:#a32921}
+.ship-form-wrap{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(230px,.8fr);gap:19px;align-items:start}
+.ship-form-body{padding:22px}
+.ship-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.ship-span-2{grid-column:span 2}
+.ship-help{font-size:11px;color:#969696;margin-top:5px}
+.ship-validation{color:#b42318;font-size:11px;margin-top:3px}
+.ship-validation-summary ul{margin:0 0 15px;padding-left:18px;color:#b42318}
+.ship-form-footer{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:18px 22px;border-top:1px solid #eee;background:#fcfcfc}
+.ship-hint{padding:20px;line-height:1.75;font-size:12px;color:#777}
+.ship-hint-title{font-size:12px;font-weight:850;color:#161616;margin:0 0 10px}
+.ship-order-tag{padding:12px 15px;background:#f6f6f6;border:1px solid #e6e6e6;border-radius:8px;font-weight:800}
+.ship-detail-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,.8fr);gap:18px;align-items:start}
+.ship-dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin:0}
+.ship-dl>div{padding:17px 20px;border-bottom:1px solid #efefef;min-width:0}
+.ship-dl dt{color:#888;font-size:11px;text-transform:uppercase;letter-spacing:.55px;font-weight:750;margin-bottom:7px}
+.ship-dl dd{font-weight:750;margin:0;overflow-wrap:anywhere}
+.ship-dl a{color:#222;text-decoration:underline;text-underline-offset:3px}
+.ship-note{line-height:1.75;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;color:#484848;padding:20px}
+.ship-timeline{padding:8px 22px 22px}
+.ship-step{position:relative;border-left:2px solid #e4e4e4;padding:15px 0 18px 22px;margin-left:7px}
+.ship-step::before{content:'';position:absolute;left:-7px;top:19px;height:12px;width:12px;background:#fff;border:3px solid #b7b7b7;border-radius:50%}
+.ship-step.done{border-color:#151515}
+.ship-step.done::before{border-color:#111;background:#111}
+.ship-step:last-child{border-left-color:transparent}
+.ship-step-label{font-size:12px;font-weight:850}
+.ship-step-date{color:#888;font-size:11px;margin-top:5px}
+@media(max-width:1050px){.ship-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.ship-form-wrap,.ship-detail-grid{grid-template-columns:1fr}}
+@media(max-width:580px){.ship-head{flex-direction:column}.ship-stats{gap:9px}.ship-stat{padding:14px}.ship-stat-number{font-size:25px}.ship-form-body{padding:16px}.ship-form-grid{grid-template-columns:1fr}.ship-span-2{grid-column:auto}.ship-dl{grid-template-columns:1fr}.ship-filters{padding:15px}.ship-field-grow{min-width:100%}}

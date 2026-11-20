@@ -1,0 +1,16 @@
+@model Jersey_ecommerce.Models.Orders.Order
+@{ Layout = null; }
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>@Model.OrderNumber | PANENKA</title><link rel="stylesheet" href="/css/panenka-checkout.css"></head><body>
+@await Html.PartialAsync("_PanenkaCheckoutHeader")
+<section class="container intro"><div class="kicker">ORDER REFERENCE / @Model.OrderNumber</div><h1>Order details.</h1><p class="lead">Created @Model.CreatedAt.ToString("dd MMM yyyy") · @Model.Status</p></section>
+<main class="container checkout-layout"><section><h2 class="panel-heading">Items ordered</h2>
+@foreach (var item in Model.Items) {<div class="summary-row" style="padding:14px 0;border-bottom:1px solid #ddd;color:inherit"><div><strong style="color:inherit">@(item.ProductName)</strong><div class="lead">Quantity: @item.Quantity</div></div><strong style="color:inherit">৳@item.LineTotal.ToString("N2")</strong></div>}
+<hr class="sep"><h2 class="panel-heading">Shipping address</h2>
+<p class="lead">@Model.CustomerName · @Model.CustomerPhone<br>@Model.ShippingAddressLine1 @Model.ShippingAddressLine2<br>@Model.ShippingCity, @Model.ShippingDistrict, @Model.ShippingPostalCode<br>@Model.ShippingCountry</p>
+@if (TempData["OrderInfo"] is string notice) { <p class="notice">@notice</p> }
+@if (Model.Status == "Pending" && Model.Payment?.Status == "Pending" && Model.Shipment?.Status is (null or "Pending")) {
+<form method="post" action="/MyOrders/Cancel/@Model.Id" onsubmit="return confirm('Cancel this unpaid order and return its stock?')">@Html.AntiForgeryToken()<button type="submit" class="primary">CANCEL THIS ORDER <span>×</span></button></form>
+}
+<a href="/MyOrders" class="back">← All orders</a></section>
+<aside class="summary"><h2>Order status</h2><div class="summary-row"><span>Fulfillment</span><strong>@Model.Status</strong></div><div class="summary-row"><span>Payment</span><strong>@(Model.Payment?.Status ?? "Pending")</strong></div><div class="summary-row"><span>Shipment</span><strong>@(Model.Shipment?.Status ?? "Pending")</strong></div><div class="summary-total"><span>Total</span><strong>৳@Model.TotalAmount.ToString("N2")</strong></div></aside></main>
+@await Html.PartialAsync("_PanenkaCheckoutFooter")</body></html>

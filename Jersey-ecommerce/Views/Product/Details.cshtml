@@ -1,0 +1,75 @@
+@model Jersey_ecommerce.Models.Catalog.Product
+@using Jersey_ecommerce.Models.Customers
+@using System.Text.Json
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    Layout = null;
+    var variants = Model.Variants.Where(v => v.IsActive && v.Size.IsActive && v.Color.IsActive)
+        .OrderBy(v => v.Size.DisplayOrder).ThenBy(v => v.Color.Name).ToList();
+    var images = Model.Images.Where(i => !(i.AltText ?? "").StartsWith("variant:"))
+        .OrderByDescending(i => i.IsPrimary).ThenBy(i => i.DisplayOrder).ToList();
+    var reviews = ViewBag.Reviews as IEnumerable<Review> ?? Enumerable.Empty<Review>();
+    var variantImgs = ViewBag.VariantImages as Dictionary<int,string> ?? new();
+    var main = images.FirstOrDefault()?.ImageUrl;
+    var token = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+    var choices = variants.Select(v => new { id = v.Id, size = v.Size.Name, color = v.Color.Name,
+        hex = v.Color.HexCode, price = v.Price, stock = v.StockQuantity,
+        image = variantImgs.TryGetValue(v.Id, out var url) ? url : main }).ToArray();
+}
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>@Model.Name | PANENKA</title><meta name="description" content="@(Model.ShortDescription ?? Model.Name)">
+<meta name="request-verification-token" content="@token"><link rel="icon" href="/assets/brands/panekalogo.jpeg">
+<link rel="stylesheet" href="/css/panenka-product.css"></head><body>
+<header><div class="inner"><a class="logo" href="/">PANENKA</a><nav><a href="/shop">SHOP</a><a href="/Wishlist">WISHLIST</a><a href="/MyOrders">MY ORDERS</a><a href="/Cart">BAG</a><a href="/Account/Profile">ACCOUNT</a></nav></div></header>
+<div class="container"><div class="crumb"><a href="/">Home</a> / <a href="/shop">Shop</a> / @Model.Name</div>
+<main class="detail">
+<div><div class="gallery-main" id="heroImage">
+@if (!string.IsNullOrWhiteSpace(main)) { <img src="@main" alt="@Model.Name" id="productMain" /> }
+else { <span class="gallery-empty">PANENKA</span> }
+</div>
+@if (images.Count > 1) { <div class="thumbs">@foreach(var image in images) {
+<button type="button" data-photo="@image.ImageUrl" aria-label="View product image"><img src="@image.ImageUrl" alt="@(image.AltText ?? Model.Name)" loading="lazy"></button>
+}</div> }
+</div>
+<div class="info"><div class="eyebrow">@(Model.Category?.Name ?? "FOOTBALL JERSEY") / @(Model.Brand?.Name ?? "PANENKA")</div>
+<h1>@Model.Name</h1><div class="price" id="displayPrice">৳@Model.BasePrice.ToString("N2")
+@if (Model.CompareAtPrice > Model.BasePrice) { <span class="old">৳@Model.CompareAtPrice.Value.ToString("N2")</span> }
+</div><p class="desc">@(Model.Description ?? Model.ShortDescription ?? "Premium football jersey from PANENKA.")</p>
+<label class="label" for="variant">Size / Color</label>
+<select class="choice" id="variant" disabled="@(!variants.Any(v=>v.StockQuantity>0))">
+@foreach(var v in variants){<option value="@v.Id" disabled="@(v.StockQuantity <= 0)">@v.Size.Name / @v.Color.Name — ৳@v.Price.ToString("N2") · @(v.StockQuantity > 0 ? $"{v.StockQuantity} available" : "Sold out")</option>}
+</select>
+<label class="label" for="quantity">Quantity</label><input id="quantity" class="quantity" type="number" min="1" max="100" value="1" />
+<div class="actions"><button id="addToBag" type="button" class="primary" disabled="@(!variants.Any(v=>v.StockQuantity>0))">ADD TO BAG →</button>
+<button id="saveWishlist" type="button" class="secondary" aria-label="Save to wishlist">♡ SAVE</button></div>
+<div id="feedback" class="messages" role="status" hidden></div>
+<p class="helper">Products, prices, sizes and stock are live from the store database. Cash on delivery availability depends on delivery address and store settings.</p>
+@if (TempData["ReviewMessage"] is string message){<p class="messages">@message</p>}
+</div></main>
+<section class="review-list" id="reviews"><h2>Customer reviews (@reviews.Count())</h2>
+@foreach(var review in reviews){<article class="review-card"><div aria-label="@review.Rating stars">@(new string('★', review.Rating))@(new string('☆', 5-review.Rating))</div><h3>@review.Title</h3><small>@(review.User?.FullName ?? "Verified customer") · @review.CreatedAt.ToString("dd MMM yyyy")</small><p>@review.Comment</p></article>}
+@if(!reviews.Any()){<p class="helper">No approved reviews yet.</p>}
+@if (ViewBag.CanReview == true){<form class="review-form" method="post" action="/Product/Review/@Model.Id">@Html.AntiForgeryToken()
+<h3>Review your purchase</h3><label>Rating<select name="rating" required><option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option></select></label>
+<label>Title<input name="title" maxlength="180" placeholder="Review title"></label>
+<label>Comment<textarea name="comment" maxlength="2000" required placeholder="How was your jersey?"></textarea></label>
+<button type="submit" class="primary">SUBMIT FOR REVIEW</button></form>}
+</section></div>
+<footer class="footer"><div class="container">© @DateTime.UtcNow.Year PANENKA · FOOTBALL CULTURE</div></footer>
+<script>
+(()=>{'use strict';const variants=@Html.Raw(JsonSerializer.Serialize(choices, new JsonSerializerOptions{PropertyNamingPolicy=JsonNamingPolicy.CamelCase}));
+const productId=@Model.Id, $=id=>document.getElementById(id), csrf=document.querySelector('meta[name="request-verification-token"]').content;
+const select=$('variant');function chosen(){return variants.find(v=>v.id===Number(select.value))}
+function show(message){$('feedback').hidden=false;$('feedback').textContent=message}
+function sync(){const v=chosen();if(!v)return;$('displayPrice').textContent='৳'+Number(v.price).toLocaleString('en-BD',{minimumFractionDigits:2});
+$('quantity').max=Math.min(v.stock,100);$('addToBag').disabled=v.stock<=0; if(v.image&&v.image.startsWith('/')){const img=$('productMain');if(img)img.src=v.image;}}
+select.addEventListener('change',sync);if(select.options.length){const available=[...select.options].find(o=>!o.disabled);if(available)select.value=available.value;sync();}
+document.querySelectorAll('[data-photo]').forEach(btn=>btn.addEventListener('click',()=>{const img=$('productMain');if(img)img.src=btn.dataset.photo;}));
+async function send(url,data){const res=await fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json','RequestVerificationToken':csrf},body:JSON.stringify(data)});
+if(res.redirected||res.status===401||res.headers.get('content-type')?.includes('text/html')){location.href='/Account/Login?returnUrl='+encodeURIComponent(location.pathname);return null;}
+const result=await res.json().catch(()=>({}));if(!res.ok)throw Error(result.message||'Could not complete request');return result}
+$('addToBag').addEventListener('click',async()=>{const v=chosen(),qty=Number($('quantity').value);if(!v||!Number.isInteger(qty)||qty<1||qty>Math.min(100,v.stock)){show('Choose an available quantity.');return;}
+$('addToBag').disabled=true;try{const result=await send('/api/storefront/cart/items',{productId,variantId:v.id,quantity:qty});if(result)show('Added to your bag. Open the bag to continue to delivery.');}catch(e){show(e.message)}finally{$('addToBag').disabled=false}});
+$('saveWishlist').addEventListener('click',async()=>{try{const result=await send('/api/storefront/cart/wishlist',{productId});if(result)show('Saved to your wishlist.')}catch(e){show(e.message)}});
+})();
+</script></body></html>

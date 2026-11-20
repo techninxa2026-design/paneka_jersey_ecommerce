@@ -1,0 +1,256 @@
+[
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController",
+    "Method": "Get",
+    "RelativePath": "api/storefront/cart",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController",
+    "Method": "Count",
+    "RelativePath": "api/storefront/cart/count",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController",
+    "Method": "Coupon",
+    "RelativePath": "api/storefront/cart/coupons",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController\u002BCouponRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController",
+    "Method": "Add",
+    "RelativePath": "api/storefront/cart/items",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController\u002BAddRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController",
+    "Method": "ChangeQuantity",
+    "RelativePath": "api/storefront/cart/items/{itemId}",
+    "HttpMethod": "PATCH",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "itemId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "body",
+        "Type": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController\u002BQuantityRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController",
+    "Method": "Remove",
+    "RelativePath": "api/storefront/cart/items/{itemId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "itemId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController",
+    "Method": "Recommendations",
+    "RelativePath": "api/storefront/cart/recommendations",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController",
+    "Method": "Variants",
+    "RelativePath": "api/storefront/cart/variants/{productId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "productId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController",
+    "Method": "Wishlist",
+    "RelativePath": "api/storefront/cart/wishlist",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController",
+    "Method": "SaveWish",
+    "RelativePath": "api/storefront/cart/wishlist",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "body",
+        "Type": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController\u002BWishRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.StorefrontCartApiController",
+    "Method": "RemoveWish",
+    "RelativePath": "api/storefront/cart/wishlist/{productId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "productId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.HomeStorefrontApiController",
+    "Method": "Get",
+    "RelativePath": "api/storefront/home",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.Api.NewsletterApiController",
+    "Method": "Subscribe",
+    "RelativePath": "api/storefront/newsletter",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "Jersey_ecommerce.Controllers.Api.NewsletterApiController\u002BSubscribeRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.ShopCatalogApiController",
+    "Method": "Get",
+    "RelativePath": "api/storefront/shop",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "search",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "categoryId",
+        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "sizeId",
+        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "collection",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "minPrice",
+        "Type": "System.Nullable\u00601[[System.Decimal, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "maxPrice",
+        "Type": "System.Nullable\u00601[[System.Decimal, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "inStock",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      },
+      {
+        "Name": "sort",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "Jersey_ecommerce.Controllers.ShopCatalogApiController",
+    "Method": "ShopBanner",
+    "RelativePath": "api/storefront/shop/banner",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  }
+]

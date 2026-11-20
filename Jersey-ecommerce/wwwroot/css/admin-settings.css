@@ -1,0 +1,78 @@
+/* Jersey Ecommerce — Admin Settings | PANENKA monochrome */
+.st-page{--ink:#151515;--muted:#858585;--line:#e8e8e8;--canvas:#f7f7f7;--white:#fff;color:var(--ink);font-size:13px;max-width:1440px;margin:0 auto}.st-page *{box-sizing:border-box}.st-top{display:flex;justify-content:space-between;align-items:flex-end;gap:22px;flex-wrap:wrap;margin-bottom:28px}.st-breadcrumb{display:flex;gap:10px;align-items:center;color:#999;font-size:11px;margin-bottom:17px}.st-breadcrumb a{color:#777;text-decoration:none}.st-breadcrumb a:hover{color:#111}.st-breadcrumb i{font-size:9px}.st-eyebrow{color:#8d8d8d;font-size:10px;font-weight:700;letter-spacing:2px;margin-bottom:7px}.st-top h1{font-size:clamp(28px,3vw,40px);font-weight:850;letter-spacing:-1.8px;line-height:1.1;margin:0}.st-dot{color:#888}.st-top p{color:#777;margin:11px 0 0;line-height:1.7}.st-top-actions{display:flex;gap:8px;flex-wrap:wrap}.st-btn{display:inline-flex;gap:9px;align-items:center;justify-content:center;min-height:43px;padding:0 17px;text-decoration:none!important;font-size:11px;font-weight:800;letter-spacing:.1px;border:1px solid #161616;cursor:pointer;white-space:nowrap;transition:all .18s ease}.st-btn-dark{background:#161616;color:#fff!important}.st-btn-dark:hover{background:#3e3e3e;border-color:#3e3e3e}.st-btn-outline{background:white;color:#151515!important}.st-btn-outline:hover{background:#f0f0f0}.st-btn:disabled{opacity:.55;cursor:wait}.st-alert{border:1px solid #d6e6d6;background:#f3faf4;display:flex;align-items:center;gap:12px;padding:13px 16px;margin-bottom:18px;color:#235f35;font-weight:600}.st-alert>span{flex:1}.st-alert button{border:0;background:none;color:inherit;cursor:pointer}.st-validation:empty{display:none}.st-validation ul{border:1px solid #efc4c4;background:#fff5f5;padding:13px 13px 13px 30px;color:#b02b2b;margin:0 0 20px}.st-validation.valid{display:none}.st-layout{display:grid;grid-template-columns:245px minmax(0,1fr);align-items:start;gap:22px}.st-nav{background:#fff;border:1px solid var(--line);padding:15px 11px;position:sticky;top:24px}.st-nav-kicker{font-size:10px;color:#a0a0a0;letter-spacing:1.4px;font-weight:800;padding:9px 12px 14px}.st-nav-link{appearance:none;width:100%;display:flex;align-items:center;gap:12px;padding:14px 12px;font-size:12px;background:none;border:0;border-left:3px solid transparent;color:#777;text-align:left;cursor:pointer;font-weight:650;transition:all .2s}.st-nav-link:hover{background:#f6f6f6;color:#111}.st-nav-link.active{background:#171717;color:#fff;border-left-color:#171717}.st-nav-link>i:first-child{font-size:16px;flex:0 0 20px}.st-nav-arrow{margin-left:auto;font-size:10px;opacity:.5}.st-nav-foot{border-top:1px solid #eee;display:flex;align-items:flex-start;gap:8px;margin:18px 9px 0;padding:17px 3px 5px;font-size:10px;line-height:1.7;color:#9a9a9a}.st-nav-foot i{font-size:13px}.st-panels{min-width:0}.st-js .st-pane{display:none}.st-js .st-pane.active{display:block}.st-pane{margin-bottom:19px}.st-card{background:#fff;border:1px solid var(--line)}.st-card-heading{display:flex;align-items:flex-start;gap:18px;padding:26px 29px 24px;border-bottom:1px solid var(--line)}.st-section-no{width:39px;height:39px;display:grid;place-items:center;background:#151515;color:#fff;font-weight:900;font-size:12px;flex:0 0 39px}.st-card-heading h2{margin:0 0 7px;font-size:19px;font-weight:800;letter-spacing:-.45px}.st-card-heading p{margin:0;color:#888;line-height:1.6;font-size:12px}.st-card-body{padding:28px 29px 30px}.st-grid-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}.st-field{min-width:0;margin-bottom:22px}.st-field:last-child{margin-bottom:0}.st-field label:not(.st-remove){display:block;font-size:11px;font-weight:800;margin-bottom:10px}.st-field small,.st-upload-title small{display:block;font-size:10px;line-height:1.6;color:#999;margin-top:7px}.st-input{display:block;width:100%;min-height:45px;padding:11px 13px;border:1px solid #e1e1e1;border-radius:0;background:#fff;color:#1a1a1a;font-size:12px;font-family:inherit;outline:none;transition:border-color .18s;box-shadow:none!important}.st-input:focus{border-color:#111!important;outline:0}.st-input::placeholder{color:#acacac}.st-input.input-validation-error{border-color:#d44}.st-textarea{resize:vertical;min-height:108px}.st-error{display:block;color:#b32626;font-size:11px;margin-top:6px}.st-error:empty{display:none}.st-field-meta{display:flex;justify-content:flex-end;color:#999;font-size:10px;margin-top:7px}.st-input-with-icon{position:relative}.st-input-with-icon>i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#aaa;font-size:14px}.st-input-with-icon .st-input{padding-left:39px}.st-info-strip{display:flex;align-items:flex-start;gap:10px;padding:17px 20px;color:#777;background:#f2f2f2;border:1px solid #e6e6e6;line-height:1.7;font-size:11px;margin-top:15px}.st-info-strip i{font-size:15px;flex-shrink:0}.st-upload-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:22px}.st-upload-group{min-width:0}.st-upload-title{display:flex;flex-wrap:wrap;gap:7px 14px;align-items:center;margin-bottom:12px}.st-upload-title strong{font-size:12px}.st-upload-title small{margin:0}.st-image-preview{border:1px dashed #d1d1d1;background:#fafafa;display:grid;place-items:center;min-height:172px;overflow:hidden;position:relative}.st-logo-preview{background:repeating-conic-gradient(#f2f2f2 0 25%,white 0 50%) 0 / 26px 26px}.st-favicon-preview{min-height:172px;background:#f9f9f9}.st-image-preview img{max-width:85%;max-height:135px;object-fit:contain}.st-favicon-preview img{max-height:65px;max-width:65px}.st-image-preview img[hidden]{display:none}.st-preview-placeholder{display:flex;flex-direction:column;align-items:center;gap:7px;color:#a3a3a3;font-size:9px;font-weight:750;letter-spacing:.8px}.st-preview-placeholder i{font-size:27px}.st-upload-input{width:100%;padding:11px 0;font-size:11px;max-width:100%;color:#707070}.st-upload-input::file-selector-button{background:#181818;color:#fff;border:0;padding:10px 13px;font-size:10px;cursor:pointer;margin-right:10px}.st-remove{display:flex;align-items:center;gap:9px;font-size:11px;color:#686868;cursor:pointer;margin-top:2px}.st-remove input{accent-color:#151515}.st-divider{height:1px;background:#ededed;margin:25px 0}.st-color-row{display:flex;align-items:center;gap:12px;max-width:290px}.st-color-picker{appearance:none;width:56px;height:46px;border:1px solid #ddd;padding:4px;background:#fff;cursor:pointer;flex:0 0 56px}.st-subheading{font-size:12px;font-weight:800;margin:0 0 18px}.st-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #eee;padding:18px 0;cursor:pointer}.st-toggle-row:last-child{border-bottom:0;padding-bottom:5px}.st-toggle-row strong{display:block;font-size:12px;margin-bottom:7px}.st-toggle-row small{color:#929292;font-size:11px;line-height:1.5;font-weight:400}.st-switch{flex:0 0 42px;width:42px;height:24px;position:relative}.st-switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}.st-switch-track{position:absolute;inset:0;background:#d4d4d4;border-radius:20px;transition:background .2s}.st-switch-track::before{content:'';position:absolute;top:4px;left:4px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s}.st-switch input:checked+.st-switch-track{background:#151515}.st-switch input:checked+.st-switch-track::before{transform:translateX(18px)}.st-switch input:focus-visible+.st-switch-track{outline:2px solid #777;outline-offset:3px}.st-serp-preview{border:1px solid #e6e6e6;background:#fafafa;padding:21px;margin-top:25px}.st-preview-label{font-size:9px;color:#999;font-weight:800;letter-spacing:1.4px;margin-bottom:13px}.st-serp-title{font-size:17px;color:#1a0dab;font-weight:500;margin-bottom:3px;word-wrap:break-word}.st-serp-url{font-size:11px;color:#006621;margin-bottom:8px}.st-serp-desc{font-size:12px;color:#666;line-height:1.6;word-wrap:break-word}.st-bottom-actions{background:#fff;border:1px solid #e8e8e8;margin-top:18px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:15px}.st-bottom-actions strong{font-size:12px;display:block;margin-bottom:7px}.st-bottom-actions span{font-size:11px;color:#999}.st-bottom-actions .st-btn{flex-shrink:0}
+@media(max-width:1100px){.st-layout{grid-template-columns:210px minmax(0,1fr);gap:15px}.st-card-body{padding:24px}.st-card-heading{padding:24px}.st-upload-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:820px){.st-layout{grid-template-columns:1fr}.st-nav{position:static;display:flex;gap:6px;overflow-x:auto;padding:9px}.st-nav-kicker,.st-nav-foot,.st-nav-arrow{display:none}.st-nav-link{flex:0 0 auto;width:auto;white-space:nowrap;border-left:0;border-bottom:2px solid transparent;padding:12px 14px}.st-nav-link.active{border-bottom-color:#111}.st-top{align-items:flex-start}}
+@media(max-width:550px){.st-top{margin-bottom:20px}.st-top-actions{width:100%}.st-top-actions .st-btn{flex:1}.st-card-heading{padding:20px 16px}.st-card-body{padding:20px 16px}.st-grid-two,.st-upload-grid{grid-template-columns:1fr;gap:0}.st-upload-group{margin-bottom:23px}.st-upload-group:last-child{margin:0}.st-bottom-actions{flex-direction:column;align-items:stretch}.st-bottom-actions .st-btn{width:100%}.st-top h1{font-size:31px}}
+
+
+/* ===============================================================
+   SETTINGS v1.1 — Fix MVC checkbox / hidden-input switch conflicts
+   =============================================================== */
+.st-page .st-toggle-copy { flex: 1 1 auto; min-width: 0; }
+.st-page .st-toggle-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex: 0 0 auto;
+}
+.st-page .st-switch-state {
+    min-width: 24px;
+    text-align: right;
+    font-size: 10px;
+    font-weight: 800;
+    color: #777;
+    letter-spacing: .6px;
+}
+.st-page .st-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex: 0 0 46px; }
+/* MVC may render a fallback hidden field for unchecked Booleans.
+   It must NEVER be an invisible click-catching overlay. */
+.st-page .st-switch input[type="hidden"] { display: none !important; pointer-events: none !important; }
+.st-page .st-switch input[type="checkbox"] {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 3 !important;
+    opacity: 0 !important;
+    appearance: auto;
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+.st-page .st-switch .st-switch-track {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background: #d1d1d1;
+    border-radius: 100px;
+    pointer-events: none;
+    transition: background .18s ease;
+}
+.st-page .st-switch .st-switch-track::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.14);
+    transition: transform .18s ease;
+}
+/* The general sibling selector still works if MVC inserts a hidden input
+   between the visible checkbox and its visual track. */
+.st-page .st-switch input[type="checkbox"]:checked ~ .st-switch-track { background: #171717; }
+.st-page .st-switch input[type="checkbox"]:checked ~ .st-switch-track::before { transform: translateX(20px); }
+.st-page .st-switch input[type="checkbox"]:focus-visible ~ .st-switch-track {
+    outline: 3px solid #777;
+    outline-offset: 3px;
+}
+.st-page .st-toggle-row:focus-within .st-toggle-copy strong { color: #111; }
+@media (max-width: 420px) {
+    .st-page .st-toggle-row { gap: 10px; }
+    .st-page .st-toggle-control { gap: 7px; }
+}

@@ -1,0 +1,31 @@
+@model Jersey_ecommerce.ViewModels.Checkout.DeliveryPageViewModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{ Layout = null; ViewData["Title"] = "Delivery | PANENKA"; }
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Delivery | PANENKA</title><link rel="icon" href="/assets/brands/panekalogo.jpeg"><link rel="stylesheet" href="/css/panenka-checkout.css"></head><body>
+@await Html.PartialAsync("_PanenkaCheckoutHeader")
+<section class="container intro"><div class="kicker">CHECKOUT / DELIVERY DETAILS</div><h1>Almost yours.</h1><p class="lead">Where should we send your new matchday jersey?</p><div class="stepper"><div class="step done"><b>01</b> Bag</div><span class="bar"></span><div class="step active"><b>02</b> Delivery</div><span class="bar"></span><div class="step"><b>03</b> Payment</div></div></section>
+<main class="container checkout-layout">
+<div><h2 class="panel-heading">Delivery information</h2><p class="hint">Accurate details help us get your order to the right place.</p>
+<form asp-controller="Checkout" asp-action="Delivery" method="post" id="deliveryForm">
+@Html.AntiForgeryToken()
+<div asp-validation-summary="ModelOnly" class="errors"></div>
+<div class="grid-2">
+<div class="field"><label asp-for="Delivery.FullName">Full name *</label><input asp-for="Delivery.FullName" autocomplete="name" required><span asp-validation-for="Delivery.FullName" class="field-error"></span></div>
+<div class="field"><label asp-for="Delivery.Phone">Phone number *</label><input asp-for="Delivery.Phone" autocomplete="tel" required placeholder="01XXXXXXXXX"><span asp-validation-for="Delivery.Phone" class="field-error"></span></div>
+<div class="field full"><label asp-for="Delivery.Email">Email address *</label><input asp-for="Delivery.Email" type="email" autocomplete="email" required><span asp-validation-for="Delivery.Email" class="field-error"></span></div>
+<div class="field full"><label asp-for="Delivery.AddressLine1">Address *</label><input asp-for="Delivery.AddressLine1" placeholder="House, road, area" autocomplete="address-line1" required><span asp-validation-for="Delivery.AddressLine1" class="field-error"></span></div>
+<div class="field full"><label asp-for="Delivery.AddressLine2">Apartment / landmark (optional)</label><input asp-for="Delivery.AddressLine2" autocomplete="address-line2"></div>
+<div class="field"><label asp-for="Delivery.City">City / area *</label><input asp-for="Delivery.City" required><span asp-validation-for="Delivery.City" class="field-error"></span></div>
+<div class="field"><label asp-for="Delivery.District">District *</label><input asp-for="Delivery.District" required><span asp-validation-for="Delivery.District" class="field-error"></span></div>
+<div class="field"><label asp-for="Delivery.PostalCode">Postal code (optional)</label><input asp-for="Delivery.PostalCode" autocomplete="postal-code"></div>
+</div>
+<div class="field"><label>Shipping region *</label><div class="region-choice"><label><input type="radio" asp-for="Delivery.Region" value="Dhaka" checked="@(Model.Delivery.Region == "Dhaka")"><span><strong>Inside Dhaka</strong><small>Cash on delivery or bKash online payment</small></span></label><label><input type="radio" asp-for="Delivery.Region" value="OutsideDhaka" checked="@(Model.Delivery.Region == "OutsideDhaka")"><span><strong>Outside Dhaka</strong><small>Cash on delivery or bKash online payment</small></span></label></div><span asp-validation-for="Delivery.Region" class="field-error"></span></div>
+<div class="field"><label asp-for="Delivery.Instructions">Order notes (optional)</label><textarea asp-for="Delivery.Instructions" placeholder="Any instructions for delivery?"></textarea></div>
+<button type="submit" class="primary" id="nextBtn"><span>CONTINUE TO PAYMENT</span><span>→</span></button><a href="/Cart" class="back">← Return to bag</a>
+</form></div>
+<aside class="summary"><h2>Order summary</h2><div class="summary-row"><span>Subtotal</span><strong>৳@Model.Cart.Subtotal.ToString("N2")</strong></div><div class="summary-row"><span>Discount</span><strong>−৳@Model.Cart.DiscountAmount.ToString("N2")</strong></div><div class="summary-row"><span>Delivery</span><strong id="shippingAmount">৳@((Model.Delivery.Region == "Dhaka" ? Model.DhakaFee : Model.OutsideDhakaFee).ToString("N2"))</strong></div><div class="summary-total"><span>Total</span><strong id="grandTotal">৳@((Model.Cart.Total + (Model.Delivery.Region == "Dhaka" ? Model.DhakaFee : Model.OutsideDhakaFee)).ToString("N2"))</strong></div><div class="order-lines">@foreach (var item in Model.Cart.Items){<div class="tiny-line"><span>@item.Name (@item.Size / @item.Color) × @item.Quantity</span><strong>৳@((item.Price * item.Quantity).ToString("N2"))</strong></div>}</div><p class="agree">The final amount is calculated from live database prices and availability.</p></aside>
+</main>@await Html.PartialAsync("_PanenkaCheckoutFooter")
+<script>
+(()=>{'use strict';const inside=@Model.DhakaFee.ToString(System.Globalization.CultureInfo.InvariantCulture);const outside=@Model.OutsideDhakaFee.ToString(System.Globalization.CultureInfo.InvariantCulture);const base=@Model.Cart.Total.ToString(System.Globalization.CultureInfo.InvariantCulture);const format=x=>'৳'+Number(x).toLocaleString('en-BD',{minimumFractionDigits:2,maximumFractionDigits:2});function update(){const r=document.querySelector('input[name="Delivery.Region"]:checked')?.value;const fee=r==='Dhaka'?inside:outside;document.getElementById('shippingAmount').textContent=format(fee);document.getElementById('grandTotal').textContent=format(base+fee);}document.querySelectorAll('input[name="Delivery.Region"]').forEach(x=>x.addEventListener('change',update));update();})();
+</script></body></html>

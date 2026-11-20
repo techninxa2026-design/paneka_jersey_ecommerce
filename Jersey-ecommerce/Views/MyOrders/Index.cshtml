@@ -1,0 +1,9 @@
+@model IReadOnlyList<Jersey_ecommerce.Models.Orders.Order>
+@{ Layout = null; }
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My orders | PANENKA</title><link rel="stylesheet" href="/css/panenka-checkout.css"></head><body>
+@await Html.PartialAsync("_PanenkaCheckoutHeader")
+<section class="container intro"><div class="kicker">YOUR ACCOUNT / ORDER HISTORY</div><h1>Your orders.</h1><p class="lead">Track payments and fulfillment, all in one place.</p></section>
+<main class="container" style="min-height:55vh;padding-top:45px;padding-bottom:85px">
+@if (Model.Count == 0) { <h2>No orders yet.</h2><p class="lead">Start your collection with a new jersey.</p><a class="primary" href="/shop">SHOP NOW →</a> }
+@foreach (var o in Model) {<a href="/MyOrders/@o.Id" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;padding:25px 0;border-bottom:1px solid #dedede"><div><strong>@o.OrderNumber</strong><div class="lead">@o.CreatedAt.ToString("dd MMM yyyy") · @o.Status</div></div><div><strong>৳@o.TotalAmount.ToString("N2")</strong><div class="lead">Payment: @(o.Payment?.Status ?? "Pending")</div></div><span>View →</span></a>}
+</main>@await Html.PartialAsync("_PanenkaCheckoutFooter")</body></html>

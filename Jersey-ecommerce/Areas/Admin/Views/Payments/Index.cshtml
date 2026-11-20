@@ -1,0 +1,87 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.PaymentsIndexViewModel
+@{
+    ViewData["Title"] = "Payments";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+@await Html.PartialAsync("_PaymentStyles")
+
+<div class="pp-page">
+    <header class="pp-head">
+        <div>
+            <div class="pp-crumb"><a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })">Dashboard</a><i class="bi bi-chevron-right"></i><span>Payments</span></div>
+            <div class="pp-kicker">PANENKA / SALES OPERATIONS</div>
+            <h1 class="pp-title">Payments</h1>
+            <p class="pp-subtitle">Review recorded payment statuses, references, and transaction activity. Payment settlement and refunds are handled by your integrated provider.</p>
+        </div>
+        <div class="pp-head-actions">
+            <a class="pp-btn" href="@Url.Action("Index", "Orders", new { area = "Admin" })"><i class="bi bi-bag-check"></i> Orders</a>
+            <a class="pp-btn pp-btn-primary" href="@Url.Action("Transactions", "Payments", new { area = "Admin" })"><i class="bi bi-clock-history"></i> Transaction ledger</a>
+        </div>
+    </header>
+
+    <section class="pp-stats" aria-label="Payment summary">
+        <article class="pp-stat"><div class="pp-stat-label"><i class="bi bi-credit-card"></i> All payments</div><div class="pp-stat-value">@Model.TotalCount.ToString("N0")</div><div class="pp-stat-hint">Payment records</div></article>
+        <article class="pp-stat"><div class="pp-stat-label"><i class="bi bi-hourglass-split"></i> Pending</div><div class="pp-stat-value">@Model.PendingCount.ToString("N0")</div><div class="pp-stat-hint">Waiting for resolution</div></article>
+        <article class="pp-stat"><div class="pp-stat-label"><i class="bi bi-check-circle"></i> Reported paid</div><div class="pp-stat-value">@Model.ReportedPaidCount.ToString("N0")</div><div class="pp-stat-hint">Database-recorded statuses</div></article>
+        <article class="pp-stat"><div class="pp-stat-label"><i class="bi bi-exclamation-circle"></i> Failed</div><div class="pp-stat-value">@Model.FailedCount.ToString("N0")</div><div class="pp-stat-hint">Failed payment records</div></article>
+        <article class="pp-stat"><div class="pp-stat-label"><i class="bi bi-receipt"></i> Recorded amount</div><div class="pp-stat-value" style="font-size:23px">@Model.RecordedAmount.ToString("N2")</div><div class="pp-stat-hint">All currencies combined; not revenue</div></article>
+    </section>
+
+    <div class="pp-alert"><i class="bi bi-info-circle"></i> <strong>Recorded values only:</strong> the total above adds all payment amounts, regardless of status or currency, and must not be used as received revenue. Verify settlement with your payment provider.</div>
+
+    <section class="pp-card" style="margin-bottom:18px">
+        <div class="pp-card-head"><div><h2 class="pp-card-title">Find a payment</h2><p class="pp-card-desc">Search by order, customer, provider payment ID, or payment reference.</p></div><span class="pp-muted">@Model.FilteredCount.ToString("N0") matching</span></div>
+        <div class="pp-card-body">
+            <form action="@Url.Action("Index", "Payments", new { area = "Admin" })" method="get" class="pp-filters">
+                <div><label class="pp-label" for="search">Search</label><input id="search" class="pp-input" name="search" value="@Model.Search" placeholder="Order #, customer, reference..." /></div>
+                <div><label class="pp-label" for="status">Status</label><select id="status" class="pp-select" name="status"><option value="">All statuses</option>@foreach (var option in Model.StatusOptions) { if (Model.Status == option) { <option value="@option" selected>@option</option> } else { <option value="@option">@option</option> } }</select></div>
+                <div><label class="pp-label" for="method">Method</label><select id="method" class="pp-select" name="method"><option value="">All methods</option>@foreach (var option in Model.MethodOptions) { if (Model.Method == option) { <option value="@option" selected>@option</option> } else { <option value="@option">@option</option> } }</select></div>
+                <div><label class="pp-label" for="from">From</label><input type="date" id="from" name="from" class="pp-input" value="@(Model.From?.ToString("yyyy-MM-dd"))" /></div>
+                <div><label class="pp-label" for="to">To</label><input type="date" id="to" name="to" class="pp-input" value="@(Model.To?.ToString("yyyy-MM-dd"))" /></div>
+                <div class="pp-filter-actions"><button type="submit" class="pp-btn pp-btn-primary"><i class="bi bi-search"></i> Filter</button><a class="pp-btn" href="@Url.Action("Index", "Payments", new { area = "Admin" })" title="Reset filters"><i class="bi bi-x-lg"></i></a></div>
+            </form>
+        </div>
+    </section>
+
+    <section class="pp-card">
+        <div class="pp-card-head"><div><h2 class="pp-card-title">Payment records</h2><p class="pp-card-desc">Click a payment for provider references and its full transaction history.</p></div><span class="pp-muted">Page @Model.Page of @Model.TotalPages</span></div>
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="pp-empty"><i class="bi bi-credit-card-2-front"></i><strong>No payments found</strong>Try changing the filters. Payments appear here after checkout creates a payment record.</div>
+        }
+        else
+        {
+            <div class="pp-table-wrap"><table class="pp-table"><thead><tr><th>Payment / order</th><th>Customer</th><th>Method / provider</th><th>Status</th><th>Amount</th><th>Created</th><th>Activity</th><th></th></tr></thead><tbody>
+            @foreach (var p in Model.Rows)
+            {
+                var status = (p.Status ?? "").ToLowerInvariant();
+                var badge = status switch
+                {
+                    "pending" or "processing" or "initiated" => "pp-pending",
+                    "paid" or "succeeded" or "completed" or "success" => "pp-success",
+                    "failed" or "declined" or "cancelled" or "canceled" => "pp-failed",
+                    "refunded" or "partiallyrefunded" or "partially refunded" => "pp-reversed",
+                    _ => ""
+                };
+                <tr>
+                    <td><a class="pp-link" href="@Url.Action("Details", "Payments", new { area = "Admin", id = p.Id })">PAY-@p.Id</a><div class="pp-secondary-text"><a href="@Url.Action("Details", "Orders", new { area = "Admin", id = p.OrderId })">@p.OrderNumber</a></div></td>
+                    <td><span class="pp-primary-text">@p.CustomerName</span><div class="pp-secondary-text">@p.CustomerEmail</div></td>
+                    <td><span class="pp-primary-text">@p.Method</span><div class="pp-secondary-text">@(string.IsNullOrWhiteSpace(p.Provider) ? "—" : p.Provider)</div></td>
+                    <td><span class="pp-badge @badge">@p.Status</span></td>
+                    <td><span class="pp-primary-text">@p.Amount.ToString("N2")</span><div class="pp-secondary-text">@p.Currency</div></td>
+                    <td><span class="pp-primary-text">@p.CreatedAt.ToString("dd MMM yyyy")</span><div class="pp-secondary-text">@p.CreatedAt.ToString("HH:mm") UTC</div></td>
+                    <td><span class="pp-primary-text">@p.TransactionCount</span><div class="pp-secondary-text">transactions</div></td>
+                    <td><a class="pp-btn pp-btn-small" href="@Url.Action("Details", "Payments", new { area = "Admin", id = p.Id })">View <i class="bi bi-arrow-up-right"></i></a></td>
+                </tr>
+            }
+            </tbody></table></div>
+        }
+        <div class="pp-foot"><span class="pp-muted">Showing @Model.Rows.Count of @Model.FilteredCount matching records</span><nav class="pp-pages" aria-label="Payment pages">
+            @if (Model.Page > 1)
+            { <a class="pp-btn pp-btn-small" href="@Url.Action("Index", "Payments", new { area = "Admin", search = Model.Search, status = Model.Status, method = Model.Method, from = Model.From?.ToString("yyyy-MM-dd"), to = Model.To?.ToString("yyyy-MM-dd"), page = Model.Page - 1 })"><i class="bi bi-chevron-left"></i> Previous</a> }
+            <span class="pp-current">@Model.Page / @Model.TotalPages</span>
+            @if (Model.Page < Model.TotalPages)
+            { <a class="pp-btn pp-btn-small" href="@Url.Action("Index", "Payments", new { area = "Admin", search = Model.Search, status = Model.Status, method = Model.Method, from = Model.From?.ToString("yyyy-MM-dd"), to = Model.To?.ToString("yyyy-MM-dd"), page = Model.Page + 1 })">Next <i class="bi bi-chevron-right"></i></a> }
+        </nav></div>
+    </section>
+</div>

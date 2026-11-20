@@ -1,0 +1,17 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.Products.ProductFormViewModel
+@{ Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Edit Product"; ViewData["ActivePage"] = "Products"; ViewData["Mode"] = "edit"; }
+<link rel="stylesheet" href="~/css/admin-products.css" asp-append-version="true" />
+<div class="pp-page">
+    <div class="pp-heading"><a asp-action="Index" class="pp-back"><i class="bi bi-arrow-left"></i> Back to products</a><div class="pp-eyebrow">CATALOG / EDIT PRODUCT #@Model.Id</div><h1>Edit product</h1><p>Update product information, upload imagery and manage inventory.</p></div>
+    @if (ViewData["FormError"] is string formError)
+    {
+        <div class="pp-alert pp-alert-error" role="alert">
+            <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+            <div><strong>@formError</strong>
+                <div class="pp-sm">Your text, prices, selected sizes, colors and stock entries are retained. Please reselect any image uploads.</div>
+            </div>
+        </div>
+    }
+    <partial name="_Form" model="Model" />
+</div>
+<script src="~/js/admin-products.js" asp-append-version="true"></script>

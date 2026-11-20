@@ -1,0 +1,32 @@
+@using Jersey_ecommerce.Areas.Identity
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@{
+    ApplicationUser? navUser = User.Identity?.IsAuthenticated == true
+        ? await UserManager.GetUserAsync(User)
+        : null;
+}
+<div class="jersey-account-nav" style="display:flex;align-items:center;gap:14px">
+    @if (navUser != null)
+    {
+        <a asp-area="" asp-controller="Account" asp-action="Profile" style="display:inline-flex;align-items:center;gap:9px;text-decoration:none;color:inherit">
+            @if (!string.IsNullOrWhiteSpace(navUser.ProfileImageUrl))
+            {
+                <img src="@navUser.ProfileImageUrl" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover" />
+            }
+            else
+            {
+                <span style="display:grid;place-items:center;width:34px;height:34px;background:#101a2d;color:white;border-radius:50%;font-weight:700">@((navUser.FullName.Length > 0 ? navUser.FullName[..1] : "J").ToUpperInvariant())</span>
+            }
+            <span>@navUser.FullName</span>
+        </a>
+        <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" style="margin:0">
+            <button type="submit" style="background:none;border:0;cursor:pointer;color:inherit;font:inherit">Logout</button>
+        </form>
+    }
+    else
+    {
+        <a asp-area="" asp-controller="Account" asp-action="Login">Login</a>
+        <a asp-area="" asp-controller="Account" asp-action="Register">Sign up</a>
+    }
+</div>

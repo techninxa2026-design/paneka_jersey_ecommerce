@@ -1,0 +1,125 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.BrandFormViewModel
+
+<div class="pb-grid">
+    <div class="pb-col">
+        <section class="pb-panel">
+            <div class="pb-panel-head"><div class="pb-step">01</div><div><h2 class="pb-panel-title">Brand information</h2><p class="pb-panel-help">Set a clear name and unique SEO-friendly URL.</p></div></div>
+            <div class="pb-panel-body">
+                <div class="pb-field">
+                    <label class="pb-label" for="Name">Brand name <span class="pb-required">*</span></label>
+                    <input class="pb-input" id="Name" name="Name" type="text" maxlength="100" value="@Model.Name" placeholder="e.g. PANENKA, Nike, Adidas" />
+                    @Html.ValidationMessage("Name", "", new { @class = "pb-error" })
+                    <div class="pb-hint">A name customers will recognize. Maximum 100 characters.</div>
+                </div>
+                <div class="pb-field">
+                    <label class="pb-label" for="Slug">URL slug</label>
+                    <input class="pb-input" id="Slug" name="Slug" type="text" maxlength="120" value="@Model.Slug" placeholder="e.g. panenka" />
+                    @Html.ValidationMessage("Slug", "", new { @class = "pb-error" })
+                    <div class="pb-hint">Automatically generated if left blank. Must be unique.</div>
+                    <div class="pb-hint" id="slugPreview"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="pb-panel">
+            <div class="pb-panel-head"><div class="pb-step">02</div><div><h2 class="pb-panel-title">Brand logo</h2><p class="pb-panel-help">Upload a recognizable logo. Optional for brands.</p></div></div>
+            <div class="pb-panel-body">
+                <div class="pb-field">
+                    <label class="pb-label" for="LogoFile">@(Model.Id > 0 ? "Replace logo" : "Upload logo")</label>
+                    <input class="pb-file" id="LogoFile" name="LogoFile" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" />
+                    @Html.ValidationMessage("LogoFile", "", new { @class = "pb-error" })
+                    <div class="pb-hint">JPG, PNG, or WEBP; maximum 5 MB. Leave blank to keep the existing logo when editing.</div>
+                </div>
+                <div class="pb-preview">
+                    <img id="logoPreview" alt="Brand logo preview" />
+                    <div class="pb-placeholder" id="logoPlaceholder"><i class="bi bi-image"></i><strong>No logo selected</strong><span>A logo preview will appear here.</span></div>
+                </div>
+                <div class="pb-hint" id="logoStatus" aria-live="polite"></div>
+                @if (Model.Id > 0 && !string.IsNullOrWhiteSpace(Model.LogoUrl))
+                {
+                    <label class="pb-checkbox-row"><input type="checkbox" name="RemoveLogo" value="true" checked="@(Model.RemoveLogo ? "checked" : null)" /> Remove current logo</label>
+                    <input type="hidden" name="RemoveLogo" value="false" />
+                    @Html.ValidationMessage("RemoveLogo", "", new { @class = "pb-error" })
+                }
+            </div>
+        </section>
+    </div>
+
+    <aside class="pb-col">
+        <section class="pb-panel">
+            <div class="pb-panel-head"><div><h2 class="pb-panel-title">Publishing</h2><p class="pb-panel-help">Control brand visibility in the catalog.</p></div></div>
+            <div class="pb-panel-body">
+                <div class="pb-switch-row">
+                    <div><label for="IsActive" class="pb-label">Active brand</label><p class="pb-panel-help">Enable this brand for storefront selection.</p></div>
+                    <input class="pb-switch" type="checkbox" id="IsActive" name="IsActive" value="true" checked="@(Model.IsActive ? "checked" : null)" aria-label="Active brand" />
+                    <input type="hidden" name="IsActive" value="false" />
+                </div>
+                <div class="pb-rule"></div>
+                <div class="pb-hint" id="statusPreview" aria-live="polite">@(Model.IsActive ? "Status: Active" : "Status: Inactive")</div>
+            </div>
+        </section>
+
+        @if (Model.Id > 0)
+        {
+            <section class="pb-note"><strong>Record details</strong>Brand ID: #@Model.Id<br />Original brand products are preserved when editing.</section>
+        }
+        else
+        {
+            <section class="pb-note"><strong><i class="bi bi-lightbulb"></i> Tip</strong>Use short brand names and readable slugs. Brands can be assigned to products in the Products module.</section>
+        }
+
+        <section class="pb-save">
+            <h3>@(Model.Id > 0 ? "Save brand changes" : "Create your brand")</h3>
+            <p>@(Model.Id > 0 ? "Update the brand details and keep product associations intact." : "Add this brand to your product catalog.")</p>
+            <div class="pb-actions">
+                <button type="submit" class="pb-btn pb-btn-dark"><i class="bi bi-check2-circle"></i> @(Model.Id > 0 ? "Save changes" : "Create brand")</button>
+                <a href="@Url.Action("Index", "Brands", new { area = "Admin" })" class="pb-btn">Cancel</a>
+            </div>
+        </section>
+    </aside>
+</div>
+
+<script>
+    (() => {
+        // UI enhancements only: no submit handler, preventDefault, or button disabling.
+        const name = document.getElementById('Name');
+        const slug = document.getElementById('Slug');
+        const previewText = document.getElementById('slugPreview');
+        const active = document.getElementById('IsActive');
+        const status = document.getElementById('statusPreview');
+        const file = document.getElementById('LogoFile');
+        const image = document.getElementById('logoPreview');
+        const placeholder = document.getElementById('logoPlaceholder');
+        const logoStatus = document.getElementById('logoStatus');
+        const existing = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.LogoUrl ?? ""));
+        const removeLogo = document.querySelector('input[type="checkbox"][name="RemoveLogo"]');
+        let edited = slug.value.trim().length > 0;
+        let objectUrl = null;
+
+        const slugify = value => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120).replace(/-+$/g, '');
+        const updateSlug = () => previewText.textContent = slug.value.trim() ? 'Preview: /brand/' + slug.value.trim() : 'Slug will be generated from the name';
+        name.addEventListener('input', () => { if (!edited) slug.value = slugify(name.value); updateSlug(); });
+        slug.addEventListener('input', () => { edited = slug.value.trim().length > 0; updateSlug(); });
+        active.addEventListener('change', () => { status.textContent = active.checked ? 'Status: Active' : 'Status: Inactive'; });
+        const showImage = src => {
+            image.style.display = 'none'; placeholder.style.display = 'flex';
+            image.onload = () => { image.style.display = 'block'; placeholder.style.display = 'none'; };
+            image.onerror = () => { image.style.display = 'none'; placeholder.style.display = 'flex'; };
+            if (src) image.src = src; else image.removeAttribute('src');
+        };
+        showImage(existing);
+        logoStatus.textContent = existing ? 'Current brand logo' : 'No logo uploaded yet';
+        file.addEventListener('change', () => {
+            if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+            const chosen = file.files && file.files[0];
+            if (!chosen) { showImage(existing); logoStatus.textContent = existing ? 'Current brand logo' : 'No logo uploaded yet'; return; }
+            objectUrl = URL.createObjectURL(chosen);
+            showImage(objectUrl);
+            logoStatus.textContent = 'New logo selected: ' + chosen.name;
+        });
+        if (removeLogo) removeLogo.addEventListener('change', () => {
+            if (!file.files.length) { showImage(removeLogo.checked ? '' : existing); logoStatus.textContent = removeLogo.checked ? 'Existing logo will be removed on save' : 'Current brand logo'; }
+        });
+        updateSlug();
+    })();
+</script>
