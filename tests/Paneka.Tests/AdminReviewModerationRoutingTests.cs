@@ -41,7 +41,7 @@ public sealed class AdminReviewModerationRoutingTests
             }
             Assert.Contains("@Html.AntiForgeryToken()", markup);
             foreach (var action in new[] { "Approve", "Reject", "Pending", "Delete" })
-                Assert.DoesNotContain($"<form asp-area=\\\"Admin\\\" asp-controller=\\\"Reviews\\\" asp-action=\\\"{action}\\\"", markup);
+                Assert.DoesNotContain($"<form asp-area=\"Admin\" asp-controller=\"Reviews\" asp-action=\"{action}\"", markup);
         }
     }
 
