@@ -65,8 +65,17 @@ public sealed class ProductController(ApplicationDbContext db) : Controller
             ProductId = productId, UserId = userId, Rating = rating, Title = title?.Trim(),
             Comment = comment.Trim(), IsApproved = false, IsRejected = false
         });
-        await db.SaveChangesAsync();
-        TempData["ReviewMessage"] = "Review submitted for moderation.";
+        try
+        {
+            await db.SaveChangesAsync();
+            TempData["ReviewMessage"] = "Review submitted for moderation.";
+        }
+        catch (DbUpdateException)
+        {
+            // The unique (customer, product) index rejects parallel submissions.
+            // Do not return an unhandled 500 after a browser double-click.
+            TempData["ReviewMessage"] = "Your review was already submitted or could not be saved. Refresh the page.";
+        }
         return RedirectToAction(nameof(Details), new { slug = product.Slug });
     }
 }
