@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Jersey_ecommerce.Services;
 
 namespace Jersey_ecommerce.ViewModels.Checkout;
 
@@ -38,7 +39,7 @@ public sealed class DeliveryInput
     [Required, StringLength(255)] public string AddressLine1 { get; set; } = "";
     [StringLength(255)] public string? AddressLine2 { get; set; }
     [Required, StringLength(100)] public string City { get; set; } = "";
-    [Required, StringLength(100)] public string District { get; set; } = "";
+    [Required, StringLength(100), BangladeshDistrict] public string District { get; set; } = "";
     [StringLength(20)] public string? PostalCode { get; set; }
     [Required, RegularExpression("^(Dhaka|OutsideDhaka)$")]
     public string Region { get; set; } = "Dhaka";
