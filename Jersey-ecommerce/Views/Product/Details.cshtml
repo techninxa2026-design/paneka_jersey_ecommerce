@@ -19,7 +19,8 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>@Model.Name | PANENKA</title><meta name="description" content="@(Model.ShortDescription ?? Model.Name)">
 <meta name="request-verification-token" content="@token"><link rel="icon" href="/assets/brands/panekalogo.jpeg">
-<link rel="stylesheet" href="/css/panenka-product.css"></head><body>
+<link rel="stylesheet" href="/css/panenka-product.css"><link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true">
+</head><body>
 <header><div class="inner"><a class="logo" href="/">PANENKA</a><nav><a href="/shop">SHOP</a><a href="/Wishlist">WISHLIST</a><a href="/MyOrders">MY ORDERS</a><a href="/Cart">BAG</a><a href="/Account/Profile">ACCOUNT</a></nav></div></header>
 <div class="container"><div class="crumb"><a href="/">Home</a> / <a href="/shop">Shop</a> / @Model.Name</div>
 <main class="detail">

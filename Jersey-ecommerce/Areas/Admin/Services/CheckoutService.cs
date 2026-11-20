@@ -235,7 +235,9 @@ public sealed class CheckoutService(
         var products = await db.Products.AsNoTracking()
             .Where(p => p.IsPublished && p.Variants.Any(v => v.IsActive && v.StockQuantity > 0 &&
                 v.Size.IsActive && v.Color.IsActive))
-            .Include(p => p.Category).Include(p => p.Images).Include(p => p.Variants)
+            .Include(p => p.Category).Include(p => p.Images)
+            .Include(p => p.Variants).ThenInclude(v => v.Size)
+            .Include(p => p.Variants).ThenInclude(v => v.Color)
             .OrderByDescending(p => p.CreatedAt).Take(8).AsSplitQuery().ToListAsync();
         return products.Select(p =>
         {

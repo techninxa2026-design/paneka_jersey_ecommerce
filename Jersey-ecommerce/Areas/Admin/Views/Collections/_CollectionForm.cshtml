@@ -16,12 +16,10 @@
                     <p class="pc-help">Use a memorable name shoppers can understand.</p>
                 </div>
                 <div class="pc-field">
-                    <label for="Slug" class="pc-label">URL slug</label>
-                    <input id="Slug" name="Slug" type="text" class="pc-input" maxlength="120"
-                           value="@Model.Slug" placeholder="the-retro-edit" />
-                    @Html.ValidationMessage("Slug", "", new { @class = "pc-error" })
-                    <p class="pc-help">Automatically generated while creating; editable any time.</p>
-                    <div id="pcSlugPreview" class="pc-help"></div>
+                    <label class="pc-label">Automatic collection link</label>
+                    <input id="Slug" name="Slug" type="hidden" value="@Model.Slug" />
+                    <div id="pcSlugPreview" class="panenka-slug-preview" aria-live="polite"></div>
+                    <p class="pc-help">A unique link is created automatically from the collection name. Renaming it updates its link.</p>
                 </div>
                 <div class="pc-field">
                     <label for="Description" class="pc-label">Description</label>

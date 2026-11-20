@@ -17,7 +17,7 @@
         <div asp-validation-summary="All" class="pp-validation"></div>
         <div class="pp-card"><div class="pp-card-title"><span class="pp-step">01</span><div><h2>Product information</h2><p>Essential information for the storefront.</p></div></div>
             <div class="pp-field"><label asp-for="Name">Product name <b>*</b></label><input asp-for="Name" class="pp-input" placeholder="e.g. PANENKA Home Jersey 2026" maxlength="200" /><span asp-validation-for="Name" class="pp-error"></span></div>
-            <div class="pp-field"><label asp-for="Slug">URL slug</label><input asp-for="Slug" class="pp-input" placeholder="Automatically generated from the product name" maxlength="220" /><span class="pp-hint">Leave blank to generate a unique slug automatically.</span><span asp-validation-for="Slug" class="pp-error"></span></div>
+            <div class="pp-field"><label>Product URL</label><div class="panenka-slug-preview" data-auto-slug="product" data-slug-value="@Model.Slug" aria-live="polite">Generated automatically from the product name</div><span class="pp-hint">No URL setup needed. Renaming the product generates a unique new URL; otherwise the existing link is preserved.</span></div>
             <div class="pp-field"><label asp-for="ShortDescription">Short description</label><textarea asp-for="ShortDescription" class="pp-input" rows="3" maxlength="1000" placeholder="One or two lines about this product"></textarea><span asp-validation-for="ShortDescription" class="pp-error"></span></div>
             <div class="pp-field"><label asp-for="Description">Full description</label><textarea asp-for="Description" class="pp-input" rows="6" placeholder="Materials, care instructions and product details..."></textarea></div>
         </div>

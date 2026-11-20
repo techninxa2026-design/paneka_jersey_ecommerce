@@ -1,6 +1,7 @@
 @model Jersey_ecommerce.ViewModels.Checkout.OrderSuccessViewModel
 @{ Layout = null; }
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Order received | PANENKA</title><link rel="icon" href="/assets/brands/panekalogo.jpeg"><link rel="stylesheet" href="/css/panenka-checkout.css"></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Order received | PANENKA</title><link rel="icon" href="/assets/brands/panekalogo.jpeg"><link rel="stylesheet" href="/css/panenka-checkout.css"><link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true">
+</head><body>
 @await Html.PartialAsync("_PanenkaCheckoutHeader")
 <main class="container"><div class="success-wrap"><div class="success-icon">✓</div><div class="kicker">PANENKA / ORDER PLACED</div><h1>It's in the bag.</h1><p class="lead">Your order has been recorded. Follow its status in your customer account.</p><div class="success-card"><div class="summary-row"><span>Order reference</span><strong>@Model.OrderNumber</strong></div><div class="summary-row"><span>Total</span><strong>৳@Model.Total.ToString("N2")</strong></div><div class="summary-row"><span>Payment method</span><strong>@Model.PaymentMethod</strong></div><div class="summary-row"><span>Payment status</span><strong>@Model.PaymentStatus</strong></div></div>
 @if (Model.PaymentMethod == "ManualAdvance")

@@ -36,11 +36,21 @@ namespace Jersey_ecommerce.Services
                     cancellationToken))
                 throw new InvalidOperationException("Stock already deducted for this order and variant.");
 
-            // SQL UPDATE .. WHERE StockQuantity >= quantity ensures that two
-            // concurrent buyers cannot both purchase the last unit.
+            // Caller uses a serializable transaction: verify the complete catalog
+            // state while holding the transaction, then reserve inventory atomically.
+            // Navigation joins inside ExecuteUpdate are not portable between SQL
+            // Server and SQLite; keep those checks in the eligibility query.
+            var eligible = await _db.ProductVariants.AsNoTracking().AnyAsync(
+                v => v.Id == variantId && v.IsActive && v.Product.IsPublished &&
+                     v.Size.IsActive && v.Color.IsActive, cancellationToken);
+            if (!eligible)
+                throw new InvalidOperationException(
+                    "This size/color is inactive or the jersey is unpublished.");
+
+            // The UPDATE itself still guards stock >= quantity, preventing overselling
+            // even when multiple checkout requests race for the last available unit.
             var changed = await _db.ProductVariants
                 .Where(v => v.Id == variantId && v.IsActive &&
-                            v.Product.IsPublished && v.Size.IsActive && v.Color.IsActive &&
                             v.StockQuantity >= quantity)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(v => v.StockQuantity, v => v.StockQuantity - quantity),

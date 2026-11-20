@@ -1,6 +1,7 @@
 @model Jersey_ecommerce.Models.Orders.Order
 @{ Layout = null; }
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>@Model.OrderNumber | PANENKA</title><link rel="stylesheet" href="/css/panenka-checkout.css"></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>@Model.OrderNumber | PANENKA</title><link rel="stylesheet" href="/css/panenka-checkout.css"><link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true">
+</head><body>
 @await Html.PartialAsync("_PanenkaCheckoutHeader")
 <section class="container intro"><div class="kicker">ORDER REFERENCE / @Model.OrderNumber</div><h1>Order details.</h1><p class="lead">Created @Model.CreatedAt.ToString("dd MMM yyyy") · @Model.Status</p></section>
 <main class="container checkout-layout"><section><h2 class="panel-heading">Items ordered</h2>

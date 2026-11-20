@@ -1,7 +1,8 @@
 @model IEnumerable<Jersey_ecommerce.Models.Shopping.WishListItem>
 @{ Layout = null; }
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Saved Jerseys | PANENKA</title><link rel="stylesheet" href="/css/panenka-product.css"></head><body>
+<title>Saved Jerseys | PANENKA</title><link rel="stylesheet" href="/css/panenka-product.css"><link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true">
+</head><body>
 <header><div class="inner"><a class="logo" href="/">PANENKA</a><nav><a href="/shop">SHOP</a><a href="/Cart">BAG</a><a href="/MyOrders">ORDERS</a><a href="/Account/Profile">ACCOUNT</a></nav></div></header>
 <main class="container" style="min-height:65vh"><div class="crumb"><a href="/">Home</a> / Wishlist</div><h1>Saved jerseys.</h1>
 @if(!Model.Any()){<p class="helper">Your wishlist is empty. <a href="/shop"><u>Browse jerseys</u></a></p>}

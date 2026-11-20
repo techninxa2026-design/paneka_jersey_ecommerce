@@ -12,11 +12,10 @@
                     <div class="pb-hint">A name customers will recognize. Maximum 100 characters.</div>
                 </div>
                 <div class="pb-field">
-                    <label class="pb-label" for="Slug">URL slug</label>
-                    <input class="pb-input" id="Slug" name="Slug" type="text" maxlength="120" value="@Model.Slug" placeholder="e.g. panenka" />
-                    @Html.ValidationMessage("Slug", "", new { @class = "pb-error" })
-                    <div class="pb-hint">Automatically generated if left blank. Must be unique.</div>
-                    <div class="pb-hint" id="slugPreview"></div>
+                    <label class="pb-label">Automatic URL identifier</label>
+                    <input id="Slug" name="Slug" type="hidden" value="@Model.Slug" />
+                    <div class="panenka-slug-preview" id="slugPreview" aria-live="polite"></div>
+                    <div class="pb-hint">Generated securely from the brand name. Duplicate names get unique suffixes.</div>
                 </div>
             </div>
         </section>
@@ -65,7 +64,7 @@
         }
         else
         {
-            <section class="pb-note"><strong><i class="bi bi-lightbulb"></i> Tip</strong>Use short brand names and readable slugs. Brands can be assigned to products in the Products module.</section>
+            <section class="pb-note"><strong><i class="bi bi-lightbulb"></i> Tip</strong>Use short, recognizable brand names; URLs are generated for you. Brands can be assigned to products in the Products module.</section>
         }
 
         <section class="pb-save">
@@ -93,11 +92,11 @@
         const logoStatus = document.getElementById('logoStatus');
         const existing = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.LogoUrl ?? ""));
         const removeLogo = document.querySelector('input[type="checkbox"][name="RemoveLogo"]');
-        let edited = slug.value.trim().length > 0;
+        let edited = false;
         let objectUrl = null;
 
         const slugify = value => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120).replace(/-+$/g, '');
-        const updateSlug = () => previewText.textContent = slug.value.trim() ? 'Preview: /brand/' + slug.value.trim() : 'Slug will be generated from the name';
+        const updateSlug = () => previewText.textContent = slug.value.trim() ? 'Identifier: ' + slug.value.trim() : 'Identifier will be generated from the brand name';
         name.addEventListener('input', () => { if (!edited) slug.value = slugify(name.value); updateSlug(); });
         slug.addEventListener('input', () => { edited = slug.value.trim().length > 0; updateSlug(); });
         active.addEventListener('change', () => { status.textContent = active.checked ? 'Status: Active' : 'Status: Inactive'; });

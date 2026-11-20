@@ -23,3 +23,5 @@ jobs:
         run: dotnet restore "Jersey-ecommerce/Jersey-ecommerce.csproj"
       - name: Build MVC and Razor views
         run: dotnet build "Jersey-ecommerce/Jersey-ecommerce.csproj" -c Release --no-restore -p:RazorCompileOnBuild=true
+      - name: Test catalog, filters, cart and URL generation
+        run: dotnet test "tests/Paneka.Tests/Paneka.Tests.csproj" -c Release --logger "console;verbosity=normal"

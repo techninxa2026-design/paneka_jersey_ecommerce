@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Jersey_ecommerce.Areas.Admin.ViewModels;
 using Jersey_ecommerce.Data;
+using Jersey_ecommerce.Services;
 using Jersey_ecommerce.Models.Catalog;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -90,6 +91,8 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
         public async Task<IActionResult> Create(CollectionFormViewModel model)
         {
             NormalizeAndValidate(model);
+            model.Slug = await CatalogSlug.UniqueAsync(model.Name, "collection", 120,
+                candidate => _db.Collections.AnyAsync(x => x.Slug == candidate));
             await CheckSlugAvailableAsync(model.Slug, null);
 
             if (!ModelState.IsValid) return View(model);
@@ -156,6 +159,10 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
 
             model.ImageUrl = collection.ImageUrl;
             NormalizeAndValidate(model);
+            model.Slug = string.Equals(collection.Name, model.Name, StringComparison.OrdinalIgnoreCase)
+                ? collection.Slug
+                : await CatalogSlug.UniqueAsync(model.Name, "collection", 120,
+                    candidate => _db.Collections.AnyAsync(x => x.Slug == candidate && x.Id != id));
             await CheckSlugAvailableAsync(model.Slug, id);
 
             if (model.RemoveImage && model.ImageFile != null)
@@ -332,8 +339,7 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
             model.Description = string.IsNullOrWhiteSpace(model.Description)
                 ? null : model.Description.Trim();
 
-            var slug = MakeSlug(string.IsNullOrWhiteSpace(model.Slug)
-                ? model.Name : model.Slug);
+            var slug = CatalogSlug.FromName(model.Name, "collection", 120);
             model.Slug = slug;
             ModelState.Remove(nameof(model.Slug));
 

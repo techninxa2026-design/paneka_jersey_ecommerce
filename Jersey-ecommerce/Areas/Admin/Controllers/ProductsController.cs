@@ -124,6 +124,7 @@ public sealed class ProductsController : Controller
     public async Task<IActionResult> Create(ProductFormViewModel vm)
     {
         NormalizeFormCollections(vm);
+        ModelState.Remove(nameof(vm.Slug)); // URL slugs are never supplied by the browser.
         await PopulateLookups(vm);
         await ValidateForm(vm);
         if (!ModelState.IsValid)
@@ -137,7 +138,7 @@ public sealed class ProductsController : Controller
         try
         {
             MapFields(vm, product);
-            product.Slug = await UniqueSlug(vm.Slug, vm.Name);
+            product.Slug = await UniqueSlug(null, vm.Name);
             _db.Products.Add(product);
             await SyncVariants(product, vm.Variants, addedFiles);
             SynchronizeLegacyStock(product);
@@ -193,6 +194,7 @@ public sealed class ProductsController : Controller
     {
         if (id != vm.Id) return BadRequest("Product ID mismatch.");
         NormalizeFormCollections(vm);
+        ModelState.Remove(nameof(vm.Slug));
         var product = await FullProduct(id, tracked: true);
         if (product == null) return NotFound();
 
@@ -211,8 +213,10 @@ public sealed class ProductsController : Controller
         var pendingDeletions = new List<string>();
         try
         {
+            var nameChanged = !string.Equals(product.Name, vm.Name.Trim(), StringComparison.OrdinalIgnoreCase);
             MapFields(vm, product);
-            product.Slug = await UniqueSlug(vm.Slug, vm.Name, product.Id);
+            if (nameChanged)
+                product.Slug = await UniqueSlug(null, vm.Name, product.Id);
             product.UpdatedAt = DateTime.UtcNow;
 
             foreach (var img in Gallery(product)
