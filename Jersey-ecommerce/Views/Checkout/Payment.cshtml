@@ -48,7 +48,7 @@
         {
             <div class="notice error" role="alert">No payment option is currently available. Contact PANENKA support.</div>
         }
-        <form asp-controller="Checkout" asp-action="Payment" method="post" id="paymentForm" novalidate="false">
+        <form asp-controller="Checkout" asp-action="Payment" method="post" id="paymentForm">
             @Html.AntiForgeryToken()
             <input type="hidden" name="SubmissionToken" value="@Model.SubmissionToken" />
             <input type="hidden" name="PaymentMethod" id="paymentMethod" value="@(codAvailable ? "COD" : "")" />
