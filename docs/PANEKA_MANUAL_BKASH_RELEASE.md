@@ -36,6 +36,7 @@ No automatic transfer or refund is performed by PANENKA. The website cannot know
 - Edit the saved number and **Save payment settings** to change the recipient for **future** orders.
 - Empty the number and save to **disable manual bKash for future checkouts**.
 - Existing orders retain their original receiving number in the Payment row for accounting. If the number has been retired, the customer page warns against making new transfers to it, but permits reporting a transaction already sent.
+- Pending bKash reservations hold inventory until independently reconciled. If the customer abandons checkout, staff may open **Admin → Orders → Details → Unpaid bKash reservation**, confirm that no funds reached the actual merchant wallet, add a reconciliation note, and cancel the order to restore stock and coupon usage. Submitted transfers must first be independently rejected before this action is allowed. A transfer that arrived must be reconciled/refunded instead of cancelled as unpaid.
 - If both bKash and COD are unavailable, checkout explains that no payment method is available.
 
 ## Payment storage (SQL Server)
@@ -84,6 +85,8 @@ After migration, start the app, visit **Admin → Store settings → Payment met
 - [ ] Click **Pay with bKash**; verify the backend **reserves one pending order** and reduces inventory once before the modal displays the receiving wallet and amount. Retry the same checkout token without duplicate orders.
 - [ ] Confirm the popup shows the saved order number, recipient, accurate amount, copy control and accessible mobile dialog. Enter sender, TrxID and local time, submit, and verify the payment changes from **Pending** to **Submitted** (not Paid).
 - [ ] Close the popup before submitting and recover the pending bKash order from My Orders; then complete the transaction report without another payment or order.
+- [ ] On a pending abandoned order, confirm a customer cannot cancel or release stock. Admin must provide independent no-funds reconciliation; after that, cancellation restores stock and coupon usage and creates a payment audit event.
+- [ ] Attempt to cancel a Submitted bKash claim before rejection and confirm it is blocked. Verify/refund any received funds before stock release.
 - [ ] Before order reservation, deliberately use an invalid district, exhausted stock and changed merchant number; verify **no order or stock movement**. After reservation, invalid sender/TrxID/time must not create a claim or mark the order paid.
 - [ ] Try another customer's order URL; no payment details should be exposed.
 - [ ] Attempt reuse of TrxID on another order; verify rejection.
