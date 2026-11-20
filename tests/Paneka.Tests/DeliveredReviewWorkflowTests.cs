@@ -142,8 +142,8 @@ public sealed class DeliveredReviewWorkflowTests
         var second = Assert.IsType<DeliveredProductReviewViewModel>(
             Assert.IsType<ViewResult>(await Customer(db, "buyer").Review(1, 1)).Model);
         Assert.Equal("Pending", second.ReviewStatus);
-        Assert.Equal(1, (await db.AdminNotifications.AsNoTracking()
-            .Where(x => x.EventType == "review.pending")).CountAsync());
+        Assert.Equal(1, await db.AdminNotifications.AsNoTracking()
+            .CountAsync(x => x.EventType == "review.pending"));
 
         await Reviews(db).Approve(review.Id, null, null, null);
         var published = Assert.IsType<ViewResult>(await Product(db, "other").Details("home-shirt"));
