@@ -20,7 +20,16 @@
             <div class="rv-detail-grid">
                 <div><div class="rv-detail-label">Customer</div><div class="rv-detail-value">@Model.CustomerName</div></div>
                 <div><div class="rv-detail-label">Email</div><div class="rv-detail-value">@(Model.Email ?? "Not available")</div></div>
-                <div><div class="rv-detail-label">Product</div><div class="rv-detail-value">@Model.ProductName (ID #@Model.ProductId)</div></div>
+                <div><div class="rv-detail-label">Product</div><div class="rv-detail-value">@Model.ProductName (ID #@Model.ProductId)
+                @if (Model.ProductIsPublished)
+                {
+                    <a href="/Product/Details/@Uri.EscapeDataString(Model.ProductSlug)#reviews" target="_blank" rel="noopener noreferrer" class="rv-back" style="display:inline-block;margin-left:8px">OPEN PUBLIC PRODUCT ↗</a>
+                }
+                else
+                {
+                    <span class="rv-muted">· Product is not currently published</span>
+                }
+                </div></div>
                 <div><div class="rv-detail-label">Submitted</div><div class="rv-detail-value">@Model.CreatedAt.ToString("dd MMM yyyy, hh:mm tt") UTC</div></div>
             </div>
         </div>
