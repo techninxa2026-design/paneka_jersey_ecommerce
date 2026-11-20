@@ -43,6 +43,67 @@ public sealed class ManualPaymentFlowTests
     }
 
     [Fact]
+    public async Task Bkash_popup_reserves_order_before_transfer_and_then_links_receipt_to_same_order()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = Database(connection);
+        await db.Database.EnsureCreatedAsync();
+        SeedCatalog(db);
+        db.SiteSettings.Add(new SiteSettings
+        {
+            Key = ManualBkashPaymentService.NumberSettingKey, Value = "01712345678"
+        });
+        await db.SaveChangesAsync();
+
+        var checkout = Checkout(db);
+        var token = Guid.NewGuid().ToString("N");
+        var prepare = new PlaceOrderInput
+        {
+            PaymentMethod = "Bkash",
+            BkashRecipientNumber = "01712345678",
+            SubmissionToken = token
+        };
+        var id = await checkout.PlaceOrder("buyer", Delivery(), prepare,
+            prepareManualBkash: true);
+
+        var order = await db.Orders.AsNoTracking().Include(x => x.Payment)
+            .Include(x => x.Shipment).SingleAsync(x => x.Id == id);
+        Assert.Equal("Pending", order.Status);
+        Assert.Equal("Pending", order.Payment?.Status);
+        Assert.Equal("Pending", order.Shipment?.Status);
+        Assert.Equal("01712345678", order.Payment?.ManualRecipientNumber);
+        Assert.Null(order.Payment?.TransactionReference);
+        Assert.Empty(await db.PaymentTransactions.AsNoTracking().ToListAsync());
+        Assert.Empty(await db.CartItems.AsNoTracking().ToListAsync());
+        Assert.Equal(4, (await db.ProductVariants.AsNoTracking().SingleAsync()).StockQuantity);
+
+        // Double-click and network retry must never reserve a second order.
+        var repeated = await checkout.PlaceOrder("buyer", Delivery(), prepare,
+            prepareManualBkash: true);
+        Assert.Equal(id, repeated);
+        Assert.Single(await db.Orders.AsNoTracking().ToListAsync());
+        Assert.Equal(4, (await db.ProductVariants.AsNoTracking().SingleAsync()).StockQuantity);
+
+        // Customer finishes sending money INSIDE the checkout modal.
+        var manual = new ManualBkashPaymentService(db);
+        await manual.SubmitAsync(id, "buyer", "01912345678", "PX12345678",
+            BangladeshNow());
+        var submitted = await db.Payments.AsNoTracking().SingleAsync();
+        Assert.Equal("Submitted", submitted.Status);
+        Assert.Equal("PX12345678", submitted.TransactionReference);
+        Assert.Equal("01912345678", submitted.ManualSenderNumber);
+        Assert.NotNull(submitted.ManualSubmittedAt);
+        Assert.Null(submitted.PaidAt);
+        Assert.Single(await db.PaymentTransactions.AsNoTracking().ToListAsync());
+
+        await manual.VerifyAsync(submitted.Id, "staff-1",
+            "Verified matching TrxID and exact amount in merchant wallet");
+        Assert.Equal("Paid", (await db.Payments.AsNoTracking().SingleAsync()).Status);
+        Assert.Equal("Confirmed", (await db.Orders.AsNoTracking().SingleAsync()).Status);
+    }
+
+    [Fact]
     public async Task Checkout_never_creates_an_order_for_a_fake_district_or_unreported_bkash_transfer()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
