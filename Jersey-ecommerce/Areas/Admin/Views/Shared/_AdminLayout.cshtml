@@ -22,6 +22,7 @@
     <link rel="shortcut icon" href="~/assets/brands/panekalogo.jpeg" />
     <link rel="apple-touch-icon" href="~/assets/brands/panekalogo.jpeg" />
     <meta name="theme-color" content="#111111" />
+    <link rel="stylesheet" href="~/css/panenka-admin-notifications.css" asp-append-version="true" />
     <style>
         :root {
             --admin-sidebar: #101010;
@@ -495,6 +496,11 @@
                 <i class="bi bi-grid-1x2"></i><span>Dashboard</span>
             </a>
 
+            <a href="/Admin/Notifications"
+               class="admin-nav-link @(currentController == "Notifications" ? "active" : "")">
+                <i class="bi bi-bell"></i><span>Notifications</span>
+            </a>
+
             <div class="admin-section-label">Catalog</div>
 
             <a href="/admin/products"
@@ -623,6 +629,8 @@
                            aria-label="Search products" />
                 </form>
 
+                @await Component.InvokeAsync("AdminNotificationBell")
+
                 <div class="dropdown">
                     <button type="button"
                             class="admin-icon-button"
@@ -711,6 +719,53 @@
                 link.addEventListener('click', () => setSidebar(false));
             });
         })();
+    </script>
+
+    <script>
+    (() => {
+        const trigger = document.getElementById('adminNotificationTrigger');
+        const panel = document.getElementById('adminNotificationsPopup');
+        const badge = document.getElementById('adminNotificationBadge');
+        if (!trigger || !panel || !badge) return;
+        let updating = false;
+
+        async function refreshPopup() {
+            if (updating) return;
+            updating = true;
+            try {
+                const result = await fetch('/Admin/Notifications/Popup', {
+                    credentials: 'same-origin', cache: 'no-store'
+                });
+                if (result.ok) {
+                    panel.innerHTML = await result.text();
+                }
+            } catch { /* Keep the last available activity on network failures. */ }
+            finally { updating = false; }
+        }
+
+        async function refreshCount() {
+            if (document.hidden) return;
+            try {
+                const result = await fetch('/Admin/Notifications/Summary', {
+                    credentials: 'same-origin', cache: 'no-store'
+                });
+                if (!result.ok) return;
+                const data = await result.json();
+                const count = Math.max(0, Number(data.unread) || 0);
+                badge.textContent = count > 99 ? '99+' : String(count);
+                badge.classList.toggle('an-count-hidden', count === 0);
+                badge.setAttribute('aria-label', count + ' unread');
+                trigger.setAttribute('aria-label', 'Admin notifications, ' + count + ' unread');
+                if (trigger.getAttribute('aria-expanded') === 'true') refreshPopup();
+            } catch { /* A lost connection should not disturb admin tasks. */ }
+        }
+
+        trigger.addEventListener('shown.bs.dropdown', refreshPopup);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) refreshCount();
+        });
+        window.setInterval(refreshCount, 30000);
+    })();
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
