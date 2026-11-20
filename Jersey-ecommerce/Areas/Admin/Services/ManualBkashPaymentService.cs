@@ -76,8 +76,11 @@ public sealed class ManualBkashPaymentService(ApplicationDbContext db)
             .SingleOrDefaultAsync(x => x.OrderId == orderId && x.Order.UserId == userId);
         if (payment == null || payment.Method != "Bkash")
             throw new CheckoutException("This manual bKash order was not found.");
-        if (payment.Order.Status != "Pending" || !IsValidMobile(payment.ManualRecipientNumber))
-            throw new CheckoutException("This order is no longer awaiting a manual bKash transfer. Contact support.");
+        // The recipient snapshot is optional: a buyer may already have sent
+        // money using receiving details shared directly by the store.
+        // The receiving wallet MUST be checked independently by staff.
+        if (payment.Order.Status != "Pending")
+            throw new CheckoutException("This order is no longer awaiting manual bKash details. Contact support.");
         if (payment.Status == "Submitted")
         {
             if (string.Equals(payment.TransactionReference, trxId, StringComparison.OrdinalIgnoreCase) &&
