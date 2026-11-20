@@ -191,6 +191,15 @@ public sealed class ManualPaymentFlowTests
         await Assert.ThrowsAsync<CheckoutException>(() =>
             service.SubmitAsync(second.Id, "other-buyer", "01912345678", "AB12345678", BangladeshNow()));
         Assert.Equal("Pending", (await db.Payments.AsNoTracking().SingleAsync(x => x.OrderId == second.Id)).Status);
+
+        // Replacing a rejected customer claim must not make its old TrxID
+        // reusable for someone else's order.
+        var originalPaymentId = (await db.Payments.AsNoTracking()
+            .SingleAsync(x => x.OrderId == orderId)).Id;
+        await service.RejectAsync(originalPaymentId, "staff-1", "No matching wallet transfer was received.");
+        await service.SubmitAsync(orderId, "buyer", "01912345678", "AB12345679", BangladeshNow());
+        await Assert.ThrowsAsync<CheckoutException>(() =>
+            service.SubmitAsync(second.Id, "other-buyer", "01912345678", "AB12345678", BangladeshNow()));
     }
 
     [Fact]
