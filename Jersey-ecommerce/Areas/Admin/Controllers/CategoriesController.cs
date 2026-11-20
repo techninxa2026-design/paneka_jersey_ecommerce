@@ -1,6 +1,7 @@
 ﻿
 using Jersey_ecommerce.Areas.Admin.ViewModels;
 using Jersey_ecommerce.Data;
+using Jersey_ecommerce.Services;
 using Jersey_ecommerce.Models.Catalog;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -82,10 +83,8 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
         {
             model.Name = model.Name?.Trim() ?? "";
 
-            var slug = GenerateSlug(
-                string.IsNullOrWhiteSpace(model.Slug)
-                    ? model.Name
-                    : model.Slug);
+            var slug = await CatalogSlug.UniqueAsync(model.Name, "category", 120,
+                candidate => _context.Categories.AnyAsync(x => x.Slug == candidate));
 
             model.Slug = slug;
 
@@ -230,10 +229,10 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
 
             model.Name = model.Name?.Trim() ?? "";
 
-            var slug = GenerateSlug(
-                string.IsNullOrWhiteSpace(model.Slug)
-                    ? model.Name
-                    : model.Slug);
+            var slug = string.Equals(category.Name, model.Name, StringComparison.OrdinalIgnoreCase)
+                ? category.Slug
+                : await CatalogSlug.UniqueAsync(model.Name, "category", 120,
+                    candidate => _context.Categories.AnyAsync(x => x.Slug == candidate && x.Id != id));
 
             model.Slug = slug;
             model.ImageUrl = category.ImageUrl;
