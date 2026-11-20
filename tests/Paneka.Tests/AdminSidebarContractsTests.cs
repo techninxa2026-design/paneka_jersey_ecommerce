@@ -49,10 +49,11 @@ public sealed class AdminSidebarContractsTests
 
         var index = controllerType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .SingleOrDefault(method => method.Name == "Index" &&
-                method.DeclaringType == controllerType);
+                method.DeclaringType == controllerType &&
+                method.GetCustomAttributes<HttpGetAttribute>().Any());
         Assert.NotNull(index);
         Assert.Null(index!.GetCustomAttribute<NonActionAttribute>());
-        Assert.NotNull(index.GetCustomAttribute<HttpGetAttribute>());
+        Assert.NotEmpty(index.GetCustomAttributes<HttpGetAttribute>());
     }
 
     [Theory]
