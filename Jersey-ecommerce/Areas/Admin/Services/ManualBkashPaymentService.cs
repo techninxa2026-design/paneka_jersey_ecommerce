@@ -39,20 +39,37 @@ public sealed class ManualBkashPaymentService(ApplicationDbContext db)
         return string.IsNullOrWhiteSpace(value) ? DefaultInstructions : value;
     }
 
-    public async Task SubmitAsync(int orderId, string userId, string? rawSender,
-        string? rawTransactionId, DateTime localPaidAt)
+    public sealed record CustomerTransfer(string Sender, string TrxId, DateTime ClaimedPaidAtUtc);
+
+    // One validator for both the new in-checkout popup and the legacy
+    // post-order correction screen. User-supplied IDs never constitute proof.
+    public static CustomerTransfer ValidateTransfer(
+        string? rawSender, string? rawTransactionId, DateTime? localPaidAt)
     {
         var sender = rawSender?.Trim() ?? "";
         var trxId = rawTransactionId?.Trim().ToUpperInvariant() ?? "";
         if (!IsValidMobile(sender))
-            throw new CheckoutException("Enter the 11-digit bKash number used to send the money.");
+            throw new CheckoutException("Enter the 11-digit bKash number you sent the money from.");
         if (!Trx.IsMatch(trxId))
-            throw new CheckoutException("Enter the transaction ID from your actual bKash confirmation (7–40 letters, digits or hyphens).");
-        // datetime-local inputs represent Bangladesh wall-clock time (UTC+06:00).
-        var claimedUtc = DateTime.SpecifyKind(localPaidAt.AddHours(-6), DateTimeKind.Utc);
+            throw new CheckoutException("Enter the real bKash TrxID (7–40 letters, numbers or hyphens).");
+        if (!localPaidAt.HasValue || localPaidAt.Value == default)
+            throw new CheckoutException("Enter the actual transfer date and time.");
+        // datetime-local input is Bangladesh time (UTC+06:00).
+        var claimedUtc = DateTime.SpecifyKind(localPaidAt.Value.AddHours(-6), DateTimeKind.Utc);
         var now = DateTime.UtcNow;
-        if (localPaidAt == default || claimedUtc < now.AddDays(-30) || claimedUtc > now.AddMinutes(10))
-            throw new CheckoutException("Enter the payment date and time in Bangladesh time (within the last 30 days).");
+        if (claimedUtc < now.AddDays(-30) || claimedUtc > now.AddMinutes(10))
+            throw new CheckoutException("Enter a Bangladesh transfer time in the last 30 days.");
+        return new CustomerTransfer(sender, trxId, claimedUtc);
+    }
+
+    public async Task SubmitAsync(int orderId, string userId, string? rawSender,
+        string? rawTransactionId, DateTime localPaidAt)
+    {
+        var claim = ValidateTransfer(rawSender, rawTransactionId, localPaidAt);
+        var sender = claim.Sender;
+        var trxId = claim.TrxId;
+        var claimedUtc = claim.ClaimedPaidAtUtc;
+        var now = DateTime.UtcNow;
 
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var payment = await db.Payments.Include(x => x.Order)
