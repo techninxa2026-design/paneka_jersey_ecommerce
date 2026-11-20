@@ -154,9 +154,13 @@ public sealed class CheckoutService(
         if (quantity is < 1 or > 100) throw new CheckoutException("Choose between 1 and 100 units.");
         var line = await db.CartItems.Include(x => x.ShoppingCart)
             .Include(x => x.ProductVariant).ThenInclude(v => v.Product)
+            .Include(x => x.ProductVariant).ThenInclude(v => v.Size)
+            .Include(x => x.ProductVariant).ThenInclude(v => v.Color)
             .SingleOrDefaultAsync(x => x.Id == itemId && x.ShoppingCart.UserId == userId);
         if (line == null) throw new CheckoutException("Bag item not found.");
-        if (!line.ProductVariant.IsActive || !line.ProductVariant.Product.IsPublished || quantity > line.ProductVariant.StockQuantity)
+        if (!line.ProductVariant.IsActive || !line.ProductVariant.Product.IsPublished ||
+            !line.ProductVariant.Size.IsActive || !line.ProductVariant.Color.IsActive ||
+            quantity > line.ProductVariant.StockQuantity)
             throw new CheckoutException("That quantity is not available.");
         line.Quantity = quantity;
         line.ShoppingCart.UpdatedAt = DateTime.UtcNow;
@@ -229,12 +233,14 @@ public sealed class CheckoutService(
     public async Task<IReadOnlyList<object>> Recommendations(string userId)
     {
         var products = await db.Products.AsNoTracking()
-            .Where(p => p.IsPublished && p.Variants.Any(v => v.IsActive && v.StockQuantity > 0))
+            .Where(p => p.IsPublished && p.Variants.Any(v => v.IsActive && v.StockQuantity > 0 &&
+                v.Size.IsActive && v.Color.IsActive))
             .Include(p => p.Category).Include(p => p.Images).Include(p => p.Variants)
             .OrderByDescending(p => p.CreatedAt).Take(8).AsSplitQuery().ToListAsync();
         return products.Select(p =>
         {
-            var variant = p.Variants.First(v => v.IsActive && v.StockQuantity > 0);
+            var variant = p.Variants.First(v => v.IsActive && v.StockQuantity > 0 &&
+                v.Size.IsActive && v.Color.IsActive);
             return (object)new { id = p.Id, productId = p.Id, variantId = variant.Id, name = p.Name,
                 slug = p.Slug, category = p.Category?.Name ?? "Jersey", price = variant.Price,
                 imageUrl = MainImage(p) };
