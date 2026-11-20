@@ -64,7 +64,7 @@
                         <textarea id="reviewComment" name="comment" required minlength="10"
                                   maxlength="2000" rows="7" placeholder="Share how it fits, the material quality, or what you liked about your order.">@Model.Comment</textarea>
                         <div class="pn-review-form-foot">
-                            <p><i class="bi bi-shield-check"></i> Verified purchase · Your review enters the store moderation queue before it appears publicly.</p>
+                            <p>✓ Verified purchase · Your review enters the store moderation queue before it appears publicly.</p>
                             <button type="submit">@(isRejected ? "RESUBMIT FOR APPROVAL" : "SUBMIT MY REVIEW") <span>↗</span></button>
                         </div>
                     </form>
@@ -85,7 +85,14 @@
                         <strong>Your review has been approved.</strong>
                         <p>It's now visible on the product's public detail page. Thank you for helping other shoppers.</p>
                         <div class="pn-review-preview"><span class="pn-review-stars">@(new string('★', Model.Rating))</span><h2>@Model.Title</h2><p>@Model.Comment</p></div>
-                        <a href="/Product/Details/@Uri.EscapeDataString(Model.ProductSlug)#reviews" class="pn-review-link">VIEW PUBLIC PRODUCT REVIEWS ↗</a>
+                        @if (Model.ProductIsPublished)
+                        {
+                            <a href="/Product/Details/@Uri.EscapeDataString(Model.ProductSlug)#reviews" class="pn-review-link">VIEW PUBLIC PRODUCT REVIEWS ↗</a>
+                        }
+                        else
+                        {
+                            <p>This product is not currently listed publicly. Your approved review is saved and will appear if the product is republished.</p>
+                        }
                     </div>
                 }
             </section>
