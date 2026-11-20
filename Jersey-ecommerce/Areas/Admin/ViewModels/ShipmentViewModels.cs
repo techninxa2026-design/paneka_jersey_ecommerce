@@ -49,6 +49,9 @@ public sealed class ShipmentFormViewModel
 {
     public int? Id { get; set; }
 
+    // Optimistic edit guard: compare the status shown when the form was loaded.
+    public string? ExpectedStatus { get; set; }
+
     [Range(1, int.MaxValue, ErrorMessage = "Please select an order.")]
     public int OrderId { get; set; }
 
