@@ -47,6 +47,7 @@ builder.Services.AddScoped<InventoryStockService>();
 // Live customer storefront: database cart, checkout, order cancellation, and session-based coupon selection.
 builder.Services.AddScoped<CheckoutService>();
 builder.Services.AddScoped<OrderCancellationService>();
+builder.Services.AddScoped<ManualBkashPaymentService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -64,10 +65,7 @@ builder.Services.AddRazorPages();
 
 builder.Services.AddMemoryCache();
 
-builder.Services.Configure<BkashSettings>(
-    builder.Configuration.GetSection("Bkash"));
-
-builder.Services.AddHttpClient<BkashGateway>();
+// Manual bKash transfer is reconciled by staff; no gateway API is called.
 
 var app = builder.Build();
 // =========================================
