@@ -8,6 +8,8 @@ namespace Jersey_ecommerce.Areas.Admin.ViewModels
         public int Id { get; set; }
         public int ProductId { get; set; }
         public string ProductName { get; set; } = string.Empty;
+        public string ProductSlug { get; set; } = string.Empty;
+        public bool ProductIsPublished { get; set; }
         public string UserId { get; set; } = string.Empty;
         public string CustomerName { get; set; } = string.Empty;
         public string? Email { get; set; }

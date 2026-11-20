@@ -1,0 +1,126 @@
+@model Jersey_ecommerce.ViewModels.Orders.DeliveredProductReviewViewModel
+@{
+    Layout = null;
+    var state = Model.ReviewStatus;
+    var isRejected = state == "Rejected";
+    var isPending = state == "Pending";
+    var isApproved = state == "Approved";
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="robots" content="noindex,nofollow"/>
+    <title>Review your purchase | PANENKA</title>
+    <link rel="stylesheet" href="/css/panenka-checkout.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="/css/panenka-orders.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="/css/panenka-reviews.css" asp-append-version="true"/>
+</head>
+<body>
+    @await Html.PartialAsync("_PanenkaCheckoutHeader")
+    <main class="pn-review-container">
+        <a class="pn-review-back" href="/MyOrders/@Model.OrderId">← BACK TO ORDER @Model.OrderNumber</a>
+        <div class="pn-review-layout">
+            <section class="pn-review-main">
+                <p class="pn-review-kicker">YOUR ORDER / VERIFIED PURCHASE</p>
+                <h1>@(isApproved ? "Your review is live." : isPending ? "Thanks for your feedback." : isRejected ? "Update your review." : "How was your jersey?")</h1>
+                <p class="pn-review-intro">Your feedback helps other PANENKA customers find the right gear. Only customers who received the product can submit a review.</p>
+
+                @if (ViewBag.ReviewResult is string notice)
+                {
+                    <div class="pn-review-notice" role="status">@notice</div>
+                }
+
+                @if (Model.CanSubmit)
+                {
+                    @if (isRejected)
+                    {
+                        <div class="pn-review-notice pn-review-rejected">
+                            <strong>Your previous review was not approved.</strong>
+                            You can correct the rating or text and submit it for another admin review. Only approved feedback is public.
+                        </div>
+                    }
+                    <form method="post" action="/MyOrders/@Model.OrderId/Review/@Model.ProductId" class="pn-review-form">
+                        @Html.AntiForgeryToken()
+                        <fieldset class="pn-review-rating">
+                            <legend>YOUR RATING <span aria-hidden="true">*</span></legend>
+                            <div class="pn-rating-options" aria-label="Product rating, one to five stars">
+                                @for (int rating = 5; rating >= 1; rating--)
+                                {
+                                    <label class="pn-rating-option">
+                                        <input type="radio" name="rating" value="@rating" checked="@(Model.Rating == rating)" required/>
+                                        <span aria-hidden="true">@(new string('★', rating))</span>
+                                        <small>@rating @(rating == 1 ? "star" : "stars")</small>
+                                    </label>
+                                }
+                            </div>
+                        </fieldset>
+                        <label class="pn-review-label" for="reviewTitle">REVIEW TITLE <span>Optional</span></label>
+                        <input id="reviewTitle" name="title" type="text" maxlength="180"
+                               value="@Model.Title" placeholder="A great matchday fit"/>
+                        <label class="pn-review-label" for="reviewComment">YOUR EXPERIENCE <span>At least 10 characters</span></label>
+                        <textarea id="reviewComment" name="comment" required minlength="10"
+                                  maxlength="2000" rows="7" placeholder="Share how it fits, the material quality, or what you liked about your order.">@Model.Comment</textarea>
+                        <div class="pn-review-form-foot">
+                            <p>✓ Verified purchase · Your review enters the store moderation queue before it appears publicly.</p>
+                            <button type="submit">@(isRejected ? "RESUBMIT FOR APPROVAL" : "SUBMIT MY REVIEW") <span>↗</span></button>
+                        </div>
+                    </form>
+                }
+                else if (isPending)
+                {
+                    <div class="pn-review-state">
+                        <span class="pn-review-state-icon">◷</span>
+                        <strong>Your review is awaiting staff approval.</strong>
+                        <p>We've saved your feedback. The PANENKA team can approve or reject it in Admin → Reviews. You don't need to submit it again.</p>
+                        <div class="pn-review-preview"><span class="pn-review-stars">@(new string('★', Model.Rating))</span><h2>@Model.Title</h2><p>@Model.Comment</p></div>
+                    </div>
+                }
+                else if (isApproved)
+                {
+                    <div class="pn-review-state pn-review-approved">
+                        <span class="pn-review-state-icon">✓</span>
+                        <strong>Your review has been approved.</strong>
+                        <p>It's now visible on the product's public detail page. Thank you for helping other shoppers.</p>
+                        <div class="pn-review-preview"><span class="pn-review-stars">@(new string('★', Model.Rating))</span><h2>@Model.Title</h2><p>@Model.Comment</p></div>
+                        @if (Model.ProductIsPublished)
+                        {
+                            <a href="/Product/Details/@Uri.EscapeDataString(Model.ProductSlug)#reviews" class="pn-review-link">VIEW PUBLIC PRODUCT REVIEWS ↗</a>
+                        }
+                        else
+                        {
+                            <p>This product is not currently listed publicly. Your approved review is saved and will appear if the product is republished.</p>
+                        }
+                    </div>
+                }
+            </section>
+            <aside class="pn-review-side">
+                <div class="pn-review-product">
+                    <span class="pn-review-tag">DELIVERED ORDER</span>
+                    @if (!string.IsNullOrWhiteSpace(Model.ImageUrl))
+                    {
+                        <img src="@Model.ImageUrl" alt="@Model.ProductName" loading="lazy"/>
+                    }
+                    else
+                    {
+                        <div class="pn-review-image-empty">PANENKA</div>
+                    }
+                    <small>YOUR PURCHASE</small>
+                    <h2>@Model.ProductName</h2>
+                    <p>Order @Model.OrderNumber</p>
+                    <span class="pn-review-status">
+                        @(isApproved ? "REVIEW PUBLISHED" : isPending ? "AWAITING APPROVAL" : isRejected ? "REVISION REQUESTED" : "READY FOR YOUR REVIEW")
+                    </span>
+                </div>
+                <div class="pn-review-side-note">
+                    <strong>Why leave a review?</strong>
+                    <p>Your experience provides useful, authentic product feedback. We publish reviews only after moderation, without changing your order or payment status.</p>
+                </div>
+            </aside>
+        </div>
+    </main>
+    @await Html.PartialAsync("_PanenkaCheckoutFooter")
+</body>
+</html>

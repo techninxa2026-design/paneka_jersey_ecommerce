@@ -123,7 +123,10 @@
         }
         else
         {
-            <div class="rv-empty"><i class="bi bi-chat-square-text"></i><h3>No reviews found</h3><p>New customer reviews will appear here. You can also clear your filters.</p><a class="rv-btn rv-btn-dark mt-2" asp-area="Admin" asp-controller="Reviews" asp-action="Index">Clear filters</a></div>
+            <div class="rv-empty"><i class="bi bi-chat-square-text"></i><h3>@(Model.TotalReviews == 0 ? "No customer reviews submitted yet" : "No reviews match these filters")</h3>
+            <p>@(Model.TotalReviews == 0
+                ? "After an order is marked Delivered, the customer can rate each purchased product from My Orders → Order Details. Submitted feedback will appear here for approval or rejection. Delivery alone does not create a review."
+                : "Try a different status, rating, or search term to find customer feedback.")</p><a class="rv-btn rv-btn-dark mt-2" asp-area="Admin" asp-controller="Reviews" asp-action="Index">Clear filters</a></div>
         }
 
         <div class="rv-footer">

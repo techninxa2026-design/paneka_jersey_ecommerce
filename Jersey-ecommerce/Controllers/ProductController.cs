@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Jersey_ecommerce.Data;
 using Jersey_ecommerce.Models.Customers;
+using Jersey_ecommerce.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -33,50 +34,37 @@ public sealed class ProductController(ApplicationDbContext db) : Controller
             .Where(x => x.ProductVariant.ProductId == product.Id)
             .ToDictionaryAsync(x => x.ProductVariantId, x => x.ImageUrl);
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        ViewBag.CanReview = userId != null &&
-            await db.OrderItems.AnyAsync(x => x.ProductVariant!.ProductId == product.Id &&
-                x.Order.UserId == userId && x.Order.Status == "Delivered") &&
-            !await db.Reviews.AnyAsync(x => x.UserId == userId && x.ProductId == product.Id);
+        var deliveredOrderId = userId == null ? (int?)null :
+            await db.OrderItems.AsNoTracking()
+                .Where(x => x.ProductVariant != null &&
+                    x.ProductVariant.ProductId == product.Id &&
+                    x.Order.UserId == userId && x.Order.Status == "Delivered")
+                .OrderByDescending(x => x.Order.CreatedAt)
+                .Select(x => (int?)x.OrderId).FirstOrDefaultAsync();
+        var ownReview = userId == null ? null :
+            await db.Reviews.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.UserId == userId && x.ProductId == product.Id);
+        ViewBag.DeliveredOrderId = deliveredOrderId;
+        ViewBag.OwnReviewStatus = ownReview == null ? "NotReviewed" :
+            ownReview.IsApproved && !ownReview.IsRejected ? "Approved" :
+            ownReview.IsRejected ? "Rejected" : "Pending";
+        ViewBag.CanReview = deliveredOrderId.HasValue &&
+            (ownReview == null || ownReview.IsRejected);
         return View(product);
     }
 
     [HttpPost("Review/{productId:int}"), Authorize, ValidateAntiForgeryToken]
     public async Task<IActionResult> Review(int productId, int rating, string? title, string comment)
     {
+        var slug = await db.Products.AsNoTracking()
+            .Where(p => p.Id == productId && p.IsPublished)
+            .Select(p => p.Slug).SingleOrDefaultAsync();
+        if (slug == null) return NotFound();
+
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        var product = await db.Products.AsNoTracking().Where(p => p.Id == productId && p.IsPublished)
-            .Select(p => new { p.Slug }).SingleOrDefaultAsync();
-        if (product == null) return NotFound();
-        if (rating < 1 || rating > 5 || string.IsNullOrWhiteSpace(comment) || comment.Trim().Length > 2000 ||
-            title?.Length > 180)
-        {
-            TempData["ReviewMessage"] = "Choose 1–5 stars and a comment within 2000 characters.";
-            return RedirectToAction(nameof(Details), new { slug = product.Slug });
-        }
-        bool purchased = await db.OrderItems.AnyAsync(x => x.ProductVariant!.ProductId == productId &&
-            x.Order.UserId == userId && x.Order.Status == "Delivered");
-        if (!purchased || await db.Reviews.AnyAsync(x => x.UserId == userId && x.ProductId == productId))
-        {
-            TempData["ReviewMessage"] = "One review is allowed per customer after purchasing this product.";
-            return RedirectToAction(nameof(Details), new { slug = product.Slug });
-        }
-        var review = new Review
-        {
-            ProductId = productId, UserId = userId, Rating = rating, Title = title?.Trim(),
-            Comment = comment.Trim(), IsApproved = false, IsRejected = false
-        };
-        db.Reviews.Add(review);
-        try
-        {
-            await db.SaveChangesAsync();
-            TempData["ReviewMessage"] = "Review submitted for moderation.";
-        }
-        catch (DbUpdateException)
-        {
-            // Two fast submissions can race on the unique user/product index.
-            db.Entry(review).State = EntityState.Detached;
-            TempData["ReviewMessage"] = "This review could not be saved. Check whether you have already reviewed this product.";
-        }
-        return RedirectToAction(nameof(Details), new { slug = product.Slug });
+        var result = await CustomerReviewService.SubmitAsync(
+            db, userId, productId, rating, title, comment);
+        TempData["ReviewMessage"] = result.Message;
+        return RedirectToAction(nameof(Details), new { slug });
     }
 }
