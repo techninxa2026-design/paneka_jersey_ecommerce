@@ -115,6 +115,9 @@ public class ShipmentsController : Controller
     {
         Normalize(model);
         ValidateShipment(model);
+        if (model.Status != "Pending")
+            ModelState.AddModelError(nameof(model.Status),
+                "New shipments must begin as Pending. Dispatch using the existing shipment.");
 
         Order? order = null;
         if (model.OrderId > 0)
@@ -212,6 +215,21 @@ public class ShipmentsController : Controller
             ModelState.AddModelError(nameof(model.Status),
                 "A cancelled or returned order cannot resume fulfillment.");
 
+        if (model.Status != shipment.Status &&
+            !CanMoveTo(shipment.Status, model.Status))
+            ModelState.AddModelError(nameof(model.Status),
+                $"Cannot change shipment from {ShipmentStatuses.Label(shipment.Status)} to {ShipmentStatuses.Label(model.Status)}. Keep delivery stages in sequence.");
+
+        if (model.Status != shipment.Status && model.Status == "Packed" &&
+            shipment.Order.Status is not ("Confirmed" or "Processing"))
+            ModelState.AddModelError(nameof(model.Status),
+                "Confirm the order in Orders before packing it.");
+
+        if (model.Status != shipment.Status && IsDispatchStatus(model.Status) &&
+            shipment.Order.Status is "Pending" or "Confirmed")
+            ModelState.AddModelError(nameof(model.Status),
+                "Confirm and process the order in Orders before dispatch.");
+
         if (model.Status == "Cancelled" && shipment.Order.Status != "Cancelled")
             ModelState.AddModelError(nameof(model.Status),
                 "Cancel the order from its order details so inventory and the shipment are updated together.");
@@ -270,8 +288,15 @@ public class ShipmentsController : Controller
         var shipment = await _context.Shipments.FirstOrDefaultAsync(s => s.Id == id);
         if (shipment == null) return NotFound();
 
-        // Preserve tracking/history after dispatch; only unused shipment records can be removed.
-        if (shipment.Status is not ("Pending" or "Packed" or "Cancelled"))
+        // Preserve customer tracking evidence after any dispatch, even if its
+        // current shipment status was later changed.
+        var orderState = await _context.Orders.AsNoTracking()
+            .Where(o => o.Id == shipment.OrderId).Select(o => o.Status).SingleAsync();
+        var hadDispatch = await _context.OrderStatusHistories.AsNoTracking().AnyAsync(h =>
+            h.OrderId == shipment.OrderId &&
+            (h.Status == "Shipped" || h.Status == "Delivered" || h.Status == "Returned"));
+        if (shipment.Status is not ("Pending" or "Packed" or "Cancelled") ||
+            orderState is "Shipped" or "Delivered" or "Returned" || hadDispatch)
         {
             TempData["Error"] = "Dispatched shipments cannot be deleted. Update their status instead.";
             return RedirectToAction(nameof(Details), new { id });
@@ -321,6 +346,19 @@ public class ShipmentsController : Controller
 
     private static bool IsDispatchStatus(string? status) =>
         status is "Shipped" or "InTransit" or "OutForDelivery" or "Delivered";
+
+    // Shipping events are monotonic; optional courier scans may be skipped.
+    private static bool CanMoveTo(string current, string next) => current switch
+    {
+        "Pending" => next is "Packed" or "Shipped" or "Failed",
+        "Packed" => next is "Shipped" or "Failed",
+        "Shipped" => next is "InTransit" or "OutForDelivery" or "Delivered" or "Failed" or "Returned",
+        "InTransit" => next is "OutForDelivery" or "Delivered" or "Failed" or "Returned",
+        "OutForDelivery" => next is "Delivered" or "Failed" or "Returned",
+        "Failed" => next is "OutForDelivery" or "Returned",
+        "Delivered" => next is "Returned",
+        _ => false
+    };
 
     private static bool RequiresPaymentVerification(Order order) =>
         order.Payment == null ||
