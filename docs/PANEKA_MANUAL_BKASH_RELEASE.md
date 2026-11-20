@@ -19,15 +19,17 @@ PANENKA now offers **Cash on Delivery (COD)** or **manual bKash transfer** at ne
 ### Manual bKash
 
 1. Administrator saves an 11-digit receiving number at **Admin → Store settings → Payment methods**. Optionally edits the customer instructions.
-2. Buyer selects **bKash · Manual transfer**. The order is created with its total, stock reservation, payment status **Pending**, and a snapshot of the merchant receiving number at that moment.
-3. Buyer is shown that number and total, performs a transfer via their own bKash application, and submits their **sender number**, **transaction ID (TrxID)** and **actual payment time in Bangladesh time**.
-4. PANENKA records the claim, sets payment status **Submitted**, and adds a payment-ledger event. **The order remains Pending/unpaid.** Repeated identical submissions do not create duplicate receipts.
+2. Buyer reaches **Checkout → Payment**, where **Place COD order** and **Pay with bKash** appear as adjacent actions. A bKash merchant number must be configured in Admin before the second action is available.
+3. Clicking **Pay with bKash** opens an on-page dialog showing the exact total, current receiving wallet number, copy button, transfer instructions and form. **The order has not been created yet** at this point. Buyer sends money in their own bKash app, then provides the **sender number**, **transaction ID (TrxID)** and **payment time in Bangladesh time** in that dialog.
+4. Clicking **Submit & Place order** performs a single database transaction that validates the cart/stock/discount and reported details; creates the order, stock reservation, shipment, bKash payment with receiving-number snapshot and `Submitted` status, and a payment-ledger event. **The order is recorded automatically, but remains Pending/unpaid until staff verification.** The customer immediately sees the order number and submission status; a receipt can be revisited from My Orders.
 5. Staff opens **Admin → Verify bKash**, checks the **actual merchant wallet**, compares recipient, sender, amount and TrxID, records a note, and checks the independent-verification acknowledgement.
 6. **Verify** sets payment to **Paid**, records review staff/time and PaidAt, records the transaction-ledger event, advances the order to **Confirmed**, and permits normal fulfillment.
 7. **Reject** keeps the order **Pending**, sets payment **Rejected**, logs the reason and allows the buyer to enter corrected details. Previous submission history stays in the ledger.
 8. Identical TrxIDs cannot be claimed by another order, including an earlier rejected transaction whose current ID was corrected.
 
 No automatic transfer or refund is performed by PANENKA. The website cannot know if funds arrived without a staff member checking the bKash wallet.
+
+**Operational note:** Because the requested popup collects transfer details before placing the order, a product can become unavailable while the buyer is sending money. If checkout rejects the final submission after an actual transfer, support must reconcile the receipt and issue an appropriate manual refund or replacement order; do not ask the customer to pay twice. For high-volume production use, reserving the order before instructing payment is safer.
 
 ### Editing/deleting merchant receiving number
 
@@ -78,8 +80,10 @@ After migration, start the app, visit **Admin → Store settings → Payment met
 - [ ] Check exact order total and saved receiving number, including after admin later changes the number.
 - [ ] Place a COD order, confirm stock reservation and correct order/customer records.
 - [ ] Complete the shipment delivery flow and independently confirm cash received in Admin → Payments.
-- [ ] Place a manual bKash order; verify that it is **Pending** immediately after order placement.
-- [ ] Submit sender number, TrxID and actual time; verify `Submitted` and that the order cannot dispatch.
+- [ ] Select from Bangladesh's 64 official districts; test Gazipur / Kaliganj, Dhaka and invalid district rejection. Verify inside/outside Dhaka pricing.
+- [ ] Click **Pay with bKash**; verify modal receiver number, copy, exact order total and keyboard/mobile operation. Customer provides sender number, TrxID and local time **before** submitting the order.
+- [ ] Place the bKash order from the modal; verify one order is created, payment becomes **Submitted** (not Paid), the ledger records details, inventory is reserved once, and order cannot dispatch before staff approval.
+- [ ] Deliberately submit invalid number/TrxID, expired time and changed merchant number and verify no partial order or stock change.
 - [ ] Try another customer's order URL; no payment details should be exposed.
 - [ ] Attempt reuse of TrxID on another order; verify rejection.
 - [ ] Admin reject a claim; customer sees reason and can submit corrected details without losing ledger history.
