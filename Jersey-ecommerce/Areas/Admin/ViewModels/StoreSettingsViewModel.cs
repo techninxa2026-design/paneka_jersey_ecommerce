@@ -63,7 +63,7 @@ namespace Jersey_ecommerce.Areas.Admin.ViewModels
 
         [Display(Name = "Manual bKash receiving number")]
         [RegularExpression(@"^01[3-9][0-9]{8}$",
-            ErrorMessage = "Enter an 11-digit Bangladesh mobile number (01XXXXXXXXX), or leave blank to disable manual bKash.")]
+            ErrorMessage = "Enter an 11-digit Bangladesh mobile number (01XXXXXXXXX), or leave blank to keep manual receipt reporting enabled without publishing a recipient.")]
         public string? ManualBkashNumber { get; set; }
 
         [StringLength(500)]
