@@ -72,7 +72,10 @@ public sealed class ManualBkashPaymentService(ApplicationDbContext db)
             throw new CheckoutException("This payment is no longer open for manual submission.");
 
         var used = await db.Payments.AsNoTracking().AnyAsync(x => x.Id != payment.Id &&
-            x.Method == "Bkash" && x.TransactionReference == trxId);
+            x.Method == "Bkash" && x.TransactionReference == trxId) ||
+            await db.PaymentTransactions.AsNoTracking().AnyAsync(x =>
+                x.PaymentId != payment.Id && x.TransactionType == "ManualBkash" &&
+                x.ProviderTransactionId == trxId);
         if (used) throw new CheckoutException("That transaction ID has already been recorded on another order. Contact support.");
 
         payment.ManualSenderNumber = sender;
