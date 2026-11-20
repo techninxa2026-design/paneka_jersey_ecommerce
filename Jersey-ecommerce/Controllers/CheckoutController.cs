@@ -210,9 +210,11 @@ public sealed class CheckoutController(
             TempData["CheckoutError"] = "Your checkout session expired. Reload the payment step.";
             return RedirectToAction(nameof(Payment));
         }
-        if (!ModelState.IsValid || input.PaymentMethod is not ("COD" or "Bkash"))
+        // bKash uses PrepareBkash (reserve stock first) + BkashController.Submit
+        // (receipt afterward). Do not accept direct pay-before-order submissions.
+        if (!ModelState.IsValid || input.PaymentMethod != "COD")
         {
-            TempData["CheckoutError"] = "Choose cash on delivery or bKash.";
+            TempData["CheckoutError"] = "Choose COD here, or open the Pay with bKash popup to reserve your order before transferring.";
             return RedirectToAction(nameof(Payment));
         }
         if (input.PaymentMethod == "COD" && !await cart.CodEnabled())
@@ -220,21 +222,13 @@ public sealed class CheckoutController(
             TempData["CheckoutError"] = "Cash on delivery is disabled in store settings.";
             return RedirectToAction(nameof(Payment));
         }
-        if (input.PaymentMethod == "Bkash" && await cart.ManualBkashNumber() is null)
-        {
-            TempData["CheckoutError"] = "Manual bKash is not currently available. Choose cash on delivery or contact support.";
-            return RedirectToAction(nameof(Payment));
-        }
-
         try
         {
             // CheckoutService atomically creates the order, stock movements, and Pending
             // payment using the requested method. No second, non-transactional conversion.
             var orderId = await cart.PlaceOrder(UserId, delivery, input);
             ClearCheckout();
-            return input.PaymentMethod == "Bkash"
-                ? RedirectToAction("Status", "Bkash", new { id = orderId })
-                : RedirectToAction(nameof(Success), new { id = orderId });
+            return RedirectToAction(nameof(Success), new { id = orderId });
         }
         catch (CheckoutException ex)
         {
