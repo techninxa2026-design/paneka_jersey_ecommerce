@@ -43,6 +43,66 @@ public sealed class ManualPaymentFlowTests
     }
 
     [Fact]
+    public async Task Abandoned_bkash_reservation_requires_staff_wallet_reconciliation_before_stock_release()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = Database(connection);
+        await db.Database.EnsureCreatedAsync();
+        SeedCatalog(db);
+        db.SiteSettings.Add(new SiteSettings
+        {
+            Key = ManualBkashPaymentService.NumberSettingKey, Value = "01712345678"
+        });
+        await db.SaveChangesAsync();
+
+        var reserve = BkashInput("AB33221177");
+        reserve.BkashSenderNumber = null;
+        reserve.BkashTransactionId = null;
+        reserve.BkashPaidAtLocal = null;
+        var orderId = await Checkout(db).PlaceOrder("buyer", Delivery(), reserve,
+            prepareManualBkash: true);
+        Assert.Equal(4, (await db.ProductVariants.AsNoTracking().SingleAsync()).StockQuantity);
+
+        var cancellation = new OrderCancellationService(db, new InventoryStockService(db));
+        await Assert.ThrowsAsync<CheckoutException>(() =>
+            cancellation.CancelUnpaidPendingOrder(orderId, "buyer"));
+        await Assert.ThrowsAsync<CheckoutException>(() =>
+            cancellation.CancelUnpaidPendingOrder(orderId, "staff-1", asAdmin: true));
+        Assert.Equal(4, (await db.ProductVariants.AsNoTracking().SingleAsync()).StockQuantity);
+
+        // If the customer reported a transfer, staff must first reject it
+        // after checking the actual wallet. No direct stock release is allowed.
+        var manual = new ManualBkashPaymentService(db);
+        await manual.SubmitAsync(orderId, "buyer", "01912345678", "AB33221177",
+            BangladeshNow());
+        await Assert.ThrowsAsync<CheckoutException>(() =>
+            cancellation.CancelUnpaidPendingOrder(orderId, "staff-1", asAdmin: true,
+                financeNote: "No matching funds received in the merchant wallet."));
+        var paymentId = (await db.Payments.AsNoTracking().SingleAsync()).Id;
+        await manual.RejectAsync(paymentId, "staff-1",
+            "No matching funds in the merchant wallet.");
+        await cancellation.CancelUnpaidPendingOrder(orderId, "staff-1",
+            asAdmin: true, financeNote: "Checked wallet and confirmed no funds reached merchant account.");
+
+        var cancelled = await db.Orders.AsNoTracking()
+            .Include(x => x.Payment).Include(x => x.Shipment).SingleAsync();
+        Assert.Equal("Cancelled", cancelled.Status);
+        Assert.Equal("Cancelled", cancelled.Payment?.Status);
+        Assert.Equal("Cancelled", cancelled.Shipment?.Status);
+        Assert.NotNull(cancelled.CancelledAt);
+        Assert.Equal(6, (await db.ProductVariants.AsNoTracking().SingleAsync()).StockQuantity);
+        Assert.Single(await db.InventoryTransactions.AsNoTracking()
+            .Where(x => x.Type == "Restock").ToListAsync());
+        Assert.Contains(await db.PaymentTransactions.AsNoTracking().ToListAsync(),
+            x => x.Status == "Cancelled" && x.TransactionType == "ManualBkash");
+        Assert.Equal("staff-1", cancelled.Payment?.ManualReviewedByUserId);
+        await Assert.ThrowsAsync<CheckoutException>(() =>
+            manual.SubmitAsync(orderId, "buyer", "01912345678", "ZX99887766",
+                BangladeshNow()));
+    }
+
+    [Fact]
     public async Task Bkash_popup_reserves_order_before_transfer_and_then_links_receipt_to_same_order()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
