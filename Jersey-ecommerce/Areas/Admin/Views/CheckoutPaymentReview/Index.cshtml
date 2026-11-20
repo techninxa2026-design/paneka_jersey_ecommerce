@@ -1,15 +1,99 @@
 @model IEnumerable<Jersey_ecommerce.Models.Orders.Payment>
-@{ Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Manual Payment Review"; }
-<div style="padding:25px;max-width:1180px;margin:auto">
-<h1>Manual advance payments</h1><p>Verify payment outside this website before confirming. A customer's transaction reference is not proof of payment.</p>
-@if (TempData["Error"] is string error) { <p style="color:#b91c1c">@error</p> }
-@if (TempData["Success"] is string success) { <p>@success</p> }
-<table style="width:100%;border-collapse:collapse"><thead><tr><th>Order</th><th>Customer</th><th>Reference</th><th>Amount</th><th>Review</th></tr></thead><tbody>
-@foreach(var payment in Model){<tr style="border-bottom:1px solid #ddd">
-<td>@payment.Order.OrderNumber</td><td>@payment.Order.CustomerName</td><td>@payment.TransactionReference</td><td>৳@payment.Amount.ToString("N2")</td>
-<td><form method="post" action="/Admin/CheckoutPaymentReview/Confirm/@payment.Id">@Html.AntiForgeryToken()
-<input name="verificationNote" maxlength="160" required minlength="10" placeholder="External verification details" style="padding:9px;min-width:230px" />
-<button type="submit" onclick="return confirm('Payment independently verified?')">Mark paid</button></form></td></tr>}
-</tbody></table>
-@if (!Model.Any()) { <p>No advance payments pending verification.</p> }
+@{
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Manual Payment Review";
+    var queue = Model.ToList();
+}
+<link rel="stylesheet" href="/css/panenka-manual-bkash.css" asp-append-version="true" />
+<div class="mb-admin">
+    <header class="mb-admin-head">
+        <div>
+            <div class="mb-eyebrow">SALES / PAYMENT RECONCILIATION</div>
+            <h1>Payment verification<span class="mb-dot">.</span></h1>
+            <p>Review customer-reported transfers against your actual receiving bKash wallet. A transaction ID alone is not evidence of funds.</p>
+        </div>
+        <div class="mb-admin-actions">
+            <a href="/Admin/Payments" class="mb-button mb-button-outline">All payments</a>
+            <a href="/Admin/Settings#payments" class="mb-button mb-button-dark">Merchant bKash settings</a>
+        </div>
+    </header>
+    @if (TempData["Error"] is string error)
+    {
+        <div class="mb-alert mb-alert-error" role="alert">@error</div>
+    }
+    @if (TempData["Success"] is string success)
+    {
+        <div class="mb-alert mb-alert-success" role="status">@success</div>
+    }
+    <div class="mb-admin-overview">
+        <div><span>AWAITING STAFF VERIFICATION</span><strong>@queue.Count(p => p.Method == "Bkash")</strong><small>Manual bKash submissions</small></div>
+        <div><span>LEGACY ADVANCE</span><strong>@queue.Count(p => p.Method == "ManualAdvance")</strong><small>Existing payment records only</small></div>
+        <div><span>PROCESS</span><strong>1 → 2 → 3</strong><small>Check wallet · Verify reference · Record decision</small></div>
+    </div>
+
+    @if (queue.Count == 0)
+    {
+        <section class="mb-admin-empty">
+            <span class="mb-empty-icon"><i class="bi bi-check2-circle"></i></span>
+            <h2>Verification queue is clear</h2>
+            <p>New manual bKash submissions from customers will appear here.</p>
+            <a href="/Admin/Payments" class="mb-button mb-button-dark">View payment ledger</a>
+        </section>
+    }
+    else
+    {
+        <div class="mb-review-list">
+            @foreach (var payment in queue)
+            {
+                var isBkash = payment.Method == "Bkash";
+                <article class="mb-review-card">
+                    <div class="mb-review-top">
+                        <div>
+                            <span class="mb-tag">@(isBkash ? "MANUAL BKASH" : "LEGACY ADVANCE")</span>
+                            <h2>@payment.Order.OrderNumber</h2>
+                            <small>@payment.Order.CustomerName · @payment.Order.CustomerPhone</small>
+                        </div>
+                        <div class="mb-review-amount"><span>EXPECTED PAYMENT</span><strong>৳@payment.Amount.ToString("N2")</strong></div>
+                    </div>
+                    <div class="mb-review-details">
+                        <div><span>Customer sender</span><strong>@(payment.ManualSenderNumber ?? "Legacy record")</strong></div>
+                        <div><span>Receiving bKash number</span><strong>@(payment.ManualRecipientNumber ?? "—")</strong></div>
+                        <div><span>Customer-reported transaction ID</span><strong>@(payment.TransactionReference ?? "Not provided")</strong></div>
+                        <div><span>Reported transfer time (BDT)</span><strong>@(payment.ManualClaimedPaidAt.HasValue ? payment.ManualClaimedPaidAt.Value.AddHours(6).ToString("dd MMM yyyy · hh:mm tt") : "—")</strong></div>
+                        <div><span>Submitted (BDT)</span><strong>@(payment.ManualSubmittedAt.HasValue ? payment.ManualSubmittedAt.Value.AddHours(6).ToString("dd MMM yyyy · hh:mm tt") : "—")</strong></div>
+                        <div><span>Order status</span><strong>@payment.Order.Status</strong></div>
+                    </div>
+                    <div class="mb-review-actions">
+                        <form method="post" action="/Admin/CheckoutPaymentReview/Confirm/@payment.Id"
+                              onsubmit="return confirm('I checked the receiving wallet independently and verified the full amount and transaction ID. Confirm as paid?')">
+                            @Html.AntiForgeryToken()
+                            <label class="mb-review-label" for="confirmNote-@payment.Id">Independent verification details</label>
+                            <textarea id="confirmNote-@payment.Id" name="verificationNote" maxlength="450" minlength="10" required
+                                      placeholder="e.g. Confirmed ৳ amount and TrxID against merchant wallet statement at 12:30"></textarea>
+                            <label class="mb-confirm-checkbox">
+                                <input type="checkbox" name="independentlyVerified" value="true" required />
+                                <span>I have independently verified the payment in the receiving bKash wallet. The submitted details match the transfer and amount.</span>
+                            </label>
+                            <button type="submit" class="mb-button mb-button-confirm"><i class="bi bi-check-circle"></i> Verify &amp; confirm order</button>
+                        </form>
+                        @if (isBkash)
+                        {
+                            <form method="post" action="/Admin/CheckoutPaymentReview/Reject/@payment.Id"
+                                  onsubmit="return confirm('Reject this unverified claim? The customer may submit corrected details.')">
+                                @Html.AntiForgeryToken()
+                                <label class="mb-review-label" for="rejectNote-@payment.Id">Reason for rejection</label>
+                                <textarea id="rejectNote-@payment.Id" name="verificationNote" maxlength="450" minlength="10" required
+                                          placeholder="e.g. No matching transaction received in our wallet. Please correct your TrxID."></textarea>
+                                <button type="submit" class="mb-button mb-button-reject"><i class="bi bi-x-circle"></i> Reject claim</button>
+                            </form>
+                        }
+                    </div>
+                    <div class="mb-review-links">
+                        <a href="/Admin/Payments/Details/@payment.Id">Open payment ledger ↗</a>
+                        <a href="/Admin/Orders/Details/@payment.OrderId">Open customer order ↗</a>
+                    </div>
+                </article>
+            }
+        </div>
+    }
 </div>
