@@ -23,8 +23,13 @@
 @await Html.PartialAsync("_PanenkaCheckoutHeader")
 <section class="container intro">
     <div class="kicker">CHECKOUT / MANUAL PAYMENT</div>
-    <h1>bKash transfer.</h1>
-    <p class="lead">Send Money in your own bKash app, then record the transfer details here for independent store verification.</p>
+    <h1>@(paid ? "Payment confirmed." : submitted ? "Order received." : rejected ? "Update payment details." : "Complete your transfer.")</h1>
+    <p class="lead">
+        Order <strong>@Model.OrderNumber</strong> is saved.
+        @(paid ? "Staff confirmed your manual transfer." :
+          submitted ? "Your bKash details are recorded and awaiting staff verification." :
+          "Send Money using the official bKash app, then submit your transaction details.")
+    </p>
 </section>
 <main class="container mb-manual">
     @if (!string.IsNullOrWhiteSpace(Model.Error))
