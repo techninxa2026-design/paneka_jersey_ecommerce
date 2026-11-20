@@ -1,17 +1,182 @@
 @model Jersey_ecommerce.Models.Orders.Order
-@{ Layout = null; }
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>@Model.OrderNumber | PANENKA</title><link rel="stylesheet" href="/css/panenka-checkout.css"><link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true">
-</head><body>
-@await Html.PartialAsync("_PanenkaCheckoutHeader")
-<section class="container intro"><div class="kicker">ORDER REFERENCE / @Model.OrderNumber</div><h1>Order details.</h1><p class="lead">Created @Model.CreatedAt.ToString("dd MMM yyyy") · @Model.Status</p></section>
-<main class="container checkout-layout"><section><h2 class="panel-heading">Items ordered</h2>
-@foreach (var item in Model.Items) {<div class="summary-row" style="padding:14px 0;border-bottom:1px solid #ddd;color:inherit"><div><strong style="color:inherit">@(item.ProductName)</strong><div class="lead">Quantity: @item.Quantity</div></div><strong style="color:inherit">৳@item.LineTotal.ToString("N2")</strong></div>}
-<hr class="sep"><h2 class="panel-heading">Shipping address</h2>
-<p class="lead">@Model.CustomerName · @Model.CustomerPhone<br>@Model.ShippingAddressLine1 @Model.ShippingAddressLine2<br>@Model.ShippingCity, @Model.ShippingDistrict, @Model.ShippingPostalCode<br>@Model.ShippingCountry</p>
-@if (TempData["OrderInfo"] is string notice) { <p class="notice">@notice</p> }
-@if (Model.Status == "Pending" && Model.Payment?.Status == "Pending" && Model.Shipment?.Status is (null or "Pending")) {
-<form method="post" action="/MyOrders/Cancel/@Model.Id" onsubmit="return confirm('Cancel this unpaid order and return its stock?')">@Html.AntiForgeryToken()<button type="submit" class="primary">CANCEL THIS ORDER <span>×</span></button></form>
+@{
+    Layout = null;
+    var shipment = Model.Shipment;
+    var payment = Model.Payment;
+    var allowedTrackUrl = !string.IsNullOrWhiteSpace(shipment?.TrackingUrl) &&
+        Uri.TryCreate(shipment.TrackingUrl, UriKind.Absolute, out var trackingUri) &&
+        (trackingUri.Scheme == Uri.UriSchemeHttp || trackingUri.Scheme == Uri.UriSchemeHttps);
+    var mayCancel = Model.Status == "Pending" && payment?.Method == "CashOnDelivery" &&
+        payment.Status == "Pending" && shipment?.Status is (null or "Pending");
+    var orderStages = new[] { "Pending", "Confirmed", "Processing", "Shipped", "Delivered" };
+    var currentStage = Array.IndexOf(orderStages, Model.Status);
+    var history = Model.StatusHistory.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).ToArray();
 }
-<a href="/MyOrders" class="back">← All orders</a></section>
-<aside class="summary"><h2>Order status</h2><div class="summary-row"><span>Fulfillment</span><strong>@Model.Status</strong></div><div class="summary-row"><span>Payment</span><strong>@(Model.Payment?.Status ?? "Pending")</strong></div><div class="summary-row"><span>Shipment</span><strong>@(Model.Shipment?.Status ?? "Pending")</strong></div><div class="summary-total"><span>Total</span><strong>৳@Model.TotalAmount.ToString("N2")</strong></div></aside></main>
-@await Html.PartialAsync("_PanenkaCheckoutFooter")</body></html>
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Track @Model.OrderNumber | PANENKA</title>
+    <link rel="stylesheet" href="/css/panenka-checkout.css" asp-append-version="true">
+    <link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true">
+    <style>
+      .pn-order-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,.85fr);gap:26px;align-items:start;padding-bottom:80px}
+      .pn-order-stack{display:grid;gap:20px;min-width:0}
+      .pn-order-panel{padding:25px;background:#fff;border:1px solid #e5e8eb;border-radius:12px;box-shadow:0 8px 34px rgba(15,18,21,.04)}
+      .pn-order-panel h2{font-size:17px;margin:0 0 19px;letter-spacing:-.04em}
+      .pn-order-label{font-size:10px;font-weight:800;color:#768088;letter-spacing:.1em;text-transform:uppercase}
+      .pn-order-value{margin-top:6px;font-size:13px;line-height:1.65;color:#20262b}
+      .pn-order-row{display:flex;justify-content:space-between;gap:15px;padding:15px 0;border-bottom:1px solid #eef0f1}
+      .pn-order-row:last-child{border-bottom:0}
+      .pn-order-line{display:flex;gap:14px;align-items:center}
+      .pn-order-thumb{width:62px;height:72px;object-fit:cover;border-radius:7px;background:#f1f3f4}
+      .pn-order-line-title{font-size:13px;font-weight:800;color:#1b1f22}
+      .pn-order-meta{font-size:12px;color:#707880;line-height:1.7}
+      .pn-order-pill{display:inline-flex;padding:6px 10px;background:#eef2f4;border-radius:20px;font-size:11px;font-weight:800;color:#29343b}
+      .pn-order-pill.delivered{background:#e4f2e8;color:#23593c}
+      .pn-order-pill.cancelled,.pn-order-pill.returned{background:#fbeaec;color:#a32b3b}
+      .pn-order-progress{list-style:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;padding:0;margin:22px 0 8px}
+      .pn-order-progress li{border-top:3px solid #e5e8ea;text-align:center;font-size:10px;padding-top:13px;color:#929aa0;font-weight:750}
+      .pn-order-progress li.done{border-color:#202a31;color:#1e282e}
+      .pn-order-history{list-style:none;padding:0;margin:0}
+      .pn-order-history li{display:flex;gap:14px;padding:13px 0;border-bottom:1px solid #eef0f1}
+      .pn-order-history li:last-child{border:0}
+      .pn-order-history i{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none;background:#20282e}
+      .pn-order-history strong{font-size:12px}
+      .pn-order-history small{display:block;margin-top:4px;color:#798187;font-size:11px}
+      .pn-track-button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;background:#11171b;color:white;padding:12px 18px;border-radius:8px;font-size:11px;font-weight:800;letter-spacing:.04em;text-decoration:none}
+      .pn-track-button:hover{background:#333b41;color:white}
+      .pn-order-total{font-size:20px;letter-spacing:-.04em}
+      .pn-order-address{font-size:13px;line-height:1.8;color:#40494f}
+      .pn-order-disclaimer{color:#879097;font-size:11px;line-height:1.65;margin:14px 0 0}
+      @@media(max-width:850px){.pn-order-grid{grid-template-columns:1fr}.pn-order-panel{padding:20px}}
+      @@media(max-width:450px){.pn-order-progress li{font-size:8px}.pn-order-row{gap:10px}}
+    </style>
+</head>
+<body>
+@await Html.PartialAsync("_PanenkaCheckoutHeader")
+<section class="container intro">
+    <div class="kicker">YOUR ACCOUNT / TRACK YOUR ORDER</div>
+    <h1>Order @Model.OrderNumber</h1>
+    <p class="lead">Placed @Model.CreatedAt.ToString("dd MMM yyyy") · <span class="pn-order-pill @Model.Status.ToLowerInvariant()">@Model.Status</span></p>
+    <a class="back" href="/MyOrders">← Back to all orders</a>
+</section>
+<main class="container pn-order-grid">
+    <div class="pn-order-stack">
+        @if (TempData["OrderInfo"] is string notice)
+        {
+            <div class="pn-order-panel" role="status">@notice</div>
+        }
+        <section class="pn-order-panel" aria-label="Order delivery progress">
+            <h2>Delivery progress</h2>
+            <p class="pn-order-meta">Current shipment: <strong>@(shipment?.Status ?? "Pending")</strong></p>
+            @if (currentStage >= 0)
+            {
+                <ol class="pn-order-progress">
+                    @for (var i = 0; i < orderStages.Length; i++)
+                    {
+                        <li class="@(i <= currentStage ? "done" : "")">@orderStages[i]</li>
+                    }
+                </ol>
+            }
+            else
+            {
+                <p class="pn-order-meta">The order is @Model.Status.ToLowerInvariant(). Contact support if you need assistance.</p>
+            }
+            @if (history.Length > 0)
+            {
+                <h3 class="pn-order-label" style="margin:26px 0 8px">Order updates</h3>
+                <ol class="pn-order-history">
+                    @foreach (var change in history)
+                    {
+                        <li><i aria-hidden="true"></i><div><strong>@change.Status</strong><small>@change.CreatedAt.ToString("dd MMM yyyy, HH:mm") UTC</small></div></li>
+                    }
+                </ol>
+            }
+            <p class="pn-order-disclaimer">The status updates above are recorded by PANENKA. Carrier scans are available on the courier's tracking site when provided.</p>
+        </section>
+        <section class="pn-order-panel">
+            <h2>Items in your order</h2>
+            @foreach (var item in Model.Items.OrderBy(x => x.Id))
+            {
+                <div class="pn-order-row pn-order-line">
+                    @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                    {
+                        <img class="pn-order-thumb" src="@item.ImageUrl" alt="@item.ProductName" loading="lazy" />
+                    }
+                    <div style="flex:1;min-width:0">
+                        <div class="pn-order-line-title">@item.ProductName</div>
+                        <div class="pn-order-meta">@(item.SizeName ?? "One size") · @(item.ColorName ?? "Standard") · Quantity @item.Quantity</div>
+                        @if (Model.Status == "Delivered" && item.ProductVariant?.Product?.IsPublished == true)
+                        {
+                            <a class="pn-order-meta" href="/Product/Details/@Uri.EscapeDataString(item.ProductVariant.Product.Slug)#reviews">Review your purchase</a>
+                        }
+                    </div>
+                    <strong style="font-size:13px;white-space:nowrap">৳@item.LineTotal.ToString("N2")</strong>
+                </div>
+            }
+        </section>
+        <section class="pn-order-panel">
+            <h2>Delivery address</h2>
+            <div class="pn-order-address"><strong>@Model.CustomerName</strong> · @Model.CustomerPhone
+                <div>@Model.ShippingAddressLine1 @Model.ShippingAddressLine2</div>
+                <div>@Model.ShippingCity, @Model.ShippingDistrict @Model.ShippingPostalCode</div>
+                <div>@Model.ShippingCountry</div>
+            </div>
+            @if (mayCancel)
+            {
+                <form method="post" action="/MyOrders/Cancel/@Model.Id" onsubmit="return confirm('Cancel this unpaid order and restore its stock?')">
+                    @Html.AntiForgeryToken()
+                    <button class="pn-track-button" type="submit" style="margin-top:24px;border:none">Cancel order</button>
+                </form>
+            }
+        </section>
+    </div>
+    <aside class="pn-order-stack">
+        <section class="pn-order-panel">
+            <h2>Shipment information</h2>
+            <div class="pn-order-row"><span class="pn-order-label">Status</span><strong>@(shipment?.Status ?? "Not prepared")</strong></div>
+            <div class="pn-order-row"><span class="pn-order-label">Courier</span><strong>@(shipment?.CourierName ?? "Awaiting assignment")</strong></div>
+            @if (!string.IsNullOrWhiteSpace(shipment?.TrackingNumber))
+            {
+                <div class="pn-order-row"><span class="pn-order-label">Tracking number</span><strong style="overflow-wrap:anywhere">@shipment.TrackingNumber</strong></div>
+            }
+            @if (shipment?.EstimatedDeliveryAt != null)
+            {
+                <div class="pn-order-row"><span class="pn-order-label">Expected delivery</span><strong>@shipment.EstimatedDeliveryAt.Value.ToString("dd MMM yyyy")</strong></div>
+            }
+            @if (shipment?.ShippedAt != null)
+            {
+                <div class="pn-order-row"><span class="pn-order-label">Dispatched</span><strong>@shipment.ShippedAt.Value.ToString("dd MMM yyyy")</strong></div>
+            }
+            @if (shipment?.DeliveredAt != null)
+            {
+                <div class="pn-order-row"><span class="pn-order-label">Delivered</span><strong>@shipment.DeliveredAt.Value.ToString("dd MMM yyyy")</strong></div>
+            }
+            @if (allowedTrackUrl)
+            {
+                <a class="pn-track-button" href="@shipment!.TrackingUrl" target="_blank" rel="noopener noreferrer" style="width:100%;margin-top:20px">Track with courier ↗</a>
+            }
+            else
+            {
+                <p class="pn-order-disclaimer">Courier tracking becomes available once the delivery team provides a tracking link.</p>
+            }
+        </section>
+        <section class="pn-order-panel">
+            <h2>Payment summary</h2>
+            <div class="pn-order-row"><span>Payment method</span><strong>@(payment?.Method == "CashOnDelivery" ? "Cash on delivery" : payment?.Method ?? "Unspecified")</strong></div>
+            <div class="pn-order-row"><span>Payment status</span><strong>@(payment?.Status ?? "Pending")</strong></div>
+            <div class="pn-order-row"><span>Subtotal</span><strong>৳@Model.Subtotal.ToString("N2")</strong></div>
+            @if (Model.DiscountAmount > 0)
+            {
+                <div class="pn-order-row"><span>Discount @(Model.CouponCode is null ? "" : "(" + Model.CouponCode + ")")</span><strong>− ৳@Model.DiscountAmount.ToString("N2")</strong></div>
+            }
+            <div class="pn-order-row"><span>Shipping</span><strong>৳@Model.ShippingCost.ToString("N2")</strong></div>
+            <div class="pn-order-row"><span>Total</span><strong class="pn-order-total">৳@Model.TotalAmount.ToString("N2")</strong></div>
+        </section>
+    </aside>
+</main>
+@await Html.PartialAsync("_PanenkaCheckoutFooter")
+</body>
+</html>
