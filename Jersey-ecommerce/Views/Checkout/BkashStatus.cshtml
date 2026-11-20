@@ -60,7 +60,7 @@
                             <small>RECEIVING BKASH NUMBER</small>
                             <strong id="receivingNumber">@Model.RecipientNumber</strong>
                         </div>
-                        <button type="button" id="copyReceivingNumber" class="mb-copy" aria-label="Copy bKash receiving number">
+                        <button type="button" id="copyReceivingNumber" class="mb-copy" disabled="@(!Model.ReceivingAccountIsCurrent && !paid)" aria-label="Copy bKash receiving number">
                             <i class="bi bi-clipboard"></i> COPY
                         </button>
                     </div>
@@ -69,7 +69,20 @@
                 {
                     <div class="mb-alert mb-alert-error">A receiving number was not saved for this older order. Please contact PANENKA support instead of sending money to an unconfirmed number.</div>
                 }
-                <p class="mb-note">@Model.Instructions</p>
+                @if (!Model.ReceivingAccountIsCurrent && !paid)
+                {
+                    <div class="mb-alert mb-alert-error" role="alert">
+                        <strong>This receiving number is no longer the store's current bKash account.</strong>
+                        Do not make a new transfer to this number. If you already transferred before the account changed,
+                        you may submit your earlier transaction details for reconciliation. Otherwise contact PANENKA support.
+                    </div>
+                }
+                else
+                {
+                    <p class="mb-note">@Model.Instructions</p>
+                }
+                @if (Model.ReceivingAccountIsCurrent)
+                {
                 <ol class="mb-guide">
                     <li>Open your own official <strong>bKash app</strong>, then select <strong>Send Money</strong>.</li>
                     <li>Enter the receiving number shown above. Verify the recipient inside bKash before sending.</li>
@@ -77,6 +90,7 @@
                     <li>Copy the transaction ID (TrxID) from your bKash confirmation and complete the form on this page.</li>
                     <li>The PANENKA admin will independently check receipt and confirm your order.</li>
                 </ol>
+                }
                 <div class="mb-privacy"><i class="bi bi-shield-lock"></i> We will never ask for your bKash PIN, password, or OTP. This website does not process the transfer itself.</div>
             </section>
             <p style="margin:19px 0"><a class="back" href="/MyOrders/@Model.OrderId">← Back to your order</a></p>
