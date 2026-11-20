@@ -2074,11 +2074,12 @@
                     const variants=await result.json();
                     if(state.activeProduct!==p)return;
                     if(!variants.length){byId('quickSizes').textContent='Out of stock for all sizes.';byId('quickAction').textContent='OUT OF STOCK';return;}
-                    byId('quickSizes').innerHTML=`<label for="chooseVariant">SELECT SIZE & COLOR</label><select id="chooseVariant" style="display:block;width:100%;padding:13px;margin:10px 0;background:#fff;border:1px solid #ccc;color:#111">${variants.map(v=>`<option value="${Number(v.id)}" data-price="${Number(v.price)}">${esc(v.size)} / ${esc(v.color)} — ${cash(v.price)} (${Number(v.stockQuantity)} available)</option>`).join('')}</select><label for="chooseQty">QUANTITY</label><input id="chooseQty" type="number" min="1" max="100" value="1" style="padding:12px;border:1px solid #ccc;width:100%;margin:8px 0"><div id="quickStatus" role="status" style="margin-top:10px"></div>`;
+                    byId('quickSizes').innerHTML=`<label for="chooseVariant">SELECT SIZE & COLOR</label><select id="chooseVariant" style="display:block;width:100%;padding:13px;margin:10px 0;background:#fff;border:1px solid #ccc;color:#111">${variants.map(v=>`<option value="${Number(v.id)}" data-price="${Number(v.price)}" data-stock="${Number(v.stockQuantity)}">${esc(v.size)} / ${esc(v.color)} — ${cash(v.price)} (${Number(v.stockQuantity)} available)</option>`).join('')}</select><label for="chooseQty">QUANTITY</label><input id="chooseQty" type="number" min="1" max="${Math.min(100,Number(variants[0].stockQuantity))}" value="1" style="padding:12px;border:1px solid #ccc;width:100%;margin:8px 0"><div id="quickStatus" role="status" style="margin-top:10px"></div>`;
                     byId('chooseVariant').addEventListener('change',()=>{const chosen=byId('chooseVariant').selectedOptions[0];byId('quickPrice').textContent=cash(chosen.dataset.price);
                      const selected=variants.find(v=>Number(v.id)===Number(chosen.value));
                      if(selected?.imageUrl&&selected.imageUrl.startsWith('/'))byId('quickImageWrap').innerHTML=`<img src="${esc(selected.imageUrl)}" alt="${esc(p.name)}">`;
-                     byId('chooseQty').max=Math.min(100,Number(selected?.stockQuantity||100));});
+                     const available=Math.min(100,Number(selected?.stockQuantity||0));byId('chooseQty').max=available;
+                     if(Number(byId('chooseQty').value)>available)byId('chooseQty').value=String(available);});
                     byId('quickAction').disabled=false;byId('quickAction').textContent='ADD TO BAG →';
                 }catch(e){byId('quickSizes').textContent=e.message;byId('quickAction').textContent='UNAVAILABLE';}
             }
@@ -2160,7 +2161,8 @@
                     const p=state.activeProduct,variant=byId('chooseVariant'),qty=byId('chooseQty');
                     if(!p||!variant||!qty)return;
                     const count=Number(qty.value);
-                    if(!Number.isInteger(count)||count<1||count>100){showToast('Choose a quantity between 1 and 100.');return;}
+                    const available=Math.min(100,Number(variant.selectedOptions[0]?.dataset.stock||0));
+                    if(!Number.isInteger(count)||count<1||count>available){showToast('Choose a quantity within the available stock.');return;}
                     const action=byId('quickAction');action.disabled=true;action.textContent='ADDING…';
                     try {
                         const res=await fetch('/api/storefront/cart/items',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json','RequestVerificationToken':document.querySelector('meta[name="request-verification-token"]').content},body:JSON.stringify({productId:Number(p.id),variantId:Number(variant.value),quantity:count})});
