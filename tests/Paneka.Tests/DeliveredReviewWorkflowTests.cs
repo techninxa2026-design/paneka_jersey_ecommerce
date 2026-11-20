@@ -113,6 +113,7 @@ public sealed class DeliveredReviewWorkflowTests
         await using var db = NewDb(connection);
         await db.Database.EnsureCreatedAsync();
         Seed(db);
+        await db.SaveChangesAsync();
         (await db.Orders.SingleAsync()).Status = "Delivered";
         await db.SaveChangesAsync();
 
