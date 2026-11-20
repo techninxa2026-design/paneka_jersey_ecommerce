@@ -29,7 +29,7 @@ public sealed class ProductController(ApplicationDbContext db) : Controller
                 .FirstOrDefaultAsync(p => p.IsPublished && p.Id == id);
         if (product == null) return NotFound();
         ViewBag.Reviews = await db.Reviews.AsNoTracking().Where(x => x.ProductId == product.Id && x.IsApproved && !x.IsRejected)
-            .Include(x => x.User).OrderByDescending(x => x.CreatedAt).Take(30).ToListAsync();
+            .Include(x => x.User).OrderByDescending(x => x.CreatedAt).ToListAsync();
         ViewBag.VariantImages = await db.ProductVariantImages.AsNoTracking()
             .Where(x => x.ProductVariant.ProductId == product.Id)
             .ToDictionaryAsync(x => x.ProductVariantId, x => x.ImageUrl);
