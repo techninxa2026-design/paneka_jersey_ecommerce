@@ -106,7 +106,8 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
                 PageSize = PageSize,
                 FilteredCount = filteredCount,
                 TotalCount = await baseQuery.CountAsync(),
-                PendingCount = await baseQuery.CountAsync(p => p.Status == "Pending"),
+                PendingCount = await baseQuery.CountAsync(p =>
+                    p.Status == "Pending" || p.Status == "Submitted" || p.Status == "Rejected"),
                 // This is the DATABASE-RECORDED status, not independent gateway reconciliation.
                 ReportedPaidCount = await baseQuery.CountAsync(p =>
                     p.Status == "Paid" || p.Status == "Succeeded" || p.Status == "Completed"),
