@@ -94,6 +94,16 @@ public class ShipmentsController : Controller
     [HttpGet]
     public async Task<IActionResult> Create(int? orderId)
     {
+        if (orderId is > 0)
+        {
+            // Storefront checkout already creates a Pending shipment. Open it instead
+            // of presenting an impossible second-shipment form for the same order.
+            var existingId = await _context.Shipments.AsNoTracking()
+                .Where(x => x.OrderId == orderId.Value)
+                .Select(x => x.Id).FirstOrDefaultAsync();
+            if (existingId > 0)
+                return RedirectToAction(nameof(Edit), new { id = existingId });
+        }
         var model = new ShipmentFormViewModel { OrderId = orderId ?? 0 };
         await LoadAvailableOrdersAsync(model);
         return View(model);
