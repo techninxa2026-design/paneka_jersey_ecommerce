@@ -55,8 +55,7 @@ public sealed class BkashController(
             ReviewedAtUtc = payment.ManualReviewedAt,
             ReviewNote = payment.ManualReviewNote,
             CanSubmit = order.Status == "Pending" &&
-                (payment.Status is "Pending" or "Rejected") &&
-                ManualBkashPaymentService.IsValidMobile(payment.ManualRecipientNumber),
+                (payment.Status is "Pending" or "Rejected"),
             Error = TempData["CheckoutError"]?.ToString(),
             Notice = TempData["PaymentNotice"]?.ToString()
         };
