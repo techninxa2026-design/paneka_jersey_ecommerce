@@ -263,7 +263,9 @@
             tabs.forEach(tab => tab.addEventListener('click', () => showTab(tab.dataset.settingsTab)));
             const firstError = root.querySelector('.field-validation-error, .input-validation-error');
             const errorPane = firstError && firstError.closest('[data-settings-pane]');
-            showTab(errorPane ? errorPane.dataset.settingsPane : 'general');
+            const requestedPane = window.location.hash.replace('#', '');
+            const hasRequestedPane = panes.some(p => p.dataset.settingsPane === requestedPane);
+            showTab(errorPane ? errorPane.dataset.settingsPane : hasRequestedPane ? requestedPane : 'general');
 
             // Keep visible ON/OFF indicators in sync with real checkbox state.
             // Label clicks and keyboard Space work natively without custom click handlers.
