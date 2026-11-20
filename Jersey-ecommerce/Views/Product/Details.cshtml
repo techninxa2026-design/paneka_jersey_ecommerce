@@ -8,7 +8,10 @@
         .OrderBy(v => v.Size.DisplayOrder).ThenBy(v => v.Color.Name).ToList();
     var images = Model.Images.Where(i => !(i.AltText ?? "").StartsWith("variant:"))
         .OrderByDescending(i => i.IsPrimary).ThenBy(i => i.DisplayOrder).ToList();
-    var reviews = ViewBag.Reviews as IEnumerable<Review> ?? Enumerable.Empty<Review>();
+    var reviews = (ViewBag.Reviews as IEnumerable<Review> ?? Enumerable.Empty<Review>()).ToList();
+    var reviewCount = reviews.Count;
+    var averageRating = reviewCount > 0 ? reviews.Average(x => x.Rating) : 0;
+    var ratingCounts = Enumerable.Range(1, 5).ToDictionary(stars => stars, stars => reviews.Count(x => x.Rating == stars));
     var variantImgs = ViewBag.VariantImages as Dictionary<int,string> ?? new();
     var main = images.FirstOrDefault()?.ImageUrl;
     var token = Antiforgery.GetAndStoreTokens(Context).RequestToken;
@@ -33,7 +36,13 @@ else { <span class="gallery-empty">PANENKA</span> }
 }</div> }
 </div>
 <div class="info"><div class="eyebrow">@(Model.Category?.Name ?? "FOOTBALL JERSEY") / @(Model.Brand?.Name ?? "PANENKA")</div>
-<h1>@Model.Name</h1><div class="price" id="displayPrice">৳@Model.BasePrice.ToString("N2")
+<h1>@Model.Name</h1>
+<a href="#reviews" class="product-rating-link" style="display:inline-flex;align-items:center;gap:10px;margin:5px 0 18px;color:#161616;text-decoration:none;font-size:14px" aria-label="Read @reviewCount customer reviews">
+    <span aria-hidden="true" style="color:#bd8730;letter-spacing:2px">@(reviewCount > 0 ? new string('★', (int)Math.Round(averageRating)) + new string('☆', 5 - (int)Math.Round(averageRating)) : "☆☆☆☆☆")</span>
+    <strong>@(reviewCount > 0 ? averageRating.ToString("0.0") + " / 5" : "Not yet rated")</strong>
+    <span style="color:#666;text-decoration:underline;text-underline-offset:3px">@(reviewCount == 0 ? "Be the first to review after delivery" : $"{reviewCount} customer {(reviewCount == 1 ? "review" : "reviews")}")</span>
+</a>
+<div class="price" id="displayPrice">৳@Model.BasePrice.ToString("N2")
 @if (Model.CompareAtPrice > Model.BasePrice) { <span class="old">৳@Model.CompareAtPrice.Value.ToString("N2")</span> }
 </div><p class="desc">@(Model.Description ?? Model.ShortDescription ?? "Premium football jersey from PANENKA.")</p>
 <label class="label" for="variant">Size / Color</label>
@@ -47,7 +56,25 @@ else { <span class="gallery-empty">PANENKA</span> }
 <p class="helper">Products, prices, sizes and stock are live from the store database. Cash on delivery availability depends on delivery address and store settings.</p>
 @if (TempData["ReviewMessage"] is string message){<p class="messages">@message</p>}
 </div></main>
-<section class="review-list" id="reviews"><h2>Customer reviews (@reviews.Count())</h2>
+<section class="review-list" id="reviews"><h2>Customer reviews (@reviewCount)</h2>
+@if (reviewCount > 0)
+{
+    <div class="review-summary" style="display:flex;flex-wrap:wrap;align-items:center;gap:28px;padding:22px 0;margin-bottom:18px;border-bottom:1px solid #ddd">
+        <div><strong style="font-size:36px;letter-spacing:-.05em">@averageRating.ToString("0.0")</strong><span style="color:#777"> / 5</span><div style="color:#bd8730" aria-hidden="true">@(new string('★', (int)Math.Round(averageRating)))@(new string('☆', 5 - (int)Math.Round(averageRating)))</div><small>Based on @reviewCount approved customer reviews</small></div>
+        <div style="flex:1;min-width:185px;max-width:360px">
+        @for (var stars = 5; stars >= 1; stars--)
+        {
+            var count = ratingCounts[stars];
+            var width = count * 100.0 / reviewCount;
+            <div style="display:flex;align-items:center;gap:9px;margin:6px 0;font-size:12px">
+                <span style="white-space:nowrap">@stars ★</span>
+                <div style="height:7px;background:#ededed;flex:1;border-radius:99px;overflow:hidden"><div style="height:100%;width:@(width.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%;background:#bd8730"></div></div>
+                <span style="width:25px;text-align:right">@count</span>
+            </div>
+        }
+        </div>
+    </div>
+}
 @foreach(var review in reviews){<article class="review-card"><div aria-label="@review.Rating stars">@(new string('★', review.Rating))@(new string('☆', 5-review.Rating))</div><h3>@review.Title</h3><small>@(review.User?.FullName ?? "Verified customer") · @review.CreatedAt.ToString("dd MMM yyyy")</small><p>@review.Comment</p></article>}
 @if(!reviews.Any()){<p class="helper">No approved reviews yet.</p>}
 @if (ViewBag.DeliveredOrderId is int deliveredReviewOrder)
