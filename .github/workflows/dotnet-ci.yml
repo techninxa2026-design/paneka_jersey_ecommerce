@@ -34,5 +34,14 @@ jobs:
             if ($diagnostic) { Get-Content $diagnostic.FullName }
             exit 1
           }
+      - name: Validate bKash checkout modal JavaScript
+        shell: pwsh
+        run: |
+          $source = Get-Content -Raw "Jersey-ecommerce/Views/Checkout/Payment.cshtml"
+          $match = [regex]::Match($source, '(?s)<script>\s*(.*?)\s*</script>')
+          if (-not $match.Success) { throw "Checkout modal script not found." }
+          $path = Join-Path $env:RUNNER_TEMP "panenka-bkash-checkout.js"
+          Set-Content -LiteralPath $path -Value $match.Groups[1].Value -Encoding UTF8
+          node --check $path
       - name: Test catalog, filters, cart and URL generation
         run: dotnet test "tests/Paneka.Tests/Paneka.Tests.csproj" -c Release --logger "console;verbosity=normal"
