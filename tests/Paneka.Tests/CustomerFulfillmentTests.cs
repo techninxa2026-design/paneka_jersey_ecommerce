@@ -60,7 +60,14 @@ public sealed class CustomerFulfillmentTests
 
         await AdvanceOrder(db, "Pending", "Confirmed");
         await AdvanceOrder(db, "Confirmed", "Processing");
+        var blockedPage = Assert.IsType<ViewResult>(await Orders(db).Details(1));
+        var blockedModel = Assert.IsType<OrderDetailsViewModel>(blockedPage.Model);
+        Assert.Null(blockedModel.NextStatus);
+        Assert.Contains("Packed", blockedModel.NextStatusHint ?? "");
+
         await AdvanceShipment(db, "Pending", "Packed");
+        var readyPage = Assert.IsType<ViewResult>(await Orders(db).Details(1));
+        Assert.Equal("Shipped", Assert.IsType<OrderDetailsViewModel>(readyPage.Model).NextStatus);
         await AdvanceShipment(db, "Packed", "Shipped");
         Assert.Equal("Shipped", (await db.Orders.AsNoTracking().SingleAsync()).Status);
         Assert.NotNull((await db.Shipments.AsNoTracking().SingleAsync()).ShippedAt);
