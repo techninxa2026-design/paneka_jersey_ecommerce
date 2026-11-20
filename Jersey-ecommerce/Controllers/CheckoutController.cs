@@ -18,7 +18,6 @@ public sealed class CheckoutController(
     CheckoutService cart,
     ApplicationDbContext db,
     UserManager<ApplicationUser> users,
-    BkashGateway bkash,
     ILogger<CheckoutController> logger) : Controller
 {
     // Bind checkout details to the signed-in account rather than just the browser session.
@@ -114,6 +113,8 @@ public sealed class CheckoutController(
             Delivery = delivery, Cart = quote, SubmissionToken = token!,
             ShippingCost = delivery.Region == "Dhaka" ? rates.Value.Dhaka : rates.Value.OutsideDhaka,
             AllowCashOnDelivery = await cart.CodEnabled(),
+            ManualBkashNumber = await cart.ManualBkashNumber(),
+            ManualBkashInstructions = await cart.ManualBkashInstructions(),
             ManualInstructions = cart.Options.ManualPaymentInstructions
         });
     }
@@ -144,9 +145,9 @@ public sealed class CheckoutController(
             TempData["CheckoutError"] = "Cash on delivery is disabled in store settings.";
             return RedirectToAction(nameof(Payment));
         }
-        if (input.PaymentMethod == "Bkash" && !bkash.IsConfigured)
+        if (input.PaymentMethod == "Bkash" && await cart.ManualBkashNumber() is null)
         {
-            TempData["CheckoutError"] = "bKash sandbox credentials and a public HTTPS callback URL are required.";
+            TempData["CheckoutError"] = "Manual bKash is not currently available. Choose cash on delivery or contact support.";
             return RedirectToAction(nameof(Payment));
         }
 
