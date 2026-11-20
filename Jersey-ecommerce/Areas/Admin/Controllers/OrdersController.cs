@@ -171,6 +171,7 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
             // Advance-payment orders must not progress toward shipping until
             // their payment is independently verified. COD remains eligible.
             if (order.Payment == null ||
+                order.Payment.Status is "Cancelled" or "Failed" or "Refunded" ||
                 ((order.Payment.Method == "Bkash" || order.Payment.Method == "ManualAdvance")
                   && order.Payment.Status != "Paid"))
             {
@@ -203,6 +204,19 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
                 if (string.IsNullOrWhiteSpace(order.Shipment.CourierName))
                 {
                     TempData["Error"] = "Add courier details in Shipments before dispatching this order.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+
+                if (allowedNext == "Shipped" &&
+                    order.Shipment.Status is not ("Packed" or "Shipped" or "InTransit" or "OutForDelivery"))
+                {
+                    TempData["Error"] = "Pack the shipment in Shipments before dispatch. Pending and failed shipments cannot be marked shipped.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+                if (allowedNext == "Delivered" &&
+                    order.Shipment.Status is not ("Shipped" or "InTransit" or "OutForDelivery" or "Delivered"))
+                {
+                    TempData["Error"] = "A shipment cannot be marked delivered before dispatch or while it is failed.";
                     return RedirectToAction(nameof(Details), new { id });
                 }
             }
