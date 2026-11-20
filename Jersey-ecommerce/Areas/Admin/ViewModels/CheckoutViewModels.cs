@@ -41,7 +41,7 @@ public sealed class DeliveryInput
     [Required, StringLength(100)] public string District { get; set; } = "";
     [StringLength(20)] public string? PostalCode { get; set; }
     [Required, RegularExpression("^(Dhaka|OutsideDhaka)$")]
-    public string Region { get; set; } = "Dhaka";
+    public string Region { get; set; } = "";
     [StringLength(500)] public string? Instructions { get; set; }
 }
 
