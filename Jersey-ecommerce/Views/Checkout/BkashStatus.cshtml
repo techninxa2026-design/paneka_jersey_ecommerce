@@ -82,7 +82,7 @@
                         you may submit your earlier transaction details for reconciliation. Otherwise contact PANENKA support.
                     </div>
                 }
-                else
+                else if (!string.IsNullOrWhiteSpace(Model.RecipientNumber))
                 {
                     <p class="mb-note">@Model.Instructions</p>
                 }
