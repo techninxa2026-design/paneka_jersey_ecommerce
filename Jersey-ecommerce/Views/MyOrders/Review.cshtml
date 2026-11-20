@@ -51,7 +51,7 @@
                                 {
                                     <label class="pn-rating-option">
                                         <input type="radio" name="rating" value="@rating" checked="@(Model.Rating == rating)" required/>
-                                        <span aria-hidden="true">@new string('★', rating)</span>
+                                        <span aria-hidden="true">@(new string('★', rating))</span>
                                         <small>@rating @(rating == 1 ? "star" : "stars")</small>
                                     </label>
                                 }
@@ -75,7 +75,7 @@
                         <span class="pn-review-state-icon">◷</span>
                         <strong>Your review is awaiting staff approval.</strong>
                         <p>We've saved your feedback. The PANENKA team can approve or reject it in Admin → Reviews. You don't need to submit it again.</p>
-                        <div class="pn-review-preview"><span class="pn-review-stars">@new string('★', Model.Rating)</span><h2>@Model.Title</h2><p>@Model.Comment</p></div>
+                        <div class="pn-review-preview"><span class="pn-review-stars">@(new string('★', Model.Rating))</span><h2>@Model.Title</h2><p>@Model.Comment</p></div>
                     </div>
                 }
                 else if (isApproved)
@@ -84,7 +84,7 @@
                         <span class="pn-review-state-icon">✓</span>
                         <strong>Your review has been approved.</strong>
                         <p>It's now visible on the product's public detail page. Thank you for helping other shoppers.</p>
-                        <div class="pn-review-preview"><span class="pn-review-stars">@new string('★', Model.Rating)</span><h2>@Model.Title</h2><p>@Model.Comment</p></div>
+                        <div class="pn-review-preview"><span class="pn-review-stars">@(new string('★', Model.Rating))</span><h2>@Model.Title</h2><p>@Model.Comment</p></div>
                         <a href="/Product/Details/@Uri.EscapeDataString(Model.ProductSlug)#reviews" class="pn-review-link">VIEW PUBLIC PRODUCT REVIEWS ↗</a>
                     </div>
                 }
