@@ -72,6 +72,24 @@ public sealed class CatalogAndCartTests
     }
 
     [Fact]
+    public async Task Home_collection_navigation_uses_real_shop_results()
+    {
+        await using var db = NewDb();
+        SeedCatalog(db);
+        db.ProductVariants.Add(new ProductVariant { Id = 1, ProductId = 1, SizeId = 1,
+            ColorId = 1, SKU = "HOME-1", Price = 1200, StockQuantity = 5, IsActive = true });
+        await db.SaveChangesAsync();
+
+        // Homepage editorial links use /shop?collection=club. These must work
+        // even when the store has not created a separate collection slug.
+        var catalog = new ShopCatalogApiController(db);
+        var response = await catalog.Get(collection: "club");
+        var ok = Assert.IsType<OkObjectResult>(response);
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(ok.Value));
+        Assert.Equal(1, json.RootElement.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
     public async Task Cart_shows_unavailable_variants_and_prevents_stock_bypass()
     {
         await using var db = NewDb();
