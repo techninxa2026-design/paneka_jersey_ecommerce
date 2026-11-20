@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Jersey_ecommerce.Areas.Admin.ViewModels;
 using Jersey_ecommerce.Data;
 using Jersey_ecommerce.Models.Orders;
+using Jersey_ecommerce.Services.Checkout;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -146,7 +147,13 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
                 (order.Payment == null || order.Payment.Status is "Cancelled" or "Failed" or "Refunded" ||
                  (order.Payment.Method is "Bkash" or "ManualAdvance" && order.Payment.Status != "Paid")))
             {
-                hint = "Verify the advance payment before changing fulfillment. Cash-on-delivery orders can proceed without online payment.";
+                hint = order.Payment?.Method == "Bkash" && order.Payment.Status == "Submitted"
+                    ? "bKash transfer submitted. Verify the payment in the review section below before confirming the order."
+                    : order.Payment?.Method == "Bkash" && order.Payment.Status == "Rejected"
+                        ? "This bKash claim was rejected. Await corrected transaction details from the customer."
+                        : order.Payment?.Method == "Bkash" && order.Payment.Status == "Pending"
+                            ? "The buyer has not submitted a bKash transfer reference yet. Fulfillment is on hold."
+                            : "Verify the advance payment before changing fulfillment. Cash-on-delivery orders can proceed without online payment.";
             }
             else if (next == "Shipped" &&
                 (order.Shipment == null ||
@@ -169,6 +176,73 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
                 NextStatus = hint == null ? next : null,
                 NextStatusHint = hint
             });
+        }
+
+        // POST /Admin/Orders/VerifyBkash/123
+        // Admin can reconcile a customer transfer directly from Order Details.
+        // Uses the SAME service as the central bKash verification queue; the
+        // payment, order, audit log and customer-visible timeline stay atomic.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VerifyBkash(int id, string? verificationNote,
+            bool independentlyVerified = false)
+        {
+            var payment = await _context.Payments.AsNoTracking()
+                .Where(p => p.OrderId == id && p.Method == "Bkash")
+                .Select(p => new { p.Id, p.Status }).SingleOrDefaultAsync();
+            if (payment == null) return NotFound();
+
+            if (!independentlyVerified)
+            {
+                TempData["Error"] = "You must independently verify the full amount and TrxID in the receiving bKash wallet before confirming this order.";
+                return RedirectToAction(nameof(Details), new { id, section = "payment-review" });
+            }
+            try
+            {
+                await new ManualBkashPaymentService(_context).VerifyAsync(
+                    payment.Id, User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Admin",
+                    verificationNote);
+                TempData["Success"] = "bKash payment verified. This order is now Confirmed and can move to Processing. The customer can see the updated status.";
+            }
+            catch (CheckoutException ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Unable to reconcile bKash payment on order {OrderId}", id);
+                TempData["Error"] = "Could not record the payment verification. Refresh the order and try again.";
+            }
+            return RedirectToAction(nameof(Details), new { id, section = "payment-review" });
+        }
+
+        // POST /Admin/Orders/RejectBkash/123
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RejectBkash(int id, string? verificationNote)
+        {
+            var payment = await _context.Payments.AsNoTracking()
+                .Where(p => p.OrderId == id && p.Method == "Bkash")
+                .Select(p => new { p.Id }).SingleOrDefaultAsync();
+            if (payment == null) return NotFound();
+
+            try
+            {
+                await new ManualBkashPaymentService(_context).RejectAsync(
+                    payment.Id, User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "Admin",
+                    verificationNote);
+                TempData["Success"] = "Unverified bKash claim rejected with an audit note. The order remains Pending; the customer can correct and resubmit the transaction details.";
+            }
+            catch (CheckoutException ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Unable to reject bKash claim on order {OrderId}", id);
+                TempData["Error"] = "Could not save the rejection. Refresh the order and try again.";
+            }
+            return RedirectToAction(nameof(Details), new { id, section = "payment-review" });
         }
 
         // POST /admin/orders/changestatus/123
