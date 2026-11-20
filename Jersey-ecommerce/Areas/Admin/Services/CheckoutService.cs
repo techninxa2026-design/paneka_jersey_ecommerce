@@ -267,17 +267,41 @@ public sealed class CheckoutService(
 
     // OrderNumber is derived from the signed-in session's unique checkout token, so duplicate POSTs
     // return the same order without requiring any new checkout tables or migration.
-    public async Task<int> PlaceOrder(string userId, DeliveryInput delivery, PlaceOrderInput input)
+    public async Task<int> PlaceOrder(string userId, DeliveryInput delivery, PlaceOrderInput input,
+        bool prepareManualBkash = false)
     {
-        if (delivery.Region is not ("Dhaka" or "OutsideDhaka")) throw new CheckoutException("Select a delivery region.");
+        if (delivery.Region is not ("Dhaka" or "OutsideDhaka"))
+            throw new CheckoutException("Select a delivery region.");
         var district = BangladeshDistricts.Normalize(delivery.District)
             ?? throw new CheckoutException("Choose a valid Bangladesh district.");
-        if (delivery.Region == "Dhaka" && !string.Equals(delivery.District?.Trim(), "Dhaka", StringComparison.OrdinalIgnoreCase))
+        if (delivery.Region == "Dhaka" && district != "Dhaka")
             throw new CheckoutException("Inside Dhaka requires Dhaka district.");
         if (input.PaymentMethod is not ("COD" or "Bkash"))
             throw new CheckoutException("Choose cash on delivery or manual bKash.");
-        // COD is available throughout Bangladesh when the store setting permits it.
-        if (input.PaymentMethod == "COD" && !await CodEnabled()) throw new CheckoutException("Cash on delivery is disabled.");
+        if (prepareManualBkash && input.PaymentMethod != "Bkash")
+            throw new CheckoutException("Only bKash can be prepared for manual transfer.");
+        if (!Guid.TryParseExact(input.SubmissionToken, "N", out _))
+            throw new CheckoutException("Invalid checkout token.");
+
+        var orderNumber = "PNK-" + input.SubmissionToken[..24].ToUpperInvariant();
+        // Read the already-created order before checking current store settings:
+        // a retry must remain recoverable after the merchant changes its wallet.
+        var previous = await db.Orders.AsNoTracking()
+            .Where(o => o.UserId == userId && o.OrderNumber == orderNumber)
+            .Select(o => new { o.Id, Method = o.Payment != null ? o.Payment.Method : "" })
+            .SingleOrDefaultAsync();
+        if (previous is not null)
+        {
+            var expectedMethod = input.PaymentMethod == "COD" ? "CashOnDelivery" : "Bkash";
+            if (previous.Method != expectedMethod)
+                throw new CheckoutException("This checkout was already placed using a different payment method. Check My Orders.");
+            return previous.Id;
+        }
+
+        if (await InMaintenance()) throw new CheckoutException("Checkout is paused by the store.");
+        if (input.PaymentMethod == "COD" && !await CodEnabled())
+            throw new CheckoutException("Cash on delivery is disabled.");
+
         var manualRecipient = input.PaymentMethod == "Bkash" ? await ManualBkashNumber() : null;
         if (input.PaymentMethod == "Bkash" && manualRecipient is null)
             throw new CheckoutException("Manual bKash is not available. Choose another payment option or contact support.");
@@ -285,28 +309,10 @@ public sealed class CheckoutService(
         if (input.PaymentMethod == "Bkash")
         {
             if (!string.Equals(input.BkashRecipientNumber, manualRecipient, StringComparison.Ordinal))
-                throw new CheckoutException("The store's bKash number changed while you were checking out. Reload this page and confirm the correct recipient before paying.");
-            transfer = ManualBkashPaymentService.ValidateTransfer(
-                input.BkashSenderNumber, input.BkashTransactionId, input.BkashPaidAtLocal);
-        }
-        if (await InMaintenance()) throw new CheckoutException("Checkout is paused by the store.");
-        if (!Guid.TryParseExact(input.SubmissionToken, "N", out _)) throw new CheckoutException("Invalid checkout token.");
-        var orderNumber = "PNK-" + input.SubmissionToken[..24].ToUpperInvariant();
-        // Existing order-number unique index is our durable checkout idempotency key.
-        // Never allow a retry to silently change a previously recorded payment method.
-        var previous = await db.Orders.AsNoTracking()
-            .Where(o => o.UserId == userId && o.OrderNumber == orderNumber)
-            .Select(o => new { o.Id, Method = o.Payment != null ? o.Payment.Method : "" })
-            .SingleOrDefaultAsync();
-        if (previous is not null)
-        {
-            var expectedMethod = input.PaymentMethod switch
-            {
-                "COD" => "CashOnDelivery", "Bkash" => "Bkash", _ => "ManualAdvance"
-            };
-            if (previous.Method != expectedMethod)
-                throw new CheckoutException("This checkout was already submitted using a different payment method. Check My Orders.");
-            return previous.Id;
+                throw new CheckoutException("The store's bKash number changed. Reload checkout and confirm the latest receiving number before transferring.");
+            if (!prepareManualBkash)
+                transfer = ManualBkashPaymentService.ValidateTransfer(
+                    input.BkashSenderNumber, input.BkashTransactionId, input.BkashPaidAtLocal);
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
