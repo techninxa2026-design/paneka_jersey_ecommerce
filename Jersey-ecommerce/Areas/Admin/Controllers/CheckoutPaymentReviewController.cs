@@ -19,14 +19,25 @@ public sealed class CheckoutPaymentReviewController(
     ApplicationDbContext db, ManualBkashPaymentService manual) : Controller
 {
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var queue = await db.Payments.AsNoTracking().Include(p => p.Order)
+        const int pageSize = 25;
+        var query = db.Payments.AsNoTracking()
             .Where(p => (p.Method == "Bkash" && p.Status == "Submitted" &&
                          p.ManualSubmittedAt != null) ||
-                        (p.Method == "ManualAdvance" && p.Status == "Pending"))
-            .OrderBy(p => p.ManualSubmittedAt ?? p.CreatedAt)
-            .Take(200).ToListAsync();
+                        (p.Method == "ManualAdvance" && p.Status == "Pending"));
+        var total = await query.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+        page = Math.Clamp(page, 1, totalPages);
+        ViewData["Page"] = page;
+        ViewData["TotalPages"] = totalPages;
+        ViewData["TotalPending"] = total;
+        ViewData["ManualPending"] = await query.CountAsync(p => p.Method == "Bkash");
+        ViewData["LegacyPending"] = await query.CountAsync(p => p.Method == "ManualAdvance");
+
+        var queue = await query.Include(p => p.Order)
+            .OrderBy(p => p.ManualSubmittedAt ?? p.CreatedAt).ThenBy(p => p.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
         return View(queue);
     }
 
