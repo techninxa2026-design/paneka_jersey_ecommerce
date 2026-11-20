@@ -154,7 +154,15 @@
                     </a>
                     @if (payment.Status == "Submitted")
                     {
-                        <p class="pn-muted">Your reported transfer is awaiting independent staff verification. Order fulfillment is held until confirmation.</p>
+                        <p class="pn-muted" role="status"><strong>Awaiting store verification.</strong> The transfer details were recorded, but staff must check the actual bKash wallet before confirming the order. This page will update after the payment decision.</p>
+                    }
+                    else if (payment.Status == "Rejected")
+                    {
+                        <p class="pn-muted" role="alert"><strong>Payment details could not be verified.</strong> @(string.IsNullOrWhiteSpace(payment.ManualReviewNote) ? "Please review your bKash transaction details." : payment.ManualReviewNote) Open the bKash receipt page to correct your sender number or TrxID. Do not send the money twice without checking your wallet.</p>
+                    }
+                    else if (payment.Status == "Paid")
+                    {
+                        <p class="pn-muted" role="status"><strong>Payment verified.</strong> Your bKash transfer has been confirmed by store staff. Your order can now proceed through fulfillment.</p>
                     }
                 }
                 else if (payment?.Method == "CashOnDelivery" && Model.Status == "Delivered" && payment.Status == "Pending")
