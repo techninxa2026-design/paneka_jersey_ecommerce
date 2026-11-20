@@ -154,7 +154,15 @@
                     </a>
                     @if (payment.Status == "Submitted")
                     {
-                        <p class="pn-muted">Your reported transfer is awaiting independent staff verification. Order fulfillment is held until confirmation.</p>
+                        <p class="pn-muted" role="status"><strong>Awaiting store verification.</strong> The transfer details were recorded, but staff must check the actual bKash wallet before confirming the order. This page will update after the payment decision.</p>
+                    }
+                    else if (payment.Status == "Rejected")
+                    {
+                        <p class="pn-muted" role="alert"><strong>Payment details could not be verified.</strong> @(string.IsNullOrWhiteSpace(payment.ManualReviewNote) ? "Please review your bKash transaction details." : payment.ManualReviewNote) Open the bKash receipt page to correct your sender number or TrxID. Do not send the money twice without checking your wallet.</p>
+                    }
+                    else if (payment.Status == "Paid")
+                    {
+                        <p class="pn-muted" role="status"><strong>Payment verified.</strong> Your bKash transfer has been confirmed by store staff. Your order can now proceed through fulfillment.</p>
                     }
                 }
                 else if (payment?.Method == "CashOnDelivery" && Model.Status == "Delivered" && payment.Status == "Pending")
@@ -202,5 +210,28 @@
     </div>
 </main>
 @await Html.PartialAsync("_PanenkaCheckoutFooter")
+@if (payment?.Method == "Bkash" && payment.Status == "Submitted")
+{
+    <script>
+    (() => {
+        let pending = false;
+        // Keep the buyer's order page in sync after staff verifies or rejects
+        // a reported transfer. Only buyer-scoped order status is requested.
+        window.setInterval(async () => {
+            if (document.hidden || pending) return;
+            pending = true;
+            try {
+                const res = await fetch('/Checkout/Bkash/State/@Model.Id', {
+                    credentials: 'same-origin', cache: 'no-store'
+                });
+                if (!res.ok) return;
+                const state = await res.json();
+                if (state.paymentStatus !== 'Submitted') window.location.reload();
+            } catch { /* Keep last known order details during network errors. */ }
+            finally { pending = false; }
+        }, 20000);
+    })();
+    </script>
+}
 </body>
 </html>

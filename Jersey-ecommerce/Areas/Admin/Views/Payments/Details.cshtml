@@ -77,7 +77,7 @@
                     @if (needsBkashReview)
                     {
                         <div class="pp-card-body" style="border-top:1px solid #e7e9eb">
-                            <a class="mb-button mb-button-dark" href="/Admin/CheckoutPaymentReview">Open verification queue ↗</a>
+                            <a class="mb-button mb-button-dark" href="@Url.Action("Details", "Orders", new { area = "Admin", id = payment.OrderId })#payment-review">Verify payment on this order ↗</a>
                         </div>
                     }
                 </section>

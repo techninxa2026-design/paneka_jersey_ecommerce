@@ -40,6 +40,17 @@
         <div class="po-alert" role="alert"><i class="bi bi-exclamation-triangle"></i> @error</div>
     }
 
+    @if (Model.SubmittedBkashCount > 0)
+    {
+        <section class="po-alert po-alert-success" style="display:flex;align-items:center;gap:14px;justify-content:space-between;flex-wrap:wrap;margin-top:14px">
+            <div>
+                <strong><i class="bi bi-shield-check"></i> @Model.SubmittedBkashCount manual bKash @(Model.SubmittedBkashCount == 1 ? "payment needs" : "payments need") verification</strong>
+                <p style="margin:4px 0 0;font-size:12px">Open an order, independently verify the transfer, and confirm the order for fulfillment.</p>
+            </div>
+            <a class="po-btn po-btn-dark" href="@Url.Action("Index", "CheckoutPaymentReview", new { area = "Admin" })">Review payment queue <i class="bi bi-arrow-up-right"></i></a>
+        </section>
+    }
+
     <div class="po-stats">
         <div class="po-stat"><div class="po-stat-label"><i class="bi bi-bag"></i> All orders</div><div class="po-stat-value">@Model.TotalCount.ToString("N0")</div><div class="po-stat-desc">All recorded orders</div></div>
         <div class="po-stat"><div class="po-stat-label"><i class="bi bi-hourglass-split"></i> Pending</div><div class="po-stat-value">@Model.PendingCount.ToString("N0")</div><div class="po-stat-desc">Awaiting confirmation</div></div>
@@ -86,9 +97,18 @@
                             <td><div class="po-strong">@order.CreatedAt.ToString("dd MMM yyyy")</div><div class="po-muted">@order.CreatedAt.ToString("HH:mm") UTC</div></td>
                             <td><span class="po-strong">@order.ItemCount</span></td>
                             <td><span class="po-badge @BadgeClass(order.Status)">@order.Status</span></td>
-                            <td><span class="po-badge @BadgeClass(order.PaymentStatus)">@(order.PaymentStatus ?? "Not recorded")</span></td>
+                            <td><span class="po-badge @(order.PaymentStatus == "Submitted" ? "po-badge-submitted" : order.PaymentStatus == "Paid" ? "po-badge-paid" : order.PaymentStatus == "Rejected" ? "po-badge-rejected" : BadgeClass(order.PaymentStatus))">@(order.PaymentStatus ?? "Not recorded")</span></td>
                             <td><span class="po-strong">৳@order.TotalAmount.ToString("N2")</span></td>
-                            <td style="text-align:right"><a class="po-btn po-btn-sm" href="@Url.Action("Details", "Orders", new { area = "Admin", id = order.Id })"><i class="bi bi-eye"></i> View</a></td>
+                            <td style="text-align:right">
+                                @if (order.PaymentStatus == "Submitted" && order.Status == "Pending")
+                                {
+                                    <a class="po-btn po-btn-sm po-btn-dark" href="@Url.Action("Details", "Orders", new { area = "Admin", id = order.Id })#payment-review"><i class="bi bi-shield-check"></i> Verify bKash</a>
+                                }
+                                else
+                                {
+                                    <a class="po-btn po-btn-sm" href="@Url.Action("Details", "Orders", new { area = "Admin", id = order.Id })"><i class="bi bi-eye"></i> View</a>
+                                }
+                            </td>
                         </tr>
                     }
                     </tbody>

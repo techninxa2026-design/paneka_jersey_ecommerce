@@ -233,6 +233,17 @@ public class ShipmentsController : Controller
             ModelState.AddModelError(nameof(model.Status),
                 "Cancel the order from its order details so inventory and the shipment are updated together.");
 
+        // A prepaid/manual bKash order must first pass independent payment
+        // verification before staff begin a NEW packing or dispatch stage.
+        // Legacy already-packed shipments remain editable for courier notes,
+        // but cannot be dispatched until payment is verified.
+        if (shipment.Status == "Pending" && model.Status == "Packed" &&
+            RequiresPaymentVerification(shipment.Order))
+        {
+            ModelState.AddModelError(nameof(model.Status),
+                "This order is awaiting bKash payment verification. Open the order details, verify the transfer, then pack the shipment.");
+        }
+
         if (model.Status != shipment.Status && IsDispatchStatus(model.Status))
         {
             if (RequiresPaymentVerification(shipment.Order))

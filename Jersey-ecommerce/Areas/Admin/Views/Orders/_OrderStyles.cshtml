@@ -68,6 +68,54 @@
 .po-info-icon{width:34px;height:34px;display:grid;place-items:center;background:#f5f5f5;font-size:15px;flex:0 0 auto}
 .po-card-heading{display:flex;align-items:center;gap:11px}
 .po-tag{background:#fafafa;border:1px solid #e9e9e9;color:#767676;font-size:10px;padding:5px 9px}
+/* Order-level bKash verification: fits PANENKA's existing industrial ERP layout. */
+.po-badge-paid{background:#edf9f1;border-color:#d4ebdb;color:#237447}
+.po-badge-paid::before{background:#299458}
+.po-badge-submitted,.po-badge-packed{background:#fff7e9;border-color:#f1dfb9;color:#8b6121}
+.po-badge-submitted::before,.po-badge-packed::before{background:#c69a3f}
+.po-badge-rejected{background:#fff2f2;border-color:#f0d4d4;color:#a44845}
+.po-badge-rejected::before{background:#ca615b}
+.po-payment-review{margin-bottom:19px;border-color:#dce2e6;box-shadow:0 9px 32px #0c1e2907;scroll-margin-top:95px}
+.po-payment-review .po-card-h{padding:22px 26px;background:#fafbfb}
+.po-payment-review .po-card-body{padding:26px}
+.po-payment-review-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.04fr);gap:28px;align-items:start}
+.po-payment-review-summary{background:#f8fafb;border:1px solid #e4e9eb;padding:22px}
+.po-payment-total{display:block;font-size:30px;letter-spacing:-1.1px;margin-bottom:22px;font-weight:900}
+.po-payment-review-meta{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-bottom:20px}
+.po-payment-review-meta>div{display:grid;gap:6px;min-width:0;align-content:start}
+.po-payment-review-meta span{font-size:10px;line-height:1.5;text-transform:uppercase;letter-spacing:.5px;font-weight:800;color:#7f8a91}
+.po-payment-review-meta strong{font-size:12px;line-height:1.6;overflow-wrap:anywhere;color:#20282d}
+.po-payment-ledger-link{width:100%}
+.po-payment-review-workflow{min-width:0}
+.po-review-status-banner{display:flex;gap:13px;padding:15px;background:#fff8e8;border:1px solid #f1e1be;font-size:11px;line-height:1.6;color:#87631f;margin-bottom:18px}
+.po-review-status-banner>i{font-size:20px;flex-shrink:0}
+.po-review-status-banner strong{display:block;font-size:13px;color:#654917;margin-bottom:5px}
+.po-review-status-banner span{display:block;color:#776747}
+.po-review-rejected{background:#fff4f3;border-color:#f2dbd8;color:#a2433f}
+.po-review-rejected strong,.po-review-rejected span{color:#9b4741}
+.po-payment-action-form{display:grid;gap:10px;padding:17px;border:1px solid #e3e7e9;background:#fff}
+.po-payment-action-form+.po-payment-action-form{margin-top:13px}
+.po-payment-action-form .po-textarea{min-height:74px;background:#fcfcfc}
+.po-review-checkbox{display:flex;align-items:flex-start;gap:10px;font-size:11px;color:#505b63;line-height:1.65;cursor:pointer}
+.po-review-checkbox input{margin-top:3px;accent-color:#197c4e}
+.po-btn-verify{border-color:#1b714a;background:#1b714a;color:#fff;width:100%;min-height:44px}
+.po-btn-verify:hover{background:#155b3b;color:#fff}
+.po-btn-reject{border-color:#eccfcf;background:#fff6f5;color:#9b3c36;width:100%}
+.po-btn-reject:hover{background:#ffebea;color:#8b2a26}
+.po-review-reject-form{background:#fcfcfc}
+.po-review-process{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:19px;font-size:10px;color:#7a858b;flex-wrap:wrap}
+.po-review-process span{display:flex;align-items:center;gap:6px}
+.po-review-process>i{font-size:10px;color:#a5afb5}
+.po-review-confirmed{display:flex;gap:14px;border:1px solid #cce9d5;background:#f0faf3;padding:21px;color:#286d46}
+.po-review-confirmed>i{font-size:25px;flex-shrink:0}
+.po-review-confirmed strong{display:block;font-size:17px;color:#225e3c}
+.po-review-confirmed p{font-size:12px;color:#49795e;line-height:1.7;margin:8px 0}
+.po-review-confirmed small{font-size:11px;color:#3b6d4e}
+.po-review-paid-hint{color:#2e8653;font-size:11px;line-height:1.5}
+#order-fulfillment{scroll-margin-top:90px}
+@@media(max-width:1020px){.po-payment-review-grid{grid-template-columns:1fr}}
+@@media(max-width:640px){.po-payment-review .po-card-body{padding:14px}.po-payment-review .po-card-h{padding:16px}.po-payment-review-meta{grid-template-columns:1fr 1fr;gap:14px}.po-payment-review-summary{padding:15px}.po-payment-total{font-size:25px}.po-review-process{gap:7px}}
+@@media print{.po-payment-action-form,.po-review-process,.po-payment-review .po-btn{display:none!important}}
 @@media(max-width:1150px){.po-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.po-filter{grid-template-columns:repeat(2,minmax(0,1fr))}.po-filter-actions{align-self:end}}
 @@media(max-width:900px){.po-detail-grid{grid-template-columns:1fr}.po-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @@media(max-width:640px){.po-title{font-size:28px}.po-head>.po-actions{width:100%}.po-filter{grid-template-columns:1fr}.po-filter-actions .po-btn{flex:1}.po-two,.po-metadata{grid-template-columns:1fr}.po-lineitem{grid-template-columns:44px minmax(0,1fr) 58px}.po-lineitem .po-item-price{display:none}.po-card-body{padding:16px}.po-stats{gap:9px}.po-stat{padding:14px}.po-stat-value{font-size:25px}.po-card-h{padding:16px}.po-totals{padding:15px}.po-foot{align-items:flex-start}.po-filter-actions{width:100%}}

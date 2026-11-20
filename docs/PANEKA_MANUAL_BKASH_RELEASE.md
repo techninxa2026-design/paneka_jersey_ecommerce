@@ -39,6 +39,34 @@ No automatic transfer or refund is performed by PANENKA. The website cannot know
 - Pending bKash reservations hold inventory until independently reconciled. If the customer abandons checkout, staff may open **Admin → Orders → Details → Unpaid bKash reservation**, confirm that no funds reached the actual merchant wallet, add a reconciliation note, and cancel the order to restore stock and coupon usage. Submitted transfers must first be independently rejected before this action is allowed. A transfer that arrived must be reconciled/refunded instead of cancelled as unpaid.
 - bKash manual receipt reporting is available even when COD is disabled or no merchant receiving number has been configured. No gateway call is made.
 
+## Admin Orders ↔ customer payment verification (end-to-end)
+
+**Starting state:** The customer has submitted a sender number, TrxID, and transfer time. In SQL Server `Payments.Status = Submitted`, `Orders.Status = Pending`. This is correct: the order exists, but the wallet transfer is still an unverified claim.
+
+1. Sign in as Admin. Open **Admin → Orders**. A notification at the top counts submitted bKash payments. Each matching order has a **Verify bKash** shortcut. You can also use **Admin → Verify bKash** or **Admin → Payments → Details → Verify payment on this order**.
+2. On **Order Details**, the prominent **bKash payment reconciliation** card shows the exact order amount, bKash sender, TrxID, recipient number (if configured), reported transfer time, submitted time, and payment ledger.
+3. **Independently inspect the real receiving bKash wallet** and match both amount and TrxID. Enter a meaningful verification note (10–450 characters), check the independent verification acknowledgement, and click **Verify payment & confirm order**.
+4. The server uses the same `ManualBkashPaymentService.VerifyAsync` as the central queue. In a single database transaction it writes **Payment = Paid**, `PaidAt`, reviewing admin and review time/note, **Order = Confirmed**, order `PaidAt`, a **Verified** payment transaction, and a **Confirmed** order history entry. Multiple clicks cannot mark it paid again.
+5. The admin order reloads, showing **Payment verified** and a new allowed action **Confirmed → Processing**. Staff then advance order to **Processing**, pack the shipment in **Admin → Shipments**, dispatch it, update courier/tracking, and progress through delivery. Customer My Orders and bKash receipt read those same order/payment/shipment rows, automatically refreshing while payment verification is pending.
+6. If the real wallet does not show the transfer, enter a reason and click **Reject claim**. Payment becomes **Rejected**, order remains **Pending**, and buyer sees the reason and may correct/resubmit their TrxID. Do **not** dispatch or mark `Paid` based on a customer-submitted reference alone.
+
+**Shipment guard:** A newly created bKash order may not be packed until payment is verified. Already-Packed shipments from older builds remain saved (do not destroy historical courier work), but cannot be dispatched while payment is unverified and order is not Processing.
+
+**No gateway is involved.** This is an intentionally manual bKash receipt/reconciliation workflow, not a bKash API integration. Admin verification is not a payment capture; it only records independently confirmed funds.
+
+### Admin-to-customer acceptance tests
+
+- [ ] Buyer submits bKash payment and sees `Submitted` while order remains `Pending`.
+- [ ] Admin Orders highlights submission, and the order page offers **Verify payment & confirm order**, not just a blocked status form.
+- [ ] Try verifying without independent confirmation; confirm no payment/order change.
+- [ ] Verify with wallet evidence; payment becomes `Paid`, order becomes `Confirmed`, with one Verified ledger entry and one Confirmed status history row.
+- [ ] Re-click Verify; confirm no duplicate paid transaction.
+- [ ] Customer's own My Orders shows Confirmed and Paid; another customer cannot access the buyer's bKash status.
+- [ ] Confirmed → Processing → shipment Packed → Shipped → InTransit → OutForDelivery → Delivered; customer tracking follows.
+- [ ] Reject an unverified transfer, see reason customer-side, submit corrected TrxID, then verify it.
+- [ ] Check the review queue no longer includes a verified claim.
+- [ ] Confirm manual bKash remains available without a published receiving number, but no fake recipient is displayed and staff must check the actual wallet independently.
+
 ## Payment storage (SQL Server)
 
 The additive migration `20261120120000_ManualBkashPayments` adds these nullable fields to the existing `Payments` table without dropping or rewriting existing payment or customer records:

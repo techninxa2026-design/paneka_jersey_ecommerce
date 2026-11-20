@@ -32,6 +32,7 @@ namespace Jersey_ecommerce.Areas.Admin.ViewModels
         public int FilteredCount { get; set; }
         public int TotalCount { get; set; }
         public int PendingCount { get; set; }
+        public int SubmittedBkashCount { get; set; }
         public int ProcessingCount { get; set; }
         public int ShippedCount { get; set; }
         public int DeliveredCount { get; set; }
