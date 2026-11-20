@@ -76,13 +76,18 @@ public sealed class ShopCatalogApiController : ControllerBase
                 query = query.Where(p =>
                     p.ProductCollections.Any(pc => pc.Collection.IsActive && pc.Collection.Slug == key) ||
                     (key == "player" && (p.Category.Name.Contains("Player") || p.Category.Name.Contains("Edition") ||
-                        p.Name.Contains("Player"))) ||
+                        p.Name.Contains("Player") || p.Name.Contains("Edition") || p.Name.Contains("Authentic"))) ||
                     (key == "retro" && (p.Category.Name.Contains("Retro") || p.Category.Name.Contains("Archive") ||
-                        p.Category.Name.Contains("Classic") || p.Name.Contains("Retro"))) ||
+                        p.Category.Name.Contains("Classic") || p.Name.Contains("Retro") ||
+                        p.Name.Contains("Archive") || p.Name.Contains("Classic") || p.Name.Contains("Vintage") ||
+                        p.Name.Contains("Barcelona"))) ||
                     (key == "club" && (p.Category.Name.Contains("Club") || p.Category.Name.Contains("Home") ||
-                        p.Category.Name.Contains("Away") || p.Name.Contains("Home") || p.Name.Contains("Away"))) ||
+                        p.Category.Name.Contains("Away") || p.Name.Contains("Club") || p.Name.Contains("Home") ||
+                        p.Name.Contains("Away") || p.Name.Contains("Madrid") || p.Name.Contains("Inter") ||
+                        p.Name.Contains("Liverpool"))) ||
                     (key == "national" && (p.Category.Name.Contains("National") || p.Category.Name.Contains("Country") ||
-                        p.Name.Contains("National"))));
+                        p.Name.Contains("National") || p.Name.Contains("Germany") ||
+                        p.Name.Contains("France") || p.Name.Contains("Argentina") || p.Name.Contains("Brazil"))));
             }
             else
                 query = query.Where(p => p.ProductCollections.Any(pc => pc.Collection.IsActive && pc.Collection.Slug == collection));
