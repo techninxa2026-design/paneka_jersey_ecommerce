@@ -66,7 +66,27 @@ public sealed class ShopCatalogApiController : ControllerBase
         }
 
         if (!string.IsNullOrWhiteSpace(collection))
-            query = query.Where(p => p.ProductCollections.Any(pc => pc.Collection.IsActive && pc.Collection.Slug == collection));
+        {
+            // Home uses legacy player/retro/club/national navigation labels,
+            // while Admin > Collections owns exact collection slugs. Support
+            // both instead of showing an empty shop when no matching slug exists.
+            var key = collection.ToLowerInvariant();
+            if (key is "player" or "retro" or "club" or "national")
+            {
+                query = query.Where(p =>
+                    p.ProductCollections.Any(pc => pc.Collection.IsActive && pc.Collection.Slug == key) ||
+                    (key == "player" && (p.Category.Name.Contains("Player") || p.Category.Name.Contains("Edition") ||
+                        p.Name.Contains("Player"))) ||
+                    (key == "retro" && (p.Category.Name.Contains("Retro") || p.Category.Name.Contains("Archive") ||
+                        p.Category.Name.Contains("Classic") || p.Name.Contains("Retro"))) ||
+                    (key == "club" && (p.Category.Name.Contains("Club") || p.Category.Name.Contains("Home") ||
+                        p.Category.Name.Contains("Away") || p.Name.Contains("Home") || p.Name.Contains("Away"))) ||
+                    (key == "national" && (p.Category.Name.Contains("National") || p.Category.Name.Contains("Country") ||
+                        p.Name.Contains("National"))));
+            }
+            else
+                query = query.Where(p => p.ProductCollections.Any(pc => pc.Collection.IsActive && pc.Collection.Slug == collection));
+        }
 
         if (categoryId.HasValue)
             query = query.Where(p => p.CategoryId == categoryId.Value);
@@ -174,16 +194,22 @@ public sealed class ShopCatalogApiController : ControllerBase
     }
 
     [HttpGet("banner")]
-    public async Task<IActionResult> ShopBanner(CancellationToken ct)
+    public async Task<IActionResult> ShopBanner(int? categoryId = null, CancellationToken ct = default)
     {
+        if (categoryId is <= 0) return BadRequest(new { message = "Invalid category." });
         var now = DateTime.UtcNow;
+        // Category campaigns are displayed when filtering by a category; the
+        // generic shop campaign is the fallback for the unfiltered catalog.
         var banner = await _db.Banners.AsNoTracking()
-            .Where(x => x.IsActive && x.Placement == "Shop" &&
+            .Where(x => x.IsActive &&
+                (x.Placement == "Shop" || (categoryId.HasValue && x.Placement == "Category")) &&
                 (!x.StartsAt.HasValue || x.StartsAt.Value <= now) &&
                 (!x.EndsAt.HasValue || x.EndsAt.Value >= now))
-            .OrderBy(x => x.DisplayOrder).FirstOrDefaultAsync(ct);
+            .OrderByDescending(x => x.Placement == "Category")
+            .ThenBy(x => x.DisplayOrder).ThenByDescending(x => x.Id)
+            .FirstOrDefaultAsync(ct);
         if (banner == null) return NoContent();
-        return Ok(new { banner.Title, banner.Subtitle, banner.ImageUrl, banner.LinkUrl });
+        return Ok(new { banner.Title, banner.Subtitle, banner.ImageUrl, banner.LinkUrl, banner.Placement });
     }
 
     private static string? MainImage(IEnumerable<ProductImage> images)
