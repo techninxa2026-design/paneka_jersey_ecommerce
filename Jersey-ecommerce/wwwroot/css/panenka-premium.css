@@ -146,3 +146,7 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 .pn-campaign-arrow{display:block;font-size:11px;font-weight:850;letter-spacing:.12em;margin-top:6px}
 @media(max-width:680px){.pn-campaign{grid-template-columns:1fr}.pn-campaign img{height:210px;min-height:210px}.pn-campaign-copy{padding:24px;gap:10px}}
 @media(prefers-reduced-motion:reduce){.pn-campaign img{transition:none}.pn-campaign:hover img{transform:none}}
+
+.pn-hero-campaign-link{display:inline-flex;margin-top:16px;padding:12px 19px;border:1px solid rgba(255,255,255,.72);border-radius:7px;color:#fff;font-size:11px;font-weight:850;letter-spacing:.1em;text-decoration:none;transition:background .18s,color .18s}
+.pn-hero-campaign-link:hover{background:#fff;color:#111619}
+.pn-hero-campaign-link[hidden]{display:none}
