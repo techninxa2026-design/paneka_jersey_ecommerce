@@ -465,6 +465,8 @@
         }
     </style>
 
+    <link rel="stylesheet" href="~/css/panenka-premium.css" asp-append-version="true" />
+    <script src="~/js/panenka-polish.js" asp-append-version="true" defer></script>
     @await RenderSectionAsync("Styles", required: false)
 </head>
 
@@ -634,7 +636,7 @@
                         <li><hr class="dropdown-divider" /></li>
                         <li>
                             <a class="dropdown-item rounded"
-                               href="/Account/Profile"
+                               href="/Account/Profile">
                                 <i class="bi bi-person me-2"></i>Account
                             </a>
                         </li>
