@@ -1,0 +1,129 @@
+@model Jersey_ecommerce.Models.Orders.Order
+@{
+    var payment = Model.Payment!;
+    var submitted = payment.Status == "Submitted" && Model.Status == "Pending";
+    var verified = payment.Status == "Paid";
+    var rejected = payment.Status == "Rejected";
+    var awaiting = payment.Status == "Pending";
+}
+<section class="po-card po-payment-review" id="payment-review" aria-labelledby="po-payment-review-title">
+    <div class="po-card-h">
+        <div class="po-card-heading">
+            <div class="po-info-icon"><i class="bi bi-shield-check"></i></div>
+            <div>
+                <h2 id="po-payment-review-title" class="po-card-title">bKash payment reconciliation</h2>
+                <p class="po-card-subtitle">Order confirmation, payment ledger and customer tracking stay synchronized</p>
+            </div>
+        </div>
+        <span class="po-badge @(verified ? "po-badge-paid" : rejected ? "po-badge-rejected" : "po-badge-submitted")">
+            @(verified ? "Payment verified" : submitted ? "Review required" : rejected ? "Claim rejected" : awaiting ? "Awaiting TrxID" : payment.Status)
+        </span>
+    </div>
+    <div class="po-card-body">
+        <div class="po-payment-review-grid">
+            <div class="po-payment-review-summary">
+                <div class="po-data-label">Amount to verify</div>
+                <strong class="po-payment-total">৳@payment.Amount.ToString("N2")</strong>
+                <div class="po-payment-review-meta">
+                    <div><span>Customer sender</span><strong>@(payment.ManualSenderNumber ?? "Not submitted")</strong></div>
+                    <div><span>Reported bKash TrxID</span><strong>@(payment.TransactionReference ?? "Not submitted")</strong></div>
+                    <div><span>Merchant recipient</span><strong>@(payment.ManualRecipientNumber ?? "Not published — check the actual merchant wallet")</strong></div>
+                    <div><span>Reported transfer (Bangladesh time)</span><strong>@(payment.ManualClaimedPaidAt.HasValue ? payment.ManualClaimedPaidAt.Value.AddHours(6).ToString("dd MMM yyyy, hh:mm tt") : "—")</strong></div>
+                    <div><span>Claim submitted (Bangladesh time)</span><strong>@(payment.ManualSubmittedAt.HasValue ? payment.ManualSubmittedAt.Value.AddHours(6).ToString("dd MMM yyyy, hh:mm tt") : "—")</strong></div>
+                    @if (payment.ManualReviewedAt.HasValue)
+                    {
+                        <div><span>Last reviewed (Bangladesh time)</span><strong>@payment.ManualReviewedAt.Value.AddHours(6).ToString("dd MMM yyyy, hh:mm tt")</strong></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(payment.ManualReviewNote))
+                    {
+                        <div><span>Admin decision note</span><strong>@payment.ManualReviewNote</strong></div>
+                    }
+                </div>
+                <a class="po-btn po-btn-sm po-payment-ledger-link" href="@Url.Action("Details", "Payments", new { area = "Admin", id = payment.Id })">
+                    <i class="bi bi-journal-text"></i> View payment transaction ledger
+                </a>
+            </div>
+            <div class="po-payment-review-workflow">
+                @if (submitted)
+                {
+                    <div class="po-review-status-banner"><i class="bi bi-exclamation-circle"></i>
+                        <div><strong>Customer submitted a transaction — not yet verified</strong>
+                            <span>Check the real bKash wallet for the exact ৳@payment.Amount.ToString("N2"), sender and TrxID before deciding. A submitted TrxID is not proof of payment.</span>
+                        </div>
+                    </div>
+                    <form class="po-payment-action-form" method="post"
+                          action="@Url.Action("VerifyBkash", "Orders", new { area = "Admin", id = Model.Id })"
+                          onsubmit="return confirm('Have you independently checked the actual bKash wallet, matched the TrxID and exact amount, and confirmed funds reached the merchant?')">
+                        @Html.AntiForgeryToken()
+                        <label class="po-label" for="paymentVerifyNote-@Model.Id">Verification evidence and internal note</label>
+                        <textarea id="paymentVerifyNote-@Model.Id" class="po-textarea" name="verificationNote"
+                                  minlength="10" maxlength="450" required rows="3"
+                                  placeholder="Example: Matched sender, TrxID and full amount with merchant wallet at 4:35 PM."></textarea>
+                        <label class="po-review-checkbox">
+                            <input type="checkbox" name="independentlyVerified" value="true" required />
+                            <span>I checked the real receiving bKash account independently and verified the full amount and transaction details.</span>
+                        </label>
+                        <button type="submit" class="po-btn po-btn-verify"><i class="bi bi-check-circle"></i> Verify payment &amp; confirm order</button>
+                    </form>
+                    <form class="po-payment-action-form po-review-reject-form" method="post"
+                          action="@Url.Action("RejectBkash", "Orders", new { area = "Admin", id = Model.Id })"
+                          onsubmit="return confirm('Reject this unverified claim and let the customer submit corrected transaction details?')">
+                        @Html.AntiForgeryToken()
+                        <label class="po-label" for="paymentRejectNote-@Model.Id">Reason for rejection</label>
+                        <textarea id="paymentRejectNote-@Model.Id" class="po-textarea" name="verificationNote"
+                                  minlength="10" maxlength="450" required rows="2"
+                                  placeholder="Example: No matching TrxID or full payment found in the merchant wallet."></textarea>
+                        <button type="submit" class="po-btn po-btn-reject"><i class="bi bi-x-circle"></i> Reject claim &amp; notify through customer order status</button>
+                    </form>
+                }
+                else if (verified)
+                {
+                    <div class="po-review-confirmed">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <div><strong>Payment confirmed by staff</strong>
+                            <p>This order is eligible for fulfillment. The customer sees the verified receipt and updated order status.</p>
+                            @if (payment.PaidAt.HasValue)
+                            {
+                                <small>Verified @payment.PaidAt.Value.AddHours(6).ToString("dd MMM yyyy, hh:mm tt") (BDT)</small>
+                            }
+                        </div>
+                    </div>
+                    <a class="po-btn po-btn-dark" href="#order-fulfillment" style="margin-top:16px;width:100%">
+                        <i class="bi bi-box-seam"></i> Continue order fulfillment
+                    </a>
+                }
+                else if (rejected)
+                {
+                    <div class="po-review-status-banner po-review-rejected">
+                        <i class="bi bi-x-circle"></i>
+                        <div><strong>Transfer claim rejected</strong>
+                            <span>The customer can view the rejection reason and resubmit the correct details. Order remains Pending; dispatch is blocked.</span>
+                        </div>
+                    </div>
+                }
+                else if (awaiting)
+                {
+                    <div class="po-review-status-banner">
+                        <i class="bi bi-hourglass-split"></i>
+                        <div><strong>Awaiting customer's transfer details</strong>
+                            <span>The buyer's order is saved and inventory is reserved. They can submit their bKash sender number and TrxID from their order page.</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="po-review-status-banner"><i class="bi bi-info-circle"></i>
+                        <div><strong>Payment is @payment.Status</strong><span>This payment cannot be verified again from the current order state. Review its transaction history.</span></div>
+                    </div>
+                }
+                <div class="po-review-process">
+                    <span><i class="bi bi-receipt"></i> Customer submits</span>
+                    <i class="bi bi-chevron-right"></i>
+                    <span><i class="bi bi-shield-check"></i> Admin verifies</span>
+                    <i class="bi bi-chevron-right"></i>
+                    <span><i class="bi bi-truck"></i> Fulfillment</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
