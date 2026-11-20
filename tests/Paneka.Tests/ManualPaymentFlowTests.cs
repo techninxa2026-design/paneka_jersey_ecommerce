@@ -45,15 +45,13 @@ public sealed class ManualPaymentFlowTests
         db.SiteSettings.Add(new SiteSettings { Key = ManualBkashPaymentService.NumberSettingKey, Value = "01712345678" });
         await db.SaveChangesAsync();
         var checkout = Checkout(db);
-        var orderId = await checkout.PlaceOrder("buyer", Delivery(), new PlaceOrderInput {
-            PaymentMethod = "Bkash", SubmissionToken = Guid.NewGuid().ToString("N")
-        });
+        var orderId = await checkout.PlaceOrder("buyer", Delivery(), BkashInput("BE12345678"));
 
         var payment = await db.Payments.AsNoTracking().SingleAsync();
         Assert.Equal("Bkash", payment.Method);
-        Assert.Equal("Pending", payment.Status);
+        Assert.Equal("Submitted", payment.Status);
         Assert.Equal("01712345678", payment.ManualRecipientNumber);
-        Assert.Null(payment.TransactionReference);
+        Assert.Equal("BE12345678", payment.TransactionReference);
         Assert.Null(payment.PaidAt);
 
         // Admin switches receiving wallets after this order is placed. Its audit
@@ -123,12 +121,9 @@ public sealed class ManualPaymentFlowTests
         SeedCatalog(db);
         db.SiteSettings.Add(new SiteSettings { Key = ManualBkashPaymentService.NumberSettingKey, Value = "01712345678" });
         await db.SaveChangesAsync();
-        var orderId = await Checkout(db).PlaceOrder("buyer", Delivery(), new PlaceOrderInput {
-            PaymentMethod = "Bkash", SubmissionToken = Guid.NewGuid().ToString("N")
-        });
+        var orderId = await Checkout(db).PlaceOrder("buyer", Delivery(), BkashInput("BE00000001"));
         var paymentId = (await db.Payments.AsNoTracking().SingleAsync()).Id;
         var service = new ManualBkashPaymentService(db);
-        await service.SubmitAsync(orderId, "buyer", "01912345678", "BE00000001", BangladeshNow());
         await service.RejectAsync(paymentId, "staff-2", "Transaction not received in merchant wallet.");
         var rejected = await db.Payments.AsNoTracking().SingleAsync();
         Assert.Equal("Rejected", rejected.Status);
@@ -181,11 +176,8 @@ public sealed class ManualPaymentFlowTests
         db.SiteSettings.Add(new SiteSettings { Key = ManualBkashPaymentService.NumberSettingKey, Value = "01712345678" });
         await db.SaveChangesAsync();
 
-        var orderId = await Checkout(db).PlaceOrder("buyer", Delivery(), new PlaceOrderInput {
-            PaymentMethod = "Bkash", SubmissionToken = Guid.NewGuid().ToString("N")
-        });
+        var orderId = await Checkout(db).PlaceOrder("buyer", Delivery(), BkashInput("AB12345678"));
         var service = new ManualBkashPaymentService(db);
-        await service.SubmitAsync(orderId, "buyer", "01912345678", "AB12345678", BangladeshNow());
 
         db.Orders.Add(new Order { UserId = "other-buyer", OrderNumber = "PNK-OTHER",
             Status = "Pending", CustomerName = "Other", CustomerEmail = "other@example.test",
@@ -242,6 +234,15 @@ public sealed class ManualPaymentFlowTests
         await admin.ConfirmCod(paymentId, true, "Courier remitted the full delivery cash");
         Assert.Single(await db.PaymentTransactions.AsNoTracking().ToListAsync());
     }
+
+    private static PlaceOrderInput BkashInput(string trxId) => new()
+    {
+        PaymentMethod = "Bkash", SubmissionToken = Guid.NewGuid().ToString("N"),
+        BkashRecipientNumber = "01712345678",
+        BkashSenderNumber = "01912345678",
+        BkashTransactionId = trxId,
+        BkashPaidAtLocal = BangladeshNow()
+    };
 
     private static DateTime BangladeshNow() => DateTime.UtcNow.AddHours(6);
     private static CheckoutService Checkout(ApplicationDbContext db) =>
