@@ -15,7 +15,9 @@ public sealed class HomeStorefrontApiController(ApplicationDbContext db) : Contr
         var now = DateTime.UtcNow;
         var products = await db.Products.AsNoTracking()
             .Where(p => p.IsPublished)
-            .Include(p => p.Category).Include(p => p.Images).Include(p => p.Variants)
+            .Include(p => p.Category).Include(p => p.Images)
+            .Include(p => p.Variants).ThenInclude(v => v.Size)
+            .Include(p => p.Variants).ThenInclude(v => v.Color)
             .OrderByDescending(p => p.IsNewArrival).ThenByDescending(p => p.CreatedAt)
             .Take(24).AsSplitQuery().ToListAsync(ct);
         var slides = await db.HeroSlides.AsNoTracking().Where(s => s.IsActive &&
@@ -44,7 +46,7 @@ public sealed class HomeStorefrontApiController(ApplicationDbContext db) : Contr
             id = p.Id, p.Name, p.Slug, price = p.BasePrice, p.CompareAtPrice,
             category = p.Category?.Name ?? "Football Jersey", p.IsNewArrival, p.IsFeatured,
             p.ShortDescription, description = p.ShortDescription ?? p.Description,
-            stockQuantity = p.Variants.Where(v => v.IsActive).Sum(v => (long)v.StockQuantity),
+            stockQuantity = p.Variants.Where(v => v.IsActive && v.Size.IsActive && v.Color.IsActive).Sum(v => (long)v.StockQuantity),
             imageUrl = p.Images.Where(i => !(i.AltText ?? "").StartsWith("variant:"))
                 .OrderByDescending(i => i.IsPrimary).ThenBy(i => i.DisplayOrder)
                 .Select(i => i.ImageUrl).FirstOrDefault(),
