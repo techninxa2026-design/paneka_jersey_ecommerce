@@ -52,6 +52,16 @@ public sealed class CheckoutController(
             Email = user?.Email ?? "",
             Phone = user?.PhoneNumber ?? ""
         };
+        if (BangladeshDistricts.TryNormalize(saved.District, out var chosenDistrict))
+        {
+            saved.District = chosenDistrict;
+            saved.Region = BangladeshDistricts.RegionFor(chosenDistrict);
+        }
+        else
+        {
+            saved.District = "";
+            saved.Region = "";
+        }
         return View(new DeliveryPageViewModel
         {
             Cart = quote, Delivery = saved,
@@ -70,13 +80,19 @@ public sealed class CheckoutController(
 
         if (model.Delivery is null)
             ModelState.AddModelError(nameof(model.Delivery), "Delivery details are required.");
+        else if (!BangladeshDistricts.TryNormalize(model.Delivery.District, out var canonical))
+        {
+            ModelState.AddModelError("Delivery.District", "Choose a district from the 64 districts of Bangladesh.");
+        }
         else
         {
-            if (model.Delivery.Region is not ("Dhaka" or "OutsideDhaka"))
-                ModelState.AddModelError("Delivery.Region", "Select a valid shipping region.");
-            if (model.Delivery.Region == "Dhaka" &&
-                !string.Equals(model.Delivery.District?.Trim(), "Dhaka", StringComparison.OrdinalIgnoreCase))
-                ModelState.AddModelError("Delivery.Region", "Inside Dhaka requires Dhaka district.");
+            // District controls the shipping rate; ignore any tampered Region
+            // value in the POST body, and normalize legacy district spellings.
+            model.Delivery.District = canonical;
+            model.Delivery.Region = BangladeshDistricts.RegionFor(canonical);
+            ModelState.Remove("Delivery.District");
+            ModelState.Remove("Delivery.Region");
+            TryValidateModel(model.Delivery, "Delivery");
         }
         if (!ModelState.IsValid)
         {
@@ -96,7 +112,7 @@ public sealed class CheckoutController(
     public async Task<IActionResult> Payment()
     {
         var delivery = ReadDelivery();
-        if (delivery is null || delivery.Region is not ("Dhaka" or "OutsideDhaka"))
+        if (!DeliveryIsValid(delivery))
             return RedirectToAction(nameof(Delivery));
         var quote = await cart.GetCart(UserId);
         if (quote.Items.Count == 0) return RedirectToAction("Index", "Cart");
@@ -124,7 +140,7 @@ public sealed class CheckoutController(
     public async Task<IActionResult> Payment(PlaceOrderInput input)
     {
         var delivery = ReadDelivery();
-        if (delivery is null || delivery.Region is not ("Dhaka" or "OutsideDhaka"))
+        if (!DeliveryIsValid(delivery))
             return RedirectToAction(nameof(Delivery));
 
         var storedToken = HttpContext.Session.GetString(OrderTokenSession);
@@ -219,6 +235,11 @@ public sealed class CheckoutController(
             .SingleOrDefaultAsync();
         return found is null ? null : (found.Id, found.Method);
     }
+
+    private static bool DeliveryIsValid(DeliveryInput? delivery) =>
+        delivery != null &&
+        BangladeshDistricts.TryNormalize(delivery.District, out var district) &&
+        delivery.Region == BangladeshDistricts.RegionFor(district);
 
     private DeliveryInput? ReadDelivery()
     {
