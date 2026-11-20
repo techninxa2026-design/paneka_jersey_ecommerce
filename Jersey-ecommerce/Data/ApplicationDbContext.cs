@@ -329,6 +329,15 @@ namespace Jersey_ecommerce.Data
                 .HasIndex(p => p.OrderId)
                 .IsUnique();
 
+            // A reference may be customer-reported, but it must never be
+            // accepted against two different bKash orders. A database-enforced
+            // filtered index also protects against simultaneous submissions.
+            builder.Entity<Payment>()
+                .HasIndex(p => p.TransactionReference)
+                .IsUnique()
+                .HasDatabaseName("IX_Payments_ManualBkashTrxId")
+                .HasFilter("[Method] = 'Bkash' AND [TransactionReference] IS NOT NULL");
+
             // ==========================================
             // PAYMENTS: PAYMENT -> TRANSACTIONS
             // ==========================================
