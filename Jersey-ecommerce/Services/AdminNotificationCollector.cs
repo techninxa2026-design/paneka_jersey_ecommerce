@@ -42,11 +42,91 @@ public static class AdminNotificationCollector
 
         foreach (var e in db.ChangeTracker.Entries().ToArray())
         {
-            if (e.State is not (EntityState.Added or EntityState.Modified))
+            if (e.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
                 continue;
 
             switch (e.Entity)
             {
+                // Removal events link to the containing module, never to an
+                // ID that has just been deleted.
+                case Order order when e.State == EntityState.Deleted:
+                    Add("Orders", "order.deleted", "Critical",
+                        () => "Order record deleted",
+                        () => $"Order {order.OrderNumber} was removed from the database.",
+                        () => "/Admin/Orders");
+                    break;
+                case Payment payment when e.State == EntityState.Deleted:
+                    Add("Payments", "payment.deleted", "Critical",
+                        () => "Payment record removed",
+                        () => $"Payment record for order #{payment.OrderId} was deleted.",
+                        () => "/Admin/Payments");
+                    break;
+                case Shipment shipment when e.State == EntityState.Deleted:
+                    Add("Shipping", "shipment.deleted", "Warning",
+                        () => "Shipment record removed",
+                        () => $"Shipment record for order #{shipment.OrderId} was deleted.",
+                        () => "/Admin/Shipments");
+                    break;
+                case Review review when e.State == EntityState.Deleted:
+                    Add("Reviews", "review.deleted", "Warning",
+                        () => "Product review deleted",
+                        () => $"A {review.Rating}-star review was removed by staff.",
+                        () => "/Admin/Reviews");
+                    break;
+                case Product product when e.State == EntityState.Deleted:
+                    Add("Catalog", "product.deleted", "Warning",
+                        () => "Product deleted",
+                        () => $"Product '{product.Name}' was removed.",
+                        () => "/Admin/Products");
+                    break;
+                case ProductVariant variant when e.State == EntityState.Deleted:
+                    Add("Inventory", "variant.deleted", "Warning",
+                        () => "Product variant removed",
+                        () => $"SKU {variant.SKU} was removed from the store catalog.",
+                        () => "/Admin/Products");
+                    break;
+                case ApplicationUser customer when e.State == EntityState.Deleted:
+                    Add("Customers", "customer.deleted", "Warning",
+                        () => "Customer account deleted",
+                        () => $"Customer account {customer.Email ?? customer.UserName ?? "unknown"} was removed.",
+                        () => "/Admin/Customers");
+                    break;
+                case Coupon coupon when e.State == EntityState.Deleted:
+                    Add("Promotions", "coupon.deleted", "Warning",
+                        () => "Coupon deleted",
+                        () => $"Coupon '{coupon.Code}' was removed.",
+                        () => "/Admin/Coupons");
+                    break;
+                case Brand brand when e.State == EntityState.Deleted:
+                    Add("Catalog", "brand.deleted", "Info",
+                        () => "Brand removed",
+                        () => $"Brand '{brand.Name}' was deleted.",
+                        () => "/Admin/Brands");
+                    break;
+                case Category category when e.State == EntityState.Deleted:
+                    Add("Catalog", "category.deleted", "Info",
+                        () => "Category removed",
+                        () => $"Category '{category.Name}' was deleted.",
+                        () => "/Admin/Categories");
+                    break;
+                case Collection collection when e.State == EntityState.Deleted:
+                    Add("Catalog", "collection.deleted", "Info",
+                        () => "Collection removed",
+                        () => $"Collection '{collection.Name}' was deleted.",
+                        () => "/Admin/Collections");
+                    break;
+                case Banner banner when e.State == EntityState.Deleted:
+                    Add("Content", "banner.deleted", "Info",
+                        () => "Banner removed",
+                        () => $"Banner '{banner.Title}' was deleted.",
+                        () => "/Admin/Banners");
+                    break;
+                case HeroSlide slide when e.State == EntityState.Deleted:
+                    Add("Content", "slide.deleted", "Info",
+                        () => "Homepage slide removed",
+                        () => $"Slide '{slide.Title}' was deleted.",
+                        () => "/Admin/Banners");
+                    break;
                 case Order order when e.State == EntityState.Added:
                     Add("Orders", "order.created", "Info",
                         () => $"New order {order.OrderNumber}",
