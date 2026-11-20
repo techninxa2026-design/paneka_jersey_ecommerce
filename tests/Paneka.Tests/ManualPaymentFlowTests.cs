@@ -146,6 +146,7 @@ public sealed class ManualPaymentFlowTests
         await using var db = Database(connection);
         await db.Database.EnsureCreatedAsync();
         SeedCatalog(db);
+        await db.SaveChangesAsync();
         var checkout = Checkout(db);
         Assert.Null(await checkout.ManualBkashNumber());
         await Assert.ThrowsAsync<CheckoutException>(() =>
@@ -200,6 +201,7 @@ public sealed class ManualPaymentFlowTests
         await using var db = Database(connection);
         await db.Database.EnsureCreatedAsync();
         SeedCatalog(db);
+        await db.SaveChangesAsync();
         var id = await Checkout(db).PlaceOrder("buyer", Delivery(), new PlaceOrderInput {
             PaymentMethod = "COD", SubmissionToken = Guid.NewGuid().ToString("N")
         });
