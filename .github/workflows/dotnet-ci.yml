@@ -23,5 +23,9 @@ jobs:
         run: dotnet restore "Jersey-ecommerce/Jersey-ecommerce.csproj"
       - name: Build MVC and Razor views
         run: dotnet build "Jersey-ecommerce/Jersey-ecommerce.csproj" -c Release --no-restore -p:RazorCompileOnBuild=true
+      - name: Verify EF Core migration model snapshot
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.13
+          dotnet ef migrations has-pending-model-changes --project "Jersey-ecommerce/Jersey-ecommerce.csproj" --context ApplicationDbContext --no-build --configuration Release
       - name: Test catalog, filters, cart and URL generation
         run: dotnet test "tests/Paneka.Tests/Paneka.Tests.csproj" -c Release --logger "console;verbosity=normal"
