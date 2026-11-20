@@ -26,6 +26,15 @@ namespace Paneka.Tests;
 public sealed class ManualPaymentFlowTests
 {
     [Fact]
+    public void Additive_manual_bkash_payment_migration_is_discoverable()
+    {
+        using var db = new ApplicationDbContext(
+            new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseSqlite("Data Source=:memory:").Options);
+        Assert.Contains("20261120120000_ManualBkashPayments", db.Database.GetMigrations());
+    }
+
+    [Fact]
     public async Task Manual_bkash_checkout_records_customer_claim_then_only_staff_marks_paid()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
