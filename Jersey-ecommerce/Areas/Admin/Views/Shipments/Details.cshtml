@@ -7,7 +7,7 @@
     var indexUrl = Url.Action("Index", "Shipments", new { area = "Admin" });
     var editUrl = Url.Action("Edit", "Shipments", new { area = "Admin", id = Model.Id });
     var deleteUrl = Url.Action("Delete", "Shipments", new { area = "Admin", id = Model.Id });
-    var canDelete = Model.Status is "Pending" or "Packed" or "Cancelled";
+    var canDelete = Model.Order.Status == "Cancelled" && Model.Status == "Cancelled";
     var statusClass = "ship-status-" + (Model.Status ?? "").ToLowerInvariant();
     var validTrackingLink = Uri.TryCreate(Model.TrackingUrl, UriKind.Absolute, out var parsedTrackingUrl) &&
         (parsedTrackingUrl.Scheme == Uri.UriSchemeHttp || parsedTrackingUrl.Scheme == Uri.UriSchemeHttps);
@@ -104,7 +104,7 @@
                 <section class="ship-card">
                     <div class="ship-card-head"><h3 class="ship-card-title">Manage record</h3></div>
                     <div class="ship-hint">
-                        <p>Delete this record only if it was created by mistake. The associated order is not deleted.</p>
+                        <p>Only cancelled orders permit deleting their cancelled shipment record. Delivery history for active orders is protected.</p>
                         <form action="@deleteUrl" method="post" onsubmit="return confirm('Permanently delete this shipment record?');">
                             @Html.AntiForgeryToken()
                             <button class="ship-btn ship-btn-danger" type="submit"><i class="bi bi-trash"></i> Delete shipment</button>
