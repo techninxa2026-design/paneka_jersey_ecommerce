@@ -2,9 +2,10 @@
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{
     Layout = null;
-    ViewData["Title"] = "Payment | PANENKA";
-    bool codAvailable = Model.AllowCashOnDelivery;
-    bool bkashAvailable = Model.AllowManualBkash;
+    ViewData["Title"] = "Secure checkout | PANENKA";
+    var codAvailable = Model.AllowCashOnDelivery;
+    var bkashAvailable = Model.AllowManualBkash;
+    var localTime = DateTime.UtcNow.AddHours(6).ToString("yyyy-MM-ddTHH:mm");
 }
 <!doctype html>
 <html lang="en">
@@ -16,13 +17,14 @@
     <link rel="stylesheet" href="/css/panenka-checkout.css" asp-append-version="true" />
     <link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true" />
     <link rel="stylesheet" href="/css/panenka-manual-bkash.css" asp-append-version="true" />
+    <link rel="stylesheet" href="/css/panenka-bd-checkout.css" asp-append-version="true" />
 </head>
 <body>
 @await Html.PartialAsync("_PanenkaCheckoutHeader")
 <section class="container intro">
     <div class="kicker">CHECKOUT / PAYMENT</div>
     <h1>One last step.</h1>
-    <p class="lead">Select cash on delivery or transfer through your own bKash app. PANENKA never asks for your bKash PIN or OTP.</p>
+    <p class="lead">Choose cash on delivery, or pay with bKash using your own app and submit the transaction details here.</p>
     <div class="stepper">
         <div class="step done"><b>01</b> Bag</div><span class="bar"></span>
         <div class="step done"><b>02</b> Delivery</div><span class="bar"></span>
@@ -30,57 +32,134 @@
     </div>
 </section>
 <main class="container checkout-layout">
-    <div>
-        <h2 class="panel-heading">How would you like to pay?</h2>
-        <p class="hint">Choose a method below. The amount includes your live cart, applied discount and delivery charge.</p>
+    <div class="bd-pay-main">
+        <div class="bd-pay-heading">
+            <div>
+                <div class="kicker">PAYMENT OPTIONS</div>
+                <h2 class="panel-heading">How would you like to pay?</h2>
+                <p class="hint">Both options create an order. Only a verified transfer can be recorded as paid.</p>
+            </div>
+        </div>
         @if (TempData["CheckoutError"] is string error)
         {
-            <div class="notice error" role="alert">@error</div>
+            <div class="notice error" role="alert" id="paymentError">@error</div>
         }
         @if (!codAvailable && !bkashAvailable)
         {
-            <div class="notice error" role="alert">Both payment methods are currently unavailable. Please contact PANENKA before placing an order.</div>
+            <div class="notice error" role="alert">No payment option is currently available. Contact PANENKA support.</div>
         }
-        <form asp-controller="Checkout" asp-action="Payment" method="post" id="paymentForm">
+        <form asp-controller="Checkout" asp-action="Payment" method="post" id="paymentForm" novalidate="false">
             @Html.AntiForgeryToken()
             <input type="hidden" name="SubmissionToken" value="@Model.SubmissionToken" />
+            <input type="hidden" name="PaymentMethod" id="paymentMethod" value="@(codAvailable ? "COD" : "")" />
 
-            @if (codAvailable)
+            <div class="bd-payment-options">
+                <section class="bd-method-card @(codAvailable ? "is-selected" : "is-disabled")" id="codCard">
+                    <div class="bd-method-head">
+                        <div class="bd-method-icon"><i class="bi bi-box-seam"></i></div>
+                        <div><strong>Cash on delivery</strong><small>Pay when your parcel arrives.</small></div>
+                        @if (codAvailable) { <span class="bd-method-label">AVAILABLE</span> }
+                    </div>
+                    <p>We'll prepare the order and you can pay the delivery team in cash.</p>
+                    <button type="submit" class="bd-method-action" id="codButton" disabled="@(!codAvailable)">
+                        PLACE COD ORDER <span>→</span>
+                    </button>
+                </section>
+                <section class="bd-method-card @(bkashAvailable ? "" : "is-disabled")" id="bkashCard">
+                    <div class="bd-method-head">
+                        <div class="bd-method-icon bd-method-icon-pink"><i class="bi bi-phone"></i></div>
+                        <div><strong>Pay with bKash</strong><small>Manual Send Money transfer.</small></div>
+                        @if (bkashAvailable) { <span class="bd-method-label bd-label-pink">MANUAL</span> }
+                    </div>
+                    <p>Send Money to our receiving number. Provide your sender number and TrxID in a secure popup.</p>
+                    <button type="button" class="bd-method-action bd-method-action-pink" id="openBkash"
+                            disabled="@(!bkashAvailable)" aria-haspopup="dialog" aria-controls="bkashDialog">
+                        @(bkashAvailable ? "PAY WITH BKASH" : "BKASH UNAVAILABLE") <span>→</span>
+                    </button>
+                </section>
+            </div>
+            @if (!bkashAvailable)
             {
-                <label class="pay-choice">
-                    <input type="radio" name="PaymentMethod" value="COD" checked required />
-                    <span><strong>Cash on delivery</strong>
-                        <small>Pay in cash after receiving your package. Available inside and outside Dhaka when enabled.</small>
-                    </span>
-                </label>
+                <p class="bd-payment-footnote">Manual bKash is unavailable until the store configures its receiving number. Cash on delivery remains available when enabled.</p>
             }
+
+            <div class="bd-shipping-review">
+                <div class="bd-shipping-review-header">
+                    <h2 class="panel-heading">Deliver to</h2>
+                    <a href="/Checkout/Delivery">Edit address ↗</a>
+                </div>
+                <div class="bd-address-card">
+                    <strong>@Model.Delivery.FullName</strong> · @Model.Delivery.Phone
+                    <span>@Model.Delivery.AddressLine1</span>
+                    @if (!string.IsNullOrWhiteSpace(Model.Delivery.AddressLine2))
+                    {
+                        <span>@Model.Delivery.AddressLine2</span>
+                    }
+                    <span>@Model.Delivery.City, @Model.Delivery.District @Model.Delivery.PostalCode</span>
+                    <small>@(Model.Delivery.Region == "Dhaka" ? "Inside Dhaka" : "Outside Dhaka") delivery</small>
+                </div>
+            </div>
+            <p class="agree">Your final amount is calculated from your saved cart and delivery address. We never request your bKash PIN, password or OTP.</p>
+
             @if (bkashAvailable)
             {
-                <label class="pay-choice">
-                    <input type="radio" name="PaymentMethod" value="Bkash" checked="@(!codAvailable)" required />
-                    <span><strong>bKash · Manual transfer</strong>
-                        <small>Place the order, send money to PANENKA's saved bKash number in your bKash app, then submit your transaction ID for verification.</small>
-                    </span>
-                </label>
-                <div id="bkashInfo" class="mb-privacy" style="display:@(codAvailable ? "none" : "block")">
-                    <strong><i class="bi bi-wallet2"></i> Manual bKash (not an online gateway)</strong>
-                    <p style="margin:8px 0 4px">@Model.ManualBkashInstructions</p>
-                    <p style="margin:8px 0 0">After placing the order, you will see the exact receiving number and total. The payment will remain unverified until staff check the merchant wallet independently. Do not send money twice.</p>
+                <div id="bkashDialog" class="bd-modal" hidden role="presentation">
+                    <div class="bd-modal-backdrop" data-close-bkash></div>
+                    <section class="bd-modal-panel" role="dialog" aria-modal="true" aria-labelledby="bkashDialogTitle" aria-describedby="bkashDialogHint" tabindex="-1">
+                        <header class="bd-modal-header">
+                            <div>
+                                <div class="kicker">PANENKA / MANUAL BKASH</div>
+                                <h2 id="bkashDialogTitle">Complete bKash payment</h2>
+                                <p id="bkashDialogHint">Use the official bKash app to Send Money, then enter the confirmation details below.</p>
+                            </div>
+                            <button type="button" class="bd-modal-close" data-close-bkash aria-label="Close payment popup"><i class="bi bi-x-lg"></i></button>
+                        </header>
+                        <div class="bd-modal-body">
+                            <div class="bd-payee">
+                                <div><small>STORE BKASH RECEIVING NUMBER</small><strong id="bkashRecipient">@Model.ManualBkashNumber</strong></div>
+                                <button type="button" id="copyBkash" class="bd-copy-number"><i class="bi bi-copy"></i> COPY</button>
+                            </div>
+                            <div class="bd-transfer-total"><span>Exact amount to send</span><strong>৳@Model.GrandTotal.ToString("N2")</strong></div>
+                            <p class="bd-modal-instructions">@Model.ManualBkashInstructions</p>
+                            <ol class="bd-transfer-steps">
+                                <li>Open the official bKash app and select <strong>Send Money</strong>.</li>
+                                <li>Check the recipient above and transfer exactly <strong>৳@Model.GrandTotal.ToString("N2")</strong>.</li>
+                                <li>Find your transaction ID (TrxID) in the bKash confirmation, then submit the details.</li>
+                            </ol>
+                            <div class="bd-transfer-form">
+                                <input type="hidden" name="BkashRecipientNumber" id="BkashRecipientNumber" value="@Model.ManualBkashNumber" disabled />
+                                <div class="bd-modal-field">
+                                    <label for="BkashSenderNumber">bKash sender number <span>*</span></label>
+                                    <input id="BkashSenderNumber" name="BkashSenderNumber" type="tel" inputmode="numeric"
+                                           autocomplete="tel" pattern="01[3-9][0-9]{8}" maxlength="11" minlength="11"
+                                           placeholder="01XXXXXXXXX" required disabled />
+                                    <small>The number you actually sent the payment from.</small>
+                                </div>
+                                <div class="bd-modal-field">
+                                    <label for="BkashTransactionId">Transaction ID (TrxID) <span>*</span></label>
+                                    <input id="BkashTransactionId" name="BkashTransactionId" type="text"
+                                           autocomplete="off" maxlength="40" minlength="7"
+                                           pattern="[a-zA-Z0-9-]{7,40}" placeholder="Enter your bKash TrxID" required disabled />
+                                    <small>Use the reference displayed in your bKash transaction record.</small>
+                                </div>
+                                <div class="bd-modal-field">
+                                    <label for="BkashPaidAtLocal">Transfer date and time (Bangladesh) <span>*</span></label>
+                                    <input id="BkashPaidAtLocal" name="BkashPaidAtLocal" type="datetime-local"
+                                           value="@localTime" required disabled />
+                                    <small>Pre-filled with current Bangladesh time; adjust if you transferred earlier.</small>
+                                </div>
+                            </div>
+                            <div class="bd-safety"><i class="bi bi-shield-check"></i><span>This is a manual payment report, not an official bKash payment gateway. Your order is created as <strong>awaiting payment verification</strong>. PANENKA staff must confirm funds independently before dispatch.</span></div>
+                        </div>
+                        <footer class="bd-modal-footer">
+                            <button type="button" class="bd-modal-back" data-close-bkash>BACK TO CHECKOUT</button>
+                            <button type="submit" class="bd-modal-submit" id="submitBkash">
+                                SUBMIT &amp; PLACE ORDER <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </footer>
+                    </section>
                 </div>
             }
-
-            <hr class="sep" />
-            <h2 class="panel-heading">Deliver to</h2>
-            <p class="hint"><strong>@Model.Delivery.FullName</strong> — @Model.Delivery.Phone<br />
-                @Model.Delivery.AddressLine1, @Model.Delivery.City, @Model.Delivery.District<br />
-                @(Model.Delivery.Region == "Dhaka" ? "Inside Dhaka" : "Outside Dhaka")</p>
-
-            <button type="submit" class="primary" id="placeOrder" disabled="@(!codAvailable && !bkashAvailable)">
-                <span id="buttonText">@(codAvailable ? "PLACE ORDER" : "PLACE ORDER & SEE BKASH NUMBER") — ৳@Model.GrandTotal.ToString("N2")</span>
-                <span>→</span>
-            </button>
-            <a class="back" href="/Checkout/Delivery">← Edit delivery details</a>
-            <p class="agree">Your order uses saved product prices, quantities, available inventory and delivery rates. Manual bKash requires separate staff confirmation.</p>
         </form>
     </div>
     <aside class="summary">
@@ -90,13 +169,13 @@
         <div class="summary-row"><span>Delivery</span><strong>৳@Model.ShippingCost.ToString("N2")</strong></div>
         <div class="summary-total"><span>Order total</span><strong>৳@Model.GrandTotal.ToString("N2")</strong></div>
         <div class="order-lines">
-            @foreach (var item in Model.Cart.Items)
-            {
-                <div class="tiny-line">
-                    <span>@item.Name (@item.Size / @item.Color) × @item.Quantity</span>
-                    <strong>৳@((item.Price * item.Quantity).ToString("N2"))</strong>
-                </div>
-            }
+        @foreach (var item in Model.Cart.Items)
+        {
+            <div class="tiny-line">
+                <span>@item.Name (@item.Size / @item.Color) × @item.Quantity</span>
+                <strong>৳@((item.Price * item.Quantity).ToString("N2"))</strong>
+            </div>
+        }
         </div>
     </aside>
 </main>
@@ -104,23 +183,76 @@
 <script>
 (() => {
     'use strict';
-    const form = document.getElementById('paymentForm');
-    const button = document.getElementById('placeOrder');
-    const text = document.getElementById('buttonText');
-    const info = document.getElementById('bkashInfo');
-    const total = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.GrandTotal.ToString("N2")));
-    function update() {
-        const isBkash = document.querySelector('input[name="PaymentMethod"]:checked')?.value === 'Bkash';
-        if (info) info.style.display = isBkash ? 'block' : 'none';
-        text.textContent = (isBkash ? 'PLACE ORDER & SEE BKASH NUMBER' : 'PLACE ORDER') + ' — ৳' + total;
+    const form=document.getElementById('paymentForm');
+    const modal=document.getElementById('bkashDialog');
+    const openButton=document.getElementById('openBkash');
+    const codButton=document.getElementById('codButton');
+    const method=document.getElementById('paymentMethod');
+    const sender=document.getElementById('BkashSenderNumber');
+    const trx=document.getElementById('BkashTransactionId');
+    const paymentTime=document.getElementById('BkashPaidAtLocal');
+    const recipient=document.getElementById('BkashRecipientNumber');
+    const submit=document.getElementById('submitBkash');
+    const inputs=[sender,trx,paymentTime,recipient].filter(Boolean);
+    let restoreFocus=null, isSubmitting=false;
+    function setPopup(open){
+        if(!modal)return;
+        modal.hidden=!open;
+        modal.classList.toggle('is-open',open);
+        document.body.classList.toggle('bd-payment-modal-open',open);
+        inputs.forEach(input=>{input.disabled=!open;});
+        if(open){
+            restoreFocus=document.activeElement;
+            method.value='Bkash';
+            if(paymentTime&&!paymentTime.value){
+                paymentTime.value=new Date(Date.now()+21600000).toISOString().slice(0,16);
+            }
+            sender?.focus();
+        }else{
+            method.value=codButton&&!codButton.disabled?'COD':'';
+            restoreFocus?.focus?.();
+        }
     }
-    form.querySelectorAll('input[name="PaymentMethod"]').forEach(x => x.addEventListener('change', update));
-    form.addEventListener('submit', () => {
-        if (!form.checkValidity()) return;
-        button.disabled = true;
-        text.textContent = 'RECORDING ORDER…';
+    openButton?.addEventListener('click',()=>setPopup(true));
+    document.querySelectorAll('[data-close-bkash]').forEach(el=>el.addEventListener('click',()=>{if(!isSubmitting)setPopup(false);}));
+    document.addEventListener('keydown',ev=>{
+        if(!modal||modal.hidden)return;
+        if(ev.key==='Escape'){ev.preventDefault();if(!isSubmitting)setPopup(false);}
+        if(ev.key==='Tab'){
+            const elements=[...modal.querySelectorAll('button:not([disabled]),input:not([disabled])')].filter(el=>el.getClientRects().length);
+            if(!elements.length)return;
+            const first=elements[0],last=elements[elements.length-1];
+            if(ev.shiftKey&&document.activeElement===first){ev.preventDefault();last.focus();}
+            else if(!ev.shiftKey&&document.activeElement===last){ev.preventDefault();first.focus();}
+        }
     });
-    update();
+    codButton?.addEventListener('click',()=>{method.value='COD';inputs.forEach(el=>el.disabled=true);});
+    submit?.addEventListener('click',()=>{method.value='Bkash';});
+    form.addEventListener('submit',ev=>{
+        if(isSubmitting){ev.preventDefault();return;}
+        if(method.value==='Bkash'&&(!modal||modal.hidden)){
+            ev.preventDefault();setPopup(true);return;
+        }
+        if(method.value!=='COD'&&method.value!=='Bkash'){
+            ev.preventDefault();return;
+        }
+        if(!form.checkValidity()){
+            ev.preventDefault();form.reportValidity();return;
+        }
+        isSubmitting=true;
+        if(codButton)codButton.disabled=true;
+        if(submit){submit.disabled=true;submit.textContent='SAVING ORDER & PAYMENT…';}
+    });
+    document.getElementById('copyBkash')?.addEventListener('click',async e=>{
+        const text=document.getElementById('bkashRecipient')?.textContent?.trim();
+        if(!text)return;
+        try{
+            await navigator.clipboard.writeText(text);
+            e.currentTarget.textContent='COPIED ✓';
+        }catch{
+            e.currentTarget.textContent='SELECT NUMBER TO COPY';
+        }
+    });
 })();
 </script>
 </body>
