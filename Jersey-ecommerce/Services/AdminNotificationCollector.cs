@@ -39,6 +39,9 @@ public static class AdminNotificationCollector
 
         var paymentPaid = db.ChangeTracker.Entries<Payment>()
             .Any(e => Changed(e, nameof(Payment.Status)) && e.Entity.Status == "Paid");
+        var shipmentStatusUpdated = db.ChangeTracker.Entries<Shipment>()
+            .Any(e => Changed(e, nameof(Shipment.Status)) &&
+                e.Entity.Status is "Shipped" or "InTransit" or "OutForDelivery" or "Delivered" or "Returned");
 
         foreach (var e in db.ChangeTracker.Entries().ToArray())
         {
@@ -133,7 +136,8 @@ public static class AdminNotificationCollector
                         () => $"A customer placed order {order.OrderNumber}. Review payment and fulfillment.",
                         () => $"/Admin/Orders/Details/{order.Id}");
                     break;
-                case Order order when Changed(e, nameof(Order.Status)) && !paymentPaid:
+                case Order order when Changed(e, nameof(Order.Status)) &&
+                    !paymentPaid && !shipmentStatusUpdated:
                     var newOrderStatus = order.Status;
                     Add("Orders", "order.status", newOrderStatus is "Cancelled" or "Returned" ? "Warning" : "Info",
                         () => $"Order {order.OrderNumber}: {newOrderStatus}",
