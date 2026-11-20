@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Jersey_ecommerce.Areas.Admin.Controllers;
+using Jersey_ecommerce.Areas.Admin.ViewModels;
 using Jersey_ecommerce.Areas.Identity;
 using Jersey_ecommerce.Data;
 using Jersey_ecommerce.Models.Catalog;
@@ -145,6 +146,80 @@ public sealed class AdminNotificationsTests
             .GetCustomAttributes(typeof(AuthorizeAttribute), true)
             .Cast<AuthorizeAttribute>());
         Assert.Equal("Admin", attribute.Roles);
+    }
+
+    [Fact]
+    public async Task Admin_center_filters_paginate_and_reject_external_activity_links()
+    {
+        await using var conn = new SqliteConnection("Data Source=:memory:");
+        await conn.OpenAsync();
+        await using var db = Database(conn);
+        await db.Database.EnsureCreatedAsync();
+        db.AdminNotifications.AddRange(
+            new AdminNotification
+            {
+                Category = "Payments", EventType = "payment.submitted",
+                Severity = "Warning", Title = "bKash needs verification",
+                Message = "Customer reported a transfer for order PNK-123.",
+                TargetUrl = "/Admin/Orders/Details/123"
+            },
+            new AdminNotification
+            {
+                Category = "Payments", EventType = "payment.paid",
+                Severity = "Success", Title = "Payment verified",
+                Message = "Funds confirmed in merchant wallet.",
+                TargetUrl = "/Admin/Payments/Details/5"
+            },
+            new AdminNotification
+            {
+                Category = "Reviews", EventType = "review.submitted",
+                Severity = "Warning", Title = "New product review",
+                Message = "Review needs approval.",
+                TargetUrl = "/Admin/Reviews"
+            });
+        await db.SaveChangesAsync();
+
+        var reader = new AdminNotificationReader(db);
+        var admin = Setup(new NotificationsController(db, reader), "admin-1");
+        var all = Assert.IsType<AdminNotificationsIndexViewModel>(
+            Assert.IsType<ViewResult>(await admin.Index()).Model);
+        Assert.Equal(3, all.Total);
+        Assert.Equal(3, all.UnreadCount);
+        Assert.Contains("Payments", all.Categories);
+
+        var awaiting = Assert.IsType<AdminNotificationsIndexViewModel>(
+            Assert.IsType<ViewResult>(await admin.Index(
+                category: "Payments", status: "unread", search: "bKash")).Model);
+        Assert.Single(awaiting.Items);
+        Assert.Equal("payment.submitted", awaiting.Items[0].EventType);
+        var firstId = awaiting.Items[0].Id;
+        await admin.Read(firstId);
+        var after = Assert.IsType<AdminNotificationsIndexViewModel>(
+            Assert.IsType<ViewResult>(await admin.Index(
+                category: "Payments", status: "unread")).Model);
+        Assert.Single(after.Items);
+        Assert.Equal("payment.paid", after.Items[0].EventType);
+        var readOnly = Assert.IsType<AdminNotificationsIndexViewModel>(
+            Assert.IsType<ViewResult>(await admin.Index(status: "read")).Model);
+        Assert.Single(readOnly.Items);
+        Assert.Equal(2, readOnly.UnreadCount);
+
+        var popup = Assert.IsType<AdminNotificationBellViewModel>(
+            Assert.IsType<PartialViewResult>(await admin.Popup(default)).Model);
+        Assert.Equal(2, popup.UnreadCount);
+        Assert.Equal(3, popup.Items.Count);
+
+        var otherAdmin = Setup(new NotificationsController(db, reader), "admin-2");
+        Assert.Equal(3, Assert.IsType<AdminNotificationsIndexViewModel>(
+            Assert.IsType<ViewResult>(await otherAdmin.Index(status: "unread")).Model).Total);
+
+        // A malformed database URL must never turn an admin notification into
+        // an external redirect after POST.
+        var unsafeItem = await db.AdminNotifications.SingleAsync(n => n.Id == firstId);
+        unsafeItem.TargetUrl = "//evil.test/login";
+        await db.SaveChangesAsync();
+        var redirected = Assert.IsType<LocalRedirectResult>(await admin.Open(firstId));
+        Assert.Equal("/Admin/Notifications", redirected.Url);
     }
 
     [Fact]
