@@ -20,6 +20,21 @@ namespace Jersey_ecommerce.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // Preserve the Identity key lengths already used by the original SQL
+            // migrations (nvarchar(128)). Default model conventions would
+            // otherwise silently request nvarchar(450) for these existing keys.
+            builder.Entity<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>(entity =>
+            {
+                entity.Property(x => x.LoginProvider).HasMaxLength(128);
+                entity.Property(x => x.ProviderKey).HasMaxLength(128);
+            });
+            builder.Entity<Microsoft.AspNetCore.Identity.IdentityUserToken<string>>(entity =>
+            {
+                entity.Property(x => x.LoginProvider).HasMaxLength(128);
+                entity.Property(x => x.Name).HasMaxLength(128);
+            });
+
             builder.Entity<BkashPaymentAttempt>(entity =>
             {
                 entity.HasIndex(x => x.GatewayPaymentId).IsUnique();
