@@ -20,6 +20,21 @@ namespace Jersey_ecommerce.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            // Preserve the Identity key lengths already used by the original SQL
+            // migrations (nvarchar(128)). Default model conventions would
+            // otherwise silently request nvarchar(450) for these existing keys.
+            builder.Entity<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>(entity =>
+            {
+                entity.Property(x => x.LoginProvider).HasMaxLength(128);
+                entity.Property(x => x.ProviderKey).HasMaxLength(128);
+            });
+            builder.Entity<Microsoft.AspNetCore.Identity.IdentityUserToken<string>>(entity =>
+            {
+                entity.Property(x => x.LoginProvider).HasMaxLength(128);
+                entity.Property(x => x.Name).HasMaxLength(128);
+            });
+
             builder.Entity<BkashPaymentAttempt>(entity =>
             {
                 entity.HasIndex(x => x.GatewayPaymentId).IsUnique();
@@ -328,6 +343,15 @@ namespace Jersey_ecommerce.Data
             builder.Entity<Payment>()
                 .HasIndex(p => p.OrderId)
                 .IsUnique();
+
+            // A reference may be customer-reported, but it must never be
+            // accepted against two different bKash orders. A database-enforced
+            // filtered index also protects against simultaneous submissions.
+            builder.Entity<Payment>()
+                .HasIndex(p => p.TransactionReference)
+                .IsUnique()
+                .HasDatabaseName("IX_Payments_ManualBkashTrxId")
+                .HasFilter("[Method] = 'Bkash' AND [TransactionReference] IS NOT NULL");
 
             // ==========================================
             // PAYMENTS: PAYMENT -> TRANSACTIONS

@@ -37,6 +37,7 @@
                 <button type="button" class="st-nav-link" data-settings-tab="branding"><i class="bi bi-palette2"></i> Branding <i class="bi bi-chevron-right st-nav-arrow"></i></button>
                 <button type="button" class="st-nav-link" data-settings-tab="contact"><i class="bi bi-headset"></i> Contact details <i class="bi bi-chevron-right st-nav-arrow"></i></button>
                 <button type="button" class="st-nav-link" data-settings-tab="operations"><i class="bi bi-sliders"></i> Store operations <i class="bi bi-chevron-right st-nav-arrow"></i></button>
+                <button type="button" class="st-nav-link" data-settings-tab="payments"><i class="bi bi-wallet2"></i> Payment methods <i class="bi bi-chevron-right st-nav-arrow"></i></button>
                 <button type="button" class="st-nav-link" data-settings-tab="social"><i class="bi bi-share"></i> Social media <i class="bi bi-chevron-right st-nav-arrow"></i></button>
                 <button type="button" class="st-nav-link" data-settings-tab="seo"><i class="bi bi-search"></i> SEO &amp; metadata <i class="bi bi-chevron-right st-nav-arrow"></i></button>
                 <div class="st-nav-foot"><i class="bi bi-database-check"></i> Stored in your existing settings database</div>
@@ -179,6 +180,39 @@
                     <div class="st-info-strip"><i class="bi bi-exclamation-circle"></i> These preferences are saved to the database. Your checkout, shipping calculation, notification system, and maintenance middleware must read them before they affect shoppers.</div>
                 </section>
 
+                <!-- MANUAL PAYMENT METHODS -->
+                <section class="st-pane" id="settings-payments" data-settings-pane="payments">
+                    <div class="st-card">
+                        <div class="st-card-heading"><span class="st-section-no">05</span>
+                            <div><h2>Manual bKash payments</h2><p>Choose the account customers should transfer to. This is not an automatic bKash gateway.</p></div>
+                        </div>
+                        <div class="st-card-body">
+                            <div class="st-field">
+                                <label asp-for="ManualBkashNumber">Receiving bKash number</label>
+                                <input asp-for="ManualBkashNumber" class="st-input" inputmode="numeric"
+                                       maxlength="11" autocomplete="off" placeholder="01XXXXXXXXX" />
+                                <span asp-validation-for="ManualBkashNumber" class="st-error"></span>
+                                <small>Customers will send the exact order total to this number through the bKash app, then report their transaction ID. Leave blank and save to remove/disable bKash for new orders.</small>
+                            </div>
+                            <div class="st-field" style="margin-top:22px">
+                                <label asp-for="ManualBkashInstructions">Customer transfer instructions</label>
+                                <textarea asp-for="ManualBkashInstructions" class="st-input" rows="4"
+                                          maxlength="500" placeholder="Send Money to our bKash number, then submit your transaction ID."></textarea>
+                                <span asp-validation-for="ManualBkashInstructions" class="st-error"></span>
+                                <small>The shopper will see these instructions on the manual payment screen.</small>
+                            </div>
+                            <div class="st-info-strip" style="margin-top:20px">
+                                <i class="bi bi-shield-check"></i>
+                                <span>Important: customers never enter their bKash PIN or OTP here. Their submitted transaction details remain unverified until an administrator checks the funds independently. Past orders retain their original receiving number even when you change this setting.</span>
+                            </div>
+                            <div style="display:flex;flex-wrap:wrap;gap:11px;margin-top:24px">
+                                <button type="submit" class="st-btn st-btn-dark"><i class="bi bi-check2-circle"></i> Save payment settings</button>
+                                <a class="st-btn st-btn-outline" href="/Admin/CheckoutPaymentReview"><i class="bi bi-check-circle"></i> Review submitted payments</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- SOCIAL -->
                 <section class="st-pane" id="settings-social" data-settings-pane="social">
                     <div class="st-card"><div class="st-card-heading"><span class="st-section-no">05</span><div><h2>Social accounts</h2><p>Add full, public URLs to your brand's social profiles.</p></div></div>
@@ -229,7 +263,9 @@
             tabs.forEach(tab => tab.addEventListener('click', () => showTab(tab.dataset.settingsTab)));
             const firstError = root.querySelector('.field-validation-error, .input-validation-error');
             const errorPane = firstError && firstError.closest('[data-settings-pane]');
-            showTab(errorPane ? errorPane.dataset.settingsPane : 'general');
+            const requestedPane = window.location.hash.replace('#', '');
+            const hasRequestedPane = panes.some(p => p.dataset.settingsPane === requestedPane);
+            showTab(errorPane ? errorPane.dataset.settingsPane : hasRequestedPane ? requestedPane : 'general');
 
             // Keep visible ON/OFF indicators in sync with real checkbox state.
             // Label clicks and keyboard Space work natively without custom click handlers.

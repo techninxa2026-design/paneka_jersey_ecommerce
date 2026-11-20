@@ -5,17 +5,22 @@
     var status = (payment.Status ?? "").ToLowerInvariant();
     var badge = status switch
     {
-        "pending" or "processing" or "initiated" => "pp-pending",
+        "pending" or "processing" or "initiated" or "submitted" => "pp-pending",
         "paid" or "succeeded" or "completed" or "success" => "pp-success",
-        "failed" or "declined" or "cancelled" or "canceled" => "pp-failed",
+        "failed" or "declined" or "cancelled" or "canceled" or "rejected" => "pp-failed",
         "refunded" or "partiallyrefunded" or "partially refunded" => "pp-reversed",
         _ => ""
     };
     ViewData["Title"] = $"Payment PAY-{payment.Id}";
     Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var canConfirmCod = payment.Method == "CashOnDelivery" && payment.Status == "Pending" &&
+        payment.Order.Status == "Delivered" && payment.Order.Shipment?.Status == "Delivered";
+    var needsBkashReview = payment.Method == "Bkash" && payment.Status == "Submitted" &&
+        payment.ManualSubmittedAt.HasValue;
 }
 @await Html.PartialAsync("_PaymentStyles")
 
+<link rel="stylesheet" href="/css/panenka-manual-bkash.css" asp-append-version="true" />
 <div class="pp-page">
     <header class="pp-head">
         <div>
@@ -30,6 +35,8 @@
         </div>
     </header>
 
+    @if (TempData["Error"] is string paymentError) { <div class="mb-alert mb-alert-error" role="alert">@paymentError</div> }
+    @if (TempData["Success"] is string paymentSuccess) { <div class="mb-alert mb-alert-success" role="status">@paymentSuccess</div> }
     <div class="pp-highlight" style="margin-bottom:18px">
         <div><div class="pp-h-label">Payment amount</div><div class="pp-h-value">@payment.Amount.ToString("N2") <span style="font-size:15px;font-weight:700;color:#bbb">@payment.Currency</span></div></div>
         <div><div class="pp-h-label" style="margin-bottom:10px">Recorded status</div><span class="pp-badge @badge">@payment.Status</span></div>
@@ -52,6 +59,48 @@
                     <div><div class="pp-data-label">Transaction count</div><div class="pp-data-value">@transactions.Count</div></div>
                 </div>
             </section>
+
+            @if (payment.Method == "Bkash" && payment.ManualRecipientNumber != null)
+            {
+                <section class="pp-card">
+                    <div class="pp-card-head"><div><h2 class="pp-card-title">Manual bKash submission</h2><p class="pp-card-desc">Customer-reported details; no automatic gateway verification.</p></div></div>
+                    <div class="pp-card-body pp-data-grid">
+                        <div><div class="pp-data-label">Merchant receiving wallet</div><div class="pp-data-value">@payment.ManualRecipientNumber</div></div>
+                        <div><div class="pp-data-label">Sender wallet</div><div class="pp-data-value">@(payment.ManualSenderNumber ?? "Not submitted")</div></div>
+                        <div><div class="pp-data-label">Customer TrxID</div><div class="pp-data-value">@(payment.TransactionReference ?? "Not submitted")</div></div>
+                        <div><div class="pp-data-label">Reported transfer time (BDT)</div><div class="pp-data-value">@(payment.ManualClaimedPaidAt?.AddHours(6).ToString("dd MMM yyyy · hh:mm tt") ?? "—")</div></div>
+                        <div><div class="pp-data-label">Submitted (BDT)</div><div class="pp-data-value">@(payment.ManualSubmittedAt?.AddHours(6).ToString("dd MMM yyyy · hh:mm tt") ?? "—")</div></div>
+                        <div><div class="pp-data-label">Reviewed (BDT)</div><div class="pp-data-value">@(payment.ManualReviewedAt?.AddHours(6).ToString("dd MMM yyyy · hh:mm tt") ?? "—")</div></div>
+                        <div><div class="pp-data-label">Reviewing admin ID</div><div class="pp-data-value">@(payment.ManualReviewedByUserId ?? "—")</div></div>
+                        <div><div class="pp-data-label">Staff verification note</div><div class="pp-data-value">@(payment.ManualReviewNote ?? "—")</div></div>
+                    </div>
+                    @if (needsBkashReview)
+                    {
+                        <div class="pp-card-body" style="border-top:1px solid #e7e9eb">
+                            <a class="mb-button mb-button-dark" href="/Admin/CheckoutPaymentReview">Open verification queue ↗</a>
+                        </div>
+                    }
+                </section>
+            }
+            @if (canConfirmCod)
+            {
+                <section class="pp-card">
+                    <div class="pp-card-head"><div><h2 class="pp-card-title">Confirm cash collection</h2><p class="pp-card-desc">This parcel is delivered. Reconcile cash actually received before recording the payment as paid.</p></div></div>
+                    <div class="pp-card-body">
+                        <form method="post" action="/Admin/Payments/ConfirmCod/@payment.Id" style="display:grid;gap:14px"
+                              onsubmit="return confirm('I independently confirmed the courier/cash settlement for this delivered COD order. Mark paid?')">
+                            @Html.AntiForgeryToken()
+                            <label class="mb-review-label" for="codCollectionNote">Cash reconciliation details</label>
+                            <textarea class="mb-field" id="codCollectionNote" name="collectionNote" minlength="10" maxlength="200" required
+                                      style="width:100%;padding:12px;min-height:85px;border:1px solid #dce1e4;border-radius:8px"
+                                      placeholder="e.g. Courier handed over ৳ amount, verified against delivery record."></textarea>
+                            <label class="mb-confirm-checkbox"><input type="checkbox" name="cashIndependentlyConfirmed" value="true" required />
+                                <span>The delivered parcel's cash has been independently collected and reconciled.</span></label>
+                            <button type="submit" class="mb-button mb-button-confirm">Confirm cash received</button>
+                        </form>
+                    </div>
+                </section>
+            }
 
             <section class="pp-card">
                 <div class="pp-card-head"><div><h2 class="pp-card-title">Transaction history</h2><p class="pp-card-desc">Attempts, captures, refunds or provider events recorded by the backend.</p></div><span class="pp-muted">@transactions.Count entries</span></div>
@@ -89,7 +138,7 @@
                 }
             </section>
 
-            <div class="pp-note"><i class="bi bi-shield-check"></i> <strong>Payment integrity:</strong> recorded statuses do not necessarily mean funds have settled. Always reconcile payouts and refunds against your payment gateway and bank statements. This admin screen never changes financial records.</div>
+            <div class="pp-note"><i class="bi bi-shield-check"></i> <strong>Payment integrity:</strong> customer-submitted bKash references must be checked in the actual receiving wallet. Only explicit staff verification marks a manual bKash or delivered COD payment as paid; all decisions are audited.</div>
         </main>
 
         <aside class="pp-stack">

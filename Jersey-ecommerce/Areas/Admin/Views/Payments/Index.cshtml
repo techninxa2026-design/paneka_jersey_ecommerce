@@ -11,10 +11,11 @@
             <div class="pp-crumb"><a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })">Dashboard</a><i class="bi bi-chevron-right"></i><span>Payments</span></div>
             <div class="pp-kicker">PANENKA / SALES OPERATIONS</div>
             <h1 class="pp-title">Payments</h1>
-            <p class="pp-subtitle">Review recorded payment statuses, references, and transaction activity. Payment settlement and refunds are handled by your integrated provider.</p>
+            <p class="pp-subtitle">Track cash on delivery and manual bKash transfers, customer-reported references, independent staff verifications, and every recorded payment event.</p>
         </div>
         <div class="pp-head-actions">
             <a class="pp-btn" href="@Url.Action("Index", "Orders", new { area = "Admin" })"><i class="bi bi-bag-check"></i> Orders</a>
+            <a class="pp-btn pp-btn-primary" href="/Admin/CheckoutPaymentReview"><i class="bi bi-shield-check"></i> Verify manual bKash</a>
             <a class="pp-btn pp-btn-primary" href="@Url.Action("Transactions", "Payments", new { area = "Admin" })"><i class="bi bi-clock-history"></i> Transaction ledger</a>
         </div>
     </header>
@@ -27,7 +28,7 @@
         <article class="pp-stat"><div class="pp-stat-label"><i class="bi bi-receipt"></i> Recorded amount</div><div class="pp-stat-value" style="font-size:23px">@Model.RecordedAmount.ToString("N2")</div><div class="pp-stat-hint">All currencies combined; not revenue</div></article>
     </section>
 
-    <div class="pp-alert"><i class="bi bi-info-circle"></i> <strong>Recorded values only:</strong> the total above adds all payment amounts, regardless of status or currency, and must not be used as received revenue. Verify settlement with your payment provider.</div>
+    <div class="pp-alert"><i class="bi bi-info-circle"></i> <strong>Staff reconciliation:</strong> the total above adds all payment amounts, regardless of status or currency, and must not be used as received revenue. Verify settlement with your payment provider.</div>
 
     <section class="pp-card" style="margin-bottom:18px">
         <div class="pp-card-head"><div><h2 class="pp-card-title">Find a payment</h2><p class="pp-card-desc">Search by order, customer, provider payment ID, or payment reference.</p></div><span class="pp-muted">@Model.FilteredCount.ToString("N0") matching</span></div>
@@ -57,9 +58,9 @@
                 var status = (p.Status ?? "").ToLowerInvariant();
                 var badge = status switch
                 {
-                    "pending" or "processing" or "initiated" => "pp-pending",
+                    "pending" or "processing" or "initiated" or "submitted" => "pp-pending",
                     "paid" or "succeeded" or "completed" or "success" => "pp-success",
-                    "failed" or "declined" or "cancelled" or "canceled" => "pp-failed",
+                    "failed" or "declined" or "cancelled" or "canceled" or "rejected" => "pp-failed",
                     "refunded" or "partiallyrefunded" or "partially refunded" => "pp-reversed",
                     _ => ""
                 };

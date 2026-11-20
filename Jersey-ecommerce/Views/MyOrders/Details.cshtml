@@ -134,6 +134,33 @@
                 <div class="pn-order-data"><span>Order status</span><strong><span class="pn-pill" data-state="@Model.Status">@Model.Status</span></strong></div>
                 <div class="pn-order-data"><span>Payment method</span><strong>@(payment?.Method == "CashOnDelivery" ? "Cash on delivery" : payment?.Method ?? "Not recorded")</strong></div>
                 <div class="pn-order-data"><span>Payment status</span><strong>@(payment?.Status ?? "Pending")</strong></div>
+                @if (payment?.Method == "Bkash")
+                {
+                    <div class="pn-order-data"><span>Payment type</span><strong>Manual bKash transfer</strong></div>
+                    @if (!string.IsNullOrWhiteSpace(payment.TransactionReference))
+                    {
+                        <div class="pn-order-data"><span>Reported bKash TrxID</span><strong>@payment.TransactionReference</strong></div>
+                    }
+                    @if (payment.ManualSubmittedAt.HasValue)
+                    {
+                        <div class="pn-order-data"><span>Submitted for review (BDT)</span><strong>@payment.ManualSubmittedAt.Value.AddHours(6).ToString("dd MMM, hh:mm tt")</strong></div>
+                    }
+                    @if (payment.ManualReviewedAt.HasValue && payment.Status == "Paid")
+                    {
+                        <div class="pn-order-data"><span>Staff verified (BDT)</span><strong>@payment.ManualReviewedAt.Value.AddHours(6).ToString("dd MMM, hh:mm tt")</strong></div>
+                    }
+                    <a href="/Checkout/Bkash/Status/@Model.Id" class="pn-order-track" style="margin-bottom:18px">
+                        @(payment.Status == "Paid" ? "VIEW VERIFIED PAYMENT" : payment.Status == "Submitted" ? "VIEW PAYMENT REVIEW STATUS" : "COMPLETE BKASH TRANSFER") ↗
+                    </a>
+                    @if (payment.Status == "Submitted")
+                    {
+                        <p class="pn-muted">Your reported transfer is awaiting independent staff verification. Order fulfillment is held until confirmation.</p>
+                    }
+                }
+                else if (payment?.Method == "CashOnDelivery" && Model.Status == "Delivered" && payment.Status == "Pending")
+                {
+                    <p class="pn-muted">The parcel is marked delivered. Cash collection will appear as paid after staff reconcile the courier handover.</p>
+                }
                 <div class="pn-order-data"><span>Subtotal</span><strong>৳@Model.Subtotal.ToString("N2")</strong></div>
                 @if (Model.DiscountAmount > 0)
                 {

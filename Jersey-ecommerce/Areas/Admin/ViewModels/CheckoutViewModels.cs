@@ -59,6 +59,10 @@ public sealed class PaymentPageViewModel
     public CartSummaryDto Cart { get; set; } = new();
     public decimal ShippingCost { get; init; }
     public bool AllowCashOnDelivery { get; init; } = true;
+    public bool AllowManualBkash => !string.IsNullOrWhiteSpace(ManualBkashNumber);
+    public string? ManualBkashNumber { get; init; }
+    public string ManualBkashInstructions { get; init; } =
+        "Send Money to the receiving number displayed, then submit your transaction details for staff verification.";
     public decimal GrandTotal => Cart.Total + ShippingCost;
     public string SubmissionToken { get; init; } = Guid.NewGuid().ToString("N");
     public string ManualInstructions { get; init; } = "Contact the store for advance-payment details. Your order stays unpaid until staff verify payment.";

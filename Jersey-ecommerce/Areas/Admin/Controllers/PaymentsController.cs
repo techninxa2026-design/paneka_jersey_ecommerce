@@ -1,4 +1,6 @@
 using System;
+using System.Data;
+using System.Security.Claims;
 using System.Linq;
 using System.Threading.Tasks;
 using Jersey_ecommerce.Areas.Admin.ViewModels;
@@ -104,7 +106,8 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
                 PageSize = PageSize,
                 FilteredCount = filteredCount,
                 TotalCount = await baseQuery.CountAsync(),
-                PendingCount = await baseQuery.CountAsync(p => p.Status == "Pending"),
+                PendingCount = await baseQuery.CountAsync(p =>
+                    p.Status == "Pending" || p.Status == "Submitted" || p.Status == "Rejected"),
                 // This is the DATABASE-RECORDED status, not independent gateway reconciliation.
                 ReportedPaidCount = await baseQuery.CountAsync(p =>
                     p.Status == "Paid" || p.Status == "Succeeded" || p.Status == "Completed"),
@@ -125,7 +128,7 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
             var payment = await _context.Payments
                 .AsNoTracking()
                 .AsSplitQuery()
-                .Include(p => p.Order)
+                .Include(p => p.Order).ThenInclude(o => o.Shipment)
                 .Include(p => p.Transactions)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -133,6 +136,55 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
                 return NotFound();
 
             return View(new PaymentDetailsViewModel { Payment = payment });
+        }
+
+        // Cash on delivery: record that staff reconciled actual cash collection.
+        // Delivery status alone is not proof that the courier remitted payment.
+        [HttpPost("/Admin/Payments/ConfirmCod/{id:int}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmCod(int id, bool cashIndependentlyConfirmed, string? collectionNote)
+        {
+            var note = collectionNote?.Trim() ?? "";
+            if (!cashIndependentlyConfirmed || note.Length is < 10 or > 200)
+            {
+                TempData["Error"] = "Confirm that cash has been collected and record 10–200 characters of reconciliation details.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            await using var tx = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            var payment = await _context.Payments.Include(p => p.Order)
+                .ThenInclude(o => o.Shipment)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            if (payment == null) return NotFound();
+
+            if (payment.Method != "CashOnDelivery" || payment.Status != "Pending" ||
+                payment.Order.Status != "Delivered" || payment.Order.Shipment?.Status != "Delivered")
+            {
+                TempData["Error"] = "Cash on delivery can only be marked collected after the order and shipment are delivered and the payment remains pending.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            var now = DateTime.UtcNow;
+            payment.Status = "Paid";
+            payment.PaidAt = now;
+            payment.Order.PaidAt = now;
+            payment.Order.UpdatedAt = now;
+            _context.PaymentTransactions.Add(new PaymentTransaction
+            {
+                PaymentId = payment.Id, TransactionType = "CashOnDelivery",
+                Status = "Verified", Reference = note, Amount = payment.Amount,
+                CreatedAt = now, CompletedAt = now
+            });
+            _context.OrderStatusHistories.Add(new OrderStatusHistory
+            {
+                OrderId = payment.OrderId, Status = "Delivered",
+                ChangedByUserId = User.FindFirstValue(ClaimTypes.NameIdentifier),
+                Note = "COD cash collection independently recorded: " + note,
+                CreatedAt = now
+            });
+            await _context.SaveChangesAsync();
+            await tx.CommitAsync();
+            TempData["Success"] = "Cash-on-delivery collection recorded as paid.";
+            return RedirectToAction(nameof(Details), new { id });
         }
 
         // GET /admin/payments/transactions

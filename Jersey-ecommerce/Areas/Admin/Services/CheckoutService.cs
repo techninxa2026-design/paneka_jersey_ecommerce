@@ -27,6 +27,22 @@ public sealed class CheckoutService(
         string.Equals(await db.SiteSettings.AsNoTracking().Where(s => s.Key == "operations.maintenance")
             .Select(s => s.Value).FirstOrDefaultAsync(), "true", StringComparison.OrdinalIgnoreCase);
 
+    public async Task<string?> ManualBkashNumber()
+    {
+        var value = await db.SiteSettings.AsNoTracking()
+            .Where(x => x.Key == ManualBkashPaymentService.NumberSettingKey)
+            .Select(x => x.Value).FirstOrDefaultAsync();
+        return ManualBkashPaymentService.IsValidMobile(value) ? value : null;
+    }
+
+    public async Task<string> ManualBkashInstructions()
+    {
+        var value = await db.SiteSettings.AsNoTracking()
+            .Where(x => x.Key == ManualBkashPaymentService.InstructionsSettingKey)
+            .Select(x => x.Value).FirstOrDefaultAsync();
+        return string.IsNullOrWhiteSpace(value) ? ManualBkashPaymentService.DefaultInstructions : value;
+    }
+
     public async Task<bool> CodEnabled()
     {
         var value = await db.SiteSettings.AsNoTracking().Where(s => s.Key == "operations.cash_on_delivery")
@@ -260,6 +276,9 @@ public sealed class CheckoutService(
             throw new CheckoutException("Choose a valid payment method.");
         // COD is available throughout Bangladesh when the store setting permits it.
         if (input.PaymentMethod == "COD" && !await CodEnabled()) throw new CheckoutException("Cash on delivery is disabled.");
+        var manualRecipient = input.PaymentMethod == "Bkash" ? await ManualBkashNumber() : null;
+        if (input.PaymentMethod == "Bkash" && manualRecipient is null)
+            throw new CheckoutException("Manual bKash is not available. Choose another payment option or contact support.");
         if (await InMaintenance()) throw new CheckoutException("Checkout is paused by the store.");
         if (!Guid.TryParseExact(input.SubmissionToken, "N", out _)) throw new CheckoutException("Invalid checkout token.");
         var orderNumber = "PNK-" + input.SubmissionToken[..24].ToUpperInvariant();
@@ -330,7 +349,8 @@ public sealed class CheckoutService(
                 _ => "ManualAdvance"
             },
             Status = "Pending",
-            Provider = input.PaymentMethod == "Bkash" ? "bKash" : "Offline",
+            Provider = input.PaymentMethod == "Bkash" ? "bKash (manual transfer)" : "Offline",
+            ManualRecipientNumber = manualRecipient,
             Amount = order.TotalAmount,
             Currency = "BDT",
             TransactionReference = input.PaymentMethod == "ManualAdvance" ? input.PaymentReference?.Trim() : null,

@@ -1088,6 +1088,31 @@ namespace Jersey_ecommerce.Migrations
                     b.Property<DateTime?>("FailedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("ManualClaimedPaidAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ManualRecipientNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("ManualReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ManualReviewedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ManualReviewNote")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ManualSenderNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("ManualSubmittedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Method")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -1120,6 +1145,11 @@ namespace Jersey_ecommerce.Migrations
 
                     b.HasIndex("OrderId")
                         .IsUnique();
+
+                    b.HasIndex("TransactionReference")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Payments_ManualBkashTrxId")
+                        .HasFilter("[Method] = 'Bkash' AND [TransactionReference] IS NOT NULL");
 
                     b.ToTable("Payments");
                 });

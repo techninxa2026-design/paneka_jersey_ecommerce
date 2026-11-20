@@ -39,6 +39,26 @@ namespace Jersey_ecommerce.Models.Orders
 
         public DateTime? FailedAt { get; set; }
 
+        // Manual bKash reconciliation; these are customer-reported details,
+        // not gateway-verified evidence. Times are stored in UTC.
+        [StringLength(20)]
+        public string? ManualSenderNumber { get; set; }
+
+        [StringLength(20)]
+        public string? ManualRecipientNumber { get; set; }
+
+        public DateTime? ManualClaimedPaidAt { get; set; }
+
+        public DateTime? ManualSubmittedAt { get; set; }
+
+        public DateTime? ManualReviewedAt { get; set; }
+
+        [StringLength(450)]
+        public string? ManualReviewNote { get; set; }
+
+        [StringLength(450)]
+        public string? ManualReviewedByUserId { get; set; }
+
         public Order Order { get; set; } = null!;
 
         public ICollection<PaymentTransaction> Transactions { get; set; }

@@ -60,6 +60,16 @@ namespace Jersey_ecommerce.Areas.Admin.ViewModels
         // Preference keys only. Other website services must explicitly consume these values.
         public bool IsMaintenanceMode { get; set; }
         public bool AllowCashOnDelivery { get; set; } = true;
+
+        [Display(Name = "Manual bKash receiving number")]
+        [RegularExpression(@"^01[3-9][0-9]{8}$",
+            ErrorMessage = "Enter an 11-digit Bangladesh mobile number (01XXXXXXXXX), or leave blank to disable manual bKash.")]
+        public string? ManualBkashNumber { get; set; }
+
+        [StringLength(500)]
+        [Display(Name = "bKash payment instructions")]
+        public string? ManualBkashInstructions { get; set; } =
+            "Send Money to the receiving number shown, then submit your sender number, transaction ID and payment time.";
         public bool SendOrderNotifications { get; set; } = true;
 
         [Url]
