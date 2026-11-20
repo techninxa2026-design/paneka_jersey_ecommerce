@@ -49,8 +49,7 @@ public sealed class ManualBkashPaymentService(ApplicationDbContext db)
         if (!Trx.IsMatch(trxId))
             throw new CheckoutException("Enter the transaction ID from your actual bKash confirmation (7–40 letters, digits or hyphens).");
         // datetime-local inputs represent Bangladesh wall-clock time (UTC+06:00).
-        var claimedUtc = DateTime.SpecifyKind(localPaidAt, DateTimeKind.Unspecified)
-            .AddHours(-6);
+        var claimedUtc = DateTime.SpecifyKind(localPaidAt.AddHours(-6), DateTimeKind.Utc);
         var now = DateTime.UtcNow;
         if (localPaidAt == default || claimedUtc < now.AddDays(-30) || claimedUtc > now.AddMinutes(10))
             throw new CheckoutException("Enter the payment date and time in Bangladesh time (within the last 30 days).");
