@@ -1,0 +1,60 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.AdminNotificationBellViewModel
+<div class="an-popup-head">
+    <div>
+        <strong>Notifications</strong>
+        <small>@Model.UnreadCount unread · Store activity</small>
+    </div>
+    <a href="/Admin/Notifications" class="an-popup-view-all">View all</a>
+</div>
+@if (Model.Items.Count == 0)
+{
+    <div class="an-popup-empty">
+        <i class="bi bi-bell-slash"></i>
+        <strong>All caught up</strong>
+        <span>New orders, bKash claims and important store events will show here.</span>
+    </div>
+}
+else
+{
+    <div class="an-popup-items">
+        @foreach (var item in Model.Items)
+        {
+            <form method="post" action="/Admin/Notifications/Open/@item.Id" class="an-popup-item-form">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="an-popup-item @(item.IsRead ? "an-is-read" : "an-is-unread")">
+                    <span class="an-item-icon an-level-@item.Severity.ToLowerInvariant()">
+                        <i class="bi @(item.Category switch
+                            {
+                                "Orders" => "bi-bag-check",
+                                "Payments" => "bi-credit-card",
+                                "Shipping" => "bi-truck",
+                                "Reviews" => "bi-star",
+                                "Inventory" => "bi-box-seam",
+                                "Customers" => "bi-people",
+                                "Promotions" => "bi-ticket-perforated",
+                                "Catalog" => "bi-grid",
+                                "Content" => "bi-image",
+                                _ => "bi-bell"
+                            })"></i>
+                    </span>
+                    <span class="an-item-main">
+                        <strong>@item.Title</strong>
+                        <span class="an-item-description">@item.Message</span>
+                        <small>@item.Category · @item.CreatedAt.AddHours(6).ToString("dd MMM, hh:mm tt") BDT</small>
+                    </span>
+                    @if (!item.IsRead) { <span class="an-unread-dot" aria-label="Unread"></span> }
+                </button>
+            </form>
+        }
+    </div>
+}
+<div class="an-popup-foot">
+    @if (Model.UnreadCount > 0)
+    {
+        <form action="/Admin/Notifications/ReadAll" method="post" class="an-popup-markall">
+            @Html.AntiForgeryToken()
+            <button type="submit"><i class="bi bi-check2-all"></i> Mark all read</button>
+        </form>
+    }
+    <a href="/Admin/Notifications">Notification center <i class="bi bi-arrow-right"></i></a>
+</div>
