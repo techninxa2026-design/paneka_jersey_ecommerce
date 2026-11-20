@@ -114,6 +114,7 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
                 FilteredCount = filteredCount,
                 TotalCount = await baseQuery.CountAsync(),
                 PendingCount = await baseQuery.CountAsync(o => o.Status == "Pending"),
+                SubmittedBkashCount = await baseQuery.CountAsync(o => o.Payment != null && o.Payment.Method == "Bkash" && o.Payment.Status == "Submitted" && o.Status == "Pending"),
                 ProcessingCount = await baseQuery.CountAsync(o => o.Status == "Processing"),
                 ShippedCount = await baseQuery.CountAsync(o => o.Status == "Shipped"),
                 DeliveredCount = await baseQuery.CountAsync(o => o.Status == "Delivered"),
