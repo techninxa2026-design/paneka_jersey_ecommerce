@@ -53,6 +53,8 @@
             <input type="hidden" name="SubmissionToken" value="@Model.SubmissionToken" />
             <input type="hidden" name="PaymentMethod" id="paymentMethod" value="@(codAvailable ? "COD" : "")" />
 
+            <div class="notice error" role="alert" id="prepareBkashError" hidden></div>
+            <div class="notice" role="status" id="reservedOrderNotice" hidden></div>
             <div class="bd-payment-options">
                 <section class="bd-method-card @(codAvailable ? "is-selected" : "is-disabled")" id="codCard">
                     <div class="bd-method-head">
@@ -71,7 +73,7 @@
                         <div><strong>Pay with bKash</strong><small>Manual Send Money transfer.</small></div>
                         @if (bkashAvailable) { <span class="bd-method-label bd-label-pink">MANUAL</span> }
                     </div>
-                    <p>Send Money to our receiving number. Provide your sender number and TrxID in a secure popup.</p>
+                    <p>Reserve your order first, then send the exact total to our number and report your TrxID.</p>
                     <button type="button" class="bd-method-action bd-method-action-pink" id="openBkash"
                             disabled="@(!bkashAvailable)" aria-haspopup="dialog" aria-controls="bkashDialog">
                         @(bkashAvailable ? "PAY WITH BKASH" : "BKASH UNAVAILABLE") <span>→</span>
@@ -110,7 +112,8 @@
                             <div>
                                 <div class="kicker">PANENKA / MANUAL BKASH</div>
                                 <h2 id="bkashDialogTitle">Complete bKash payment</h2>
-                                <p id="bkashDialogHint">Use the official bKash app to Send Money, then enter the confirmation details below.</p>
+                                <span id="bkashOrderNumber" class="bd-modal-order"></span>
+                                <p id="bkashDialogHint">Your order has been reserved. Use the official bKash app to Send Money, then enter the transaction details below.</p>
                             </div>
                             <button type="button" class="bd-modal-close" data-close-bkash aria-label="Close payment popup"><i class="bi bi-x-lg"></i></button>
                         </header>
@@ -119,37 +122,37 @@
                                 <div><small>STORE BKASH RECEIVING NUMBER</small><strong id="bkashRecipient">@Model.ManualBkashNumber</strong></div>
                                 <button type="button" id="copyBkash" class="bd-copy-number"><i class="bi bi-copy"></i> COPY</button>
                             </div>
-                            <div class="bd-transfer-total"><span>Exact amount to send</span><strong>৳@Model.GrandTotal.ToString("N2")</strong></div>
+                            <div class="bd-transfer-total"><span>Exact amount to send</span><strong id="bkashAmount">৳@Model.GrandTotal.ToString("N2")</strong></div>
                             <p class="bd-modal-instructions">@Model.ManualBkashInstructions</p>
                             <ol class="bd-transfer-steps">
                                 <li>Open the official bKash app and select <strong>Send Money</strong>.</li>
-                                <li>Check the recipient above and transfer exactly <strong>৳@Model.GrandTotal.ToString("N2")</strong>.</li>
+                                <li>Check the recipient above and transfer exactly <strong id="bkashStepsAmount">৳@Model.GrandTotal.ToString("N2")</strong>.</li>
                                 <li>Find your transaction ID (TrxID) in the bKash confirmation, then submit the details.</li>
                             </ol>
                             <div class="bd-transfer-form">
                                 <input type="hidden" name="BkashRecipientNumber" id="BkashRecipientNumber" value="@Model.ManualBkashNumber" disabled />
                                 <div class="bd-modal-field">
                                     <label for="BkashSenderNumber">bKash sender number <span>*</span></label>
-                                    <input id="BkashSenderNumber" name="BkashSenderNumber" type="tel" inputmode="numeric"
+                                    <input id="BkashSenderNumber" name="senderNumber" type="tel" inputmode="numeric"
                                            autocomplete="tel" pattern="01[3-9][0-9]{8}" maxlength="11" minlength="11"
                                            placeholder="01XXXXXXXXX" required disabled />
                                     <small>The number you actually sent the payment from.</small>
                                 </div>
                                 <div class="bd-modal-field">
                                     <label for="BkashTransactionId">Transaction ID (TrxID) <span>*</span></label>
-                                    <input id="BkashTransactionId" name="BkashTransactionId" type="text"
+                                    <input id="BkashTransactionId" name="transactionId" type="text"
                                            autocomplete="off" maxlength="40" minlength="7"
                                            pattern="[a-zA-Z0-9-]{7,40}" placeholder="Enter your bKash TrxID" required disabled />
                                     <small>Use the reference displayed in your bKash transaction record.</small>
                                 </div>
                                 <div class="bd-modal-field">
                                     <label for="BkashPaidAtLocal">Transfer date and time (Bangladesh) <span>*</span></label>
-                                    <input id="BkashPaidAtLocal" name="BkashPaidAtLocal" type="datetime-local"
+                                    <input id="BkashPaidAtLocal" name="paidAtLocal" type="datetime-local"
                                            value="@localTime" required disabled />
                                     <small>Pre-filled with current Bangladesh time; adjust if you transferred earlier.</small>
                                 </div>
                             </div>
-                            <div class="bd-safety"><i class="bi bi-shield-check"></i><span>This is a manual payment report, not an official bKash payment gateway. Your order is created as <strong>awaiting payment verification</strong>. PANENKA staff must confirm funds independently before dispatch.</span></div>
+                            <div class="bd-safety"><i class="bi bi-shield-check"></i><span>This is a manual payment report, not an official bKash gateway. Your order has already been saved and stock reserved. Your transfer remains <strong>unverified</strong> until PANENKA staff independently confirm receipt.</span></div>
                         </div>
                         <footer class="bd-modal-footer">
                             <button type="button" class="bd-modal-back" data-close-bkash>BACK TO CHECKOUT</button>
@@ -193,8 +196,17 @@
     const paymentTime=document.getElementById('BkashPaidAtLocal');
     const recipient=document.getElementById('BkashRecipientNumber');
     const submit=document.getElementById('submitBkash');
+    const prepError=document.getElementById('prepareBkashError');
+    const reservedNotice=document.getElementById('reservedOrderNotice');
     const inputs=[sender,trx,paymentTime,recipient].filter(Boolean);
-    let restoreFocus=null, isSubmitting=false;
+    let restoreFocus=null, isSubmitting=false, isPreparing=false, preparedOrderId=null;
+
+    function showError(message){
+        if(!prepError)return;
+        prepError.textContent=message;
+        prepError.hidden=false;
+        prepError.scrollIntoView({behavior:'smooth',block:'center'});
+    }
     function setPopup(open){
         if(!modal)return;
         modal.hidden=!open;
@@ -204,56 +216,134 @@
         if(open){
             restoreFocus=document.activeElement;
             method.value='Bkash';
-            if(paymentTime&&!paymentTime.value){
+            if(paymentTime&&!paymentTime.value)
                 paymentTime.value=new Date(Date.now()+21600000).toISOString().slice(0,16);
-            }
             sender?.focus();
         }else{
-            method.value=codButton&&!codButton.disabled?'COD':'';
+            method.value=preparedOrderId?'Bkash':(codButton&&!codButton.disabled?'COD':'');
             restoreFocus?.focus?.();
         }
     }
-    openButton?.addEventListener('click',()=>setPopup(true));
-    document.querySelectorAll('[data-close-bkash]').forEach(el=>el.addEventListener('click',()=>{if(!isSubmitting)setPopup(false);}));
+
+    async function prepareBkashOrder(){
+        if(isPreparing||isSubmitting||!modal)return;
+        if(preparedOrderId){setPopup(true);return;}
+        isPreparing=true;
+        if(prepError)prepError.hidden=true;
+        const initialText=openButton.textContent;
+        openButton.disabled=true;
+        openButton.textContent='RESERVING YOUR ORDER…';
+        try{
+            const token=form.querySelector('input[name="__RequestVerificationToken"]').value;
+            const submissionToken=form.querySelector('input[name="SubmissionToken"]').value;
+            const fields=new URLSearchParams({
+                __RequestVerificationToken:token,
+                submissionToken:submissionToken,
+                bkashRecipientNumber:recipient.value
+            });
+            const response=await fetch('/Checkout/Payment/Bkash/Prepare',{
+                method:'POST',
+                credentials:'same-origin',
+                headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8','Accept':'application/json'},
+                body:fields
+            });
+            let result={};
+            try{result=await response.json();}catch{}
+            if(!response.ok)throw new Error(result.message||'Could not reserve your order. Please check your bag and try again.');
+            if(!Number.isInteger(result.orderId)||result.orderId<=0)
+                throw new Error('The order reservation could not be confirmed. Check My Orders before trying again.');
+            if(result.paymentStatus==='Submitted'||result.paymentStatus==='Paid'){
+                window.location.assign('/Checkout/Bkash/Status/'+result.orderId);
+                return;
+            }
+            if(result.paymentStatus!=='Pending')
+                throw new Error('This order can no longer accept a new payment. Open My Orders for its current status.');
+            if(result.recipientNumber!==recipient.value)
+                throw new Error('The store receiving number changed. Do not transfer money; open My Orders and verify the recipient.');
+
+            preparedOrderId=result.orderId;
+            form.action='/Checkout/Bkash/Submit/'+preparedOrderId;
+            const money=Number(result.amount);
+            if(!Number.isFinite(money)||money<0)throw new Error('The order total could not be verified. Do not transfer money.');
+            const display='৳'+money.toLocaleString('en-BD',{minimumFractionDigits:2,maximumFractionDigits:2});
+            const amountEl=document.getElementById('bkashAmount');
+            const stepsEl=document.getElementById('bkashStepsAmount');
+            if(amountEl)amountEl.textContent=display;
+            if(stepsEl)stepsEl.textContent=display;
+            const orderLabel=document.getElementById('bkashOrderNumber');
+            if(orderLabel)orderLabel.textContent='RESERVED ORDER · '+String(result.orderNumber||'');
+            method.value='Bkash';
+            if(codButton)codButton.disabled=true;
+            document.getElementById('codCard')?.classList.add('is-disabled');
+            if(reservedNotice){
+                reservedNotice.hidden=false;
+                reservedNotice.textContent='Your order '+result.orderNumber+' is saved and stock reserved. Complete the manual bKash transfer in the popup or continue from My Orders. Do not place a second order or send money twice.';
+            }
+            setPopup(true);
+            openButton.textContent='CONTINUE BKASH PAYMENT →';
+        }catch(e){
+            showError(e?.message||'Could not reserve your order. Do not send money yet.');
+            if(!preparedOrderId)openButton.textContent=initialText;
+        }finally{
+            isPreparing=false;
+            openButton.disabled=false;
+        }
+    }
+
+    openButton?.addEventListener('click',prepareBkashOrder);
+    document.querySelectorAll('[data-close-bkash]').forEach(el=>el.addEventListener('click',()=>{
+        if(!isSubmitting)setPopup(false);
+    }));
     document.addEventListener('keydown',ev=>{
         if(!modal||modal.hidden)return;
-        if(ev.key==='Escape'){ev.preventDefault();if(!isSubmitting)setPopup(false);}
+        if(ev.key==='Escape'){
+            ev.preventDefault();
+            if(!isSubmitting)setPopup(false);
+        }
         if(ev.key==='Tab'){
-            const elements=[...modal.querySelectorAll('button:not([disabled]),input:not([disabled])')].filter(el=>el.getClientRects().length);
+            const elements=[...modal.querySelectorAll('button:not([disabled]),input:not([disabled])')]
+                .filter(el=>el.getClientRects().length);
             if(!elements.length)return;
             const first=elements[0],last=elements[elements.length-1];
             if(ev.shiftKey&&document.activeElement===first){ev.preventDefault();last.focus();}
             else if(!ev.shiftKey&&document.activeElement===last){ev.preventDefault();first.focus();}
         }
     });
-    codButton?.addEventListener('click',()=>{method.value='COD';inputs.forEach(el=>el.disabled=true);});
+    codButton?.addEventListener('click',()=>{
+        if(preparedOrderId){showError('This checkout already reserved a bKash order. Continue with bKash or open My Orders.');return;}
+        method.value='COD';
+        inputs.forEach(el=>el.disabled=true);
+    });
     submit?.addEventListener('click',()=>{method.value='Bkash';});
     form.addEventListener('submit',ev=>{
         if(isSubmitting){ev.preventDefault();return;}
-        if(method.value==='Bkash'&&(!modal||modal.hidden)){
-            ev.preventDefault();setPopup(true);return;
+        if(method.value==='Bkash'&&(!preparedOrderId||!modal||modal.hidden)){
+            ev.preventDefault();
+            prepareBkashOrder();
+            return;
         }
-        if(method.value!=='COD'&&method.value!=='Bkash'){
-            ev.preventDefault();return;
+        if(preparedOrderId&&method.value!=='Bkash'){
+            ev.preventDefault();
+            showError('A bKash order has already been reserved. Continue that payment from My Orders.');
+            return;
         }
+        if(method.value!=='COD'&&method.value!=='Bkash'){ev.preventDefault();return;}
         if(!form.checkValidity()){
-            ev.preventDefault();form.reportValidity();return;
+            ev.preventDefault();
+            form.reportValidity();
+            return;
         }
         isSubmitting=true;
         if(codButton)codButton.disabled=true;
-        if(submit){submit.disabled=true;submit.textContent='SAVING ORDER & PAYMENT…';}
+        if(submit){submit.disabled=true;submit.textContent='SAVING YOUR PAYMENT DETAILS…';}
     });
     document.getElementById('copyBkash')?.addEventListener('click',async e=>{
         const text=document.getElementById('bkashRecipient')?.textContent?.trim();
         if(!text)return;
-        try{
-            await navigator.clipboard.writeText(text);
-            e.currentTarget.textContent='COPIED ✓';
-        }catch{
-            e.currentTarget.textContent='SELECT NUMBER TO COPY';
-        }
+        try{await navigator.clipboard.writeText(text);e.currentTarget.textContent='COPIED ✓';}
+        catch{e.currentTarget.textContent='SELECT NUMBER TO COPY';}
     });
 })();
-</script>
+</script>>
 </body>
 </html>
