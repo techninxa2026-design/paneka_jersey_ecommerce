@@ -86,7 +86,7 @@
                                     <a class="rv-btn rv-btn-soft" asp-area="Admin" asp-controller="Reviews" asp-action="Details" asp-route-id="@review.Id" title="View review" aria-label="View review"><i class="bi bi-eye"></i></a>
                                     @if (!review.IsApproved || review.IsRejected)
                                     {
-                                        <form asp-area="Admin" asp-controller="Reviews" asp-action="Approve" asp-route-id="@review.Id" method="post">
+                                        <form action="@Url.Action("Approve", "Reviews", new { area = "Admin", id = review.Id })" method="post">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="search" value="@Model.Search" /><input type="hidden" name="status" value="@Model.Status" /><input type="hidden" name="rating" value="@Model.Rating" /><input type="hidden" name="page" value="@Model.Page" />
                                             <button class="rv-btn rv-btn-success" type="submit" title="Approve review" aria-label="Approve review"><i class="bi bi-check-lg"></i></button>
@@ -94,7 +94,7 @@
                                     }
                                     @if (!review.IsRejected)
                                     {
-                                        <form asp-area="Admin" asp-controller="Reviews" asp-action="Reject" asp-route-id="@review.Id" method="post">
+                                        <form action="@Url.Action("Reject", "Reviews", new { area = "Admin", id = review.Id })" method="post">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="search" value="@Model.Search" /><input type="hidden" name="status" value="@Model.Status" /><input type="hidden" name="rating" value="@Model.Rating" /><input type="hidden" name="page" value="@Model.Page" />
                                             <button class="rv-btn rv-btn-danger" type="submit" title="Reject review" aria-label="Reject review"><i class="bi bi-x-lg"></i></button>
@@ -102,13 +102,13 @@
                                     }
                                     @if (review.IsApproved || review.IsRejected)
                                     {
-                                        <form asp-area="Admin" asp-controller="Reviews" asp-action="Pending" asp-route-id="@review.Id" method="post">
+                                        <form action="@Url.Action("Pending", "Reviews", new { area = "Admin", id = review.Id })" method="post">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="search" value="@Model.Search" /><input type="hidden" name="status" value="@Model.Status" /><input type="hidden" name="rating" value="@Model.Rating" /><input type="hidden" name="page" value="@Model.Page" />
                                             <button class="rv-btn" type="submit" title="Return to pending" aria-label="Return to pending"><i class="bi bi-arrow-counterclockwise"></i></button>
                                         </form>
                                     }
-                                    <form asp-area="Admin" asp-controller="Reviews" asp-action="Delete" asp-route-id="@review.Id" method="post" onsubmit="return confirm('Permanently delete this customer review?');">
+                                    <form action="@Url.Action("Delete", "Reviews", new { area = "Admin", id = review.Id })" method="post" onsubmit="return confirm('Permanently delete this customer review?');">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="search" value="@Model.Search" /><input type="hidden" name="status" value="@Model.Status" /><input type="hidden" name="rating" value="@Model.Rating" /><input type="hidden" name="page" value="@Model.Page" />
                                         <button class="rv-btn" type="submit" title="Delete review" aria-label="Delete review"><i class="bi bi-trash3"></i></button>
