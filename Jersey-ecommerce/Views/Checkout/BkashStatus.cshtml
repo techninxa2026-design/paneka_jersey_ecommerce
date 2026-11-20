@@ -221,5 +221,27 @@
     });
 })();
 </script>
+@if (submitted)
+{
+    <script>
+    (() => {
+        const url = '/Checkout/Bkash/State/@Model.OrderId';
+        let checking = false;
+        // No payment API: just read this authenticated customer's own order.
+        // Reload if staff have verified/rejected the manual transfer.
+        window.setInterval(async () => {
+            if (document.hidden || checking) return;
+            checking = true;
+            try {
+                const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+                if (!response.ok) return;
+                const state = await response.json();
+                if (state.paymentStatus !== 'Submitted') window.location.reload();
+            } catch { /* Network interruption: continue showing the last confirmed state. */ }
+            finally { checking = false; }
+        }, 20000);
+    })();
+    </script>
+}
 </body>
 </html>
