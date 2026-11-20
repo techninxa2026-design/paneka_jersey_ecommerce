@@ -319,3 +319,11 @@
         </aside>
     </div>
 </div>
+@if (Context.Request.Query["section"].ToString() == "payment-review")
+{
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('payment-review')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    </script>
+}
