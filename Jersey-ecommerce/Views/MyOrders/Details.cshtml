@@ -16,6 +16,15 @@
     var steps = new[] { "Pending", "Confirmed", "Processing", "Shipped", "Delivered" };
     var currentStep = Array.IndexOf(steps, Model.Status);
     var history = Model.StatusHistory.OrderBy(h => h.CreatedAt).ThenBy(h => h.Id).ToList();
+    var reviewStates = ViewBag.CustomerProductReviews as Dictionary<int, string> ?? new();
+    var reviewItems = Model.Status == "Delivered"
+        ? Model.Items.Where(i => i.ProductVariant?.Product != null)
+            .GroupBy(i => i.ProductVariant!.ProductId)
+            .Select(g => g.First()).ToList()
+        : new List<Jersey_ecommerce.Models.Orders.OrderItem>();
+    var pendingReviews = reviewItems
+        .Where(i => !reviewStates.TryGetValue(i.ProductVariant!.ProductId, out var status) ||
+            status == "Rejected").ToList();
 }
 <!doctype html>
 <html lang="en">
@@ -27,6 +36,7 @@
     <link rel="stylesheet" href="/css/panenka-checkout.css" asp-append-version="true" />
     <link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true" />
     <link rel="stylesheet" href="/css/panenka-orders.css" asp-append-version="true" />
+    <link rel="stylesheet" href="/css/panenka-reviews.css" asp-append-version="true" />
 </head>
 <body>
 @await Html.PartialAsync("_PanenkaCheckoutHeader")
@@ -47,6 +57,23 @@
         </div>
         <a class="pn-order-action" href="/MyOrders">← ALL ORDERS</a>
     </div>
+    @if (reviewItems.Count > 0)
+    {
+        <section class="pn-reviews-callout" aria-labelledby="pn-review-prompt">
+            <div>
+                <div class="pn-reviews-callout-eyebrow">ORDER DELIVERED · YOUR FEEDBACK MATTERS</div>
+                <h2 id="pn-review-prompt">@(pendingReviews.Count > 0 ? "How did your jersey fit?" : "Thanks for sharing your experience.")</h2>
+                <p>@(pendingReviews.Count > 0
+                    ? $"{pendingReviews.Count} {((pendingReviews.Count == 1) ? "item is" : "items are")} ready for your feedback. Rate the product you received and we'll send it to the PANENKA review team."
+                    : "Your submitted product feedback is saved. You can check its moderation status below.")</p>
+            </div>
+            @if (pendingReviews.Count > 0)
+            {
+                var first = pendingReviews[0];
+                <a href="/MyOrders/@Model.Id/Review/@first.ProductVariant!.ProductId">@(reviewStates.TryGetValue(first.ProductVariant!.ProductId, out var state) && state == "Rejected" ? "REVISE YOUR REVIEW" : "WRITE A REVIEW") ↗</a>
+            }
+        </section>
+    }
     <div class="pn-order-grid">
         <div class="pn-order-stack">
             <section class="pn-order-card pn-order-section">
@@ -62,10 +89,32 @@
                                 {
                                     <small style="display:block">SKU: @item.SKU</small>
                                 }
-                                @if (Model.Status == "Delivered" && !string.IsNullOrWhiteSpace(item.ProductVariant?.Product?.Slug))
+                                @if (Model.Status == "Delivered" && item.ProductVariant?.Product != null)
                                 {
-                                    <a class="pn-order-action" style="display:inline-block;margin-top:7px"
-                                       href="@($"/Product/Details/{Uri.EscapeDataString(item.ProductVariant!.Product.Slug)}#reviews")">WRITE A PRODUCT REVIEW ↗</a>
+                                    var productId = item.ProductVariant.ProductId;
+                                    var reviewStatus = reviewStates.TryGetValue(productId, out var storedStatus)
+                                        ? storedStatus : "NotReviewed";
+                                    <div class="pn-order-review-status @(reviewStatus == "Pending" ? "is-pending" : reviewStatus == "Rejected" ? "is-rejected" : "")">
+                                        @switch (reviewStatus)
+                                        {
+                                            case "Approved":
+                                                <span>✓ Your product review is published.</span>
+                                                break;
+                                            case "Pending":
+                                                <span>◷ Review submitted · Awaiting admin approval.</span>
+                                                break;
+                                            case "Rejected":
+                                                <span>Review not approved · You can edit and resubmit.</span>
+                                                break;
+                                            default:
+                                                <span>Delivered · Eligible for a verified-purchase review.</span>
+                                                break;
+                                        }
+                                    </div>
+                                    <a class="pn-order-action" style="display:inline-block;margin-top:9px"
+                                       href="/MyOrders/@Model.Id/Review/@productId">
+                                        @(reviewStatus == "Approved" ? "VIEW MY PUBLISHED REVIEW" : reviewStatus == "Pending" ? "VIEW REVIEW STATUS" : reviewStatus == "Rejected" ? "EDIT & RESUBMIT REVIEW" : "RATE & REVIEW THIS PRODUCT") ↗
+                                    </a>
                                 }
                             </div>
                             <b>৳@item.LineTotal.ToString("N2")</b>
