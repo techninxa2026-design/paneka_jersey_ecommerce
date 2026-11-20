@@ -55,6 +55,10 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
 
             // Normalize before model validation; the attributes still validate after binding.
             model.CurrencyCode = (model.CurrencyCode ?? "").Trim().ToUpperInvariant();
+            model.ManualBkashNumber = string.IsNullOrWhiteSpace(model.ManualBkashNumber)
+                ? null : model.ManualBkashNumber.Trim();
+            model.ManualBkashInstructions = string.IsNullOrWhiteSpace(model.ManualBkashInstructions)
+                ? null : model.ManualBkashInstructions.Trim();
             ModelState.Remove(nameof(model.CurrencyCode));
             // Re-validate normalized currency and all other properties.
             TryValidateModel(model);
@@ -134,6 +138,8 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
 
                 Set("operations.maintenance", Bool(model.IsMaintenanceMode), "Storefront maintenance preference");
                 Set("operations.cash_on_delivery", Bool(model.AllowCashOnDelivery), "Checkout cash on delivery preference");
+                Set("payments.bkash_number", model.ManualBkashNumber, "Manual bKash receiving account number; empty disables new bKash checkout");
+                Set("payments.bkash_instructions", model.ManualBkashInstructions, "Instructions displayed alongside manual bKash payment details");
                 Set("operations.order_notifications", Bool(model.SendOrderNotifications), "Order notification preference");
                 Set("shipping.standard_fee", Money(model.StandardShippingFee), "Standard delivery fee");
                 Set("shipping.free_threshold", Money(model.FreeShippingThreshold), "Spend threshold for free delivery (0 disables)");
@@ -205,6 +211,9 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
             WhatsAppNumber = Get(s, "contact.whatsapp"),
             IsMaintenanceMode = GetBool(s, "operations.maintenance"),
             AllowCashOnDelivery = GetBool(s, "operations.cash_on_delivery", true),
+            ManualBkashNumber = Get(s, "payments.bkash_number"),
+            ManualBkashInstructions = Get(s, "payments.bkash_instructions",
+                "Send Money to the receiving number shown, then submit your sender number, transaction ID and payment time."),
             SendOrderNotifications = GetBool(s, "operations.order_notifications", true),
             StandardShippingFee = GetMoney(s, "shipping.standard_fee"),
             FreeShippingThreshold = GetMoney(s, "shipping.free_threshold"),
