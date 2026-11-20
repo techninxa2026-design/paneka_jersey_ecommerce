@@ -74,12 +74,12 @@ public sealed class CouponAndCampaignTests
         Assert.Equal(2700m, order.TotalAmount);
         Assert.Equal(300m, order.DiscountAmount);
         Assert.Equal("MATCH10", order.CouponCode);
-        Assert.Equal(1, (await db.Coupons.SingleAsync(c => c.Id == 1)).UsageCount);
+        Assert.Equal(1, (await db.Coupons.AsNoTracking().SingleAsync(c => c.Id == 1)).UsageCount);
         Assert.Single(await db.CouponUsages.ToListAsync());
         await Assert.ThrowsAsync<CheckoutException>(() => checkout.SetCoupon("buyer", "MATCH10"));
 
         await new OrderCancellationService(db, stock).CancelUnpaidPendingOrder(orderId, "buyer");
-        Assert.Equal(0, (await db.Coupons.SingleAsync(c => c.Id == 1)).UsageCount);
+        Assert.Equal(0, (await db.Coupons.AsNoTracking().SingleAsync(c => c.Id == 1)).UsageCount);
         Assert.Empty(await db.CouponUsages.ToListAsync());
         Assert.Equal(5, (await db.ProductVariants.SingleAsync()).StockQuantity);
     }
@@ -146,7 +146,7 @@ public sealed class CouponAndCampaignTests
     }
 
     private static JsonDocument Json(OkObjectResult value) =>
-        JsonDocument.Parse(JsonSerializer.Serialize(value.Value));
+        JsonDocument.Parse(JsonSerializer.Serialize(value.Value, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
 
     private static ApplicationDbContext Database(SqliteConnection connection) =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(connection).Options);
