@@ -53,7 +53,7 @@
                     <div>
                         <div class="mb-eyebrow">ORDER @Model.OrderNumber</div>
                         <h2>Manual bKash transfer</h2>
-                        <p>The receiving wallet and amount below are saved with your order.</p>
+                        <p>Your order amount and any published receiving wallet are recorded below. You can submit a manual transfer reference for staff verification.</p>
                     </div>
                     <span class="mb-brand-pill"><i class="bi bi-wallet2"></i> BKASH</span>
                 </div>
@@ -72,9 +72,9 @@
                 }
                 else
                 {
-                    <div class="mb-alert mb-alert-error">A receiving number was not saved for this older order. Please contact PANENKA support instead of sending money to an unconfirmed number.</div>
+                    <div class="mb-alert" role="note"><strong>No receiving wallet is published for this order.</strong> If you already sent money using the store's directly provided details, enter the bKash sender number and TrxID to have it reviewed. If you have not sent money, ask PANENKA for the correct receiving number first.</div>
                 }
-                @if (!Model.ReceivingAccountIsCurrent && !paid)
+                @if (!string.IsNullOrWhiteSpace(Model.RecipientNumber) && !Model.ReceivingAccountIsCurrent && !paid)
                 {
                     <div class="mb-alert mb-alert-error" role="alert">
                         <strong>This receiving number is no longer the store's current bKash account.</strong>
@@ -82,7 +82,7 @@
                         you may submit your earlier transaction details for reconciliation. Otherwise contact PANENKA support.
                     </div>
                 }
-                else
+                else if (!string.IsNullOrWhiteSpace(Model.RecipientNumber))
                 {
                     <p class="mb-note">@Model.Instructions</p>
                 }
@@ -95,6 +95,15 @@
                     <li>Copy the transaction ID (TrxID) from your bKash confirmation and complete the form on this page.</li>
                     <li>The PANENKA admin will independently check receipt and confirm your order.</li>
                 </ol>
+                }
+                @if (string.IsNullOrWhiteSpace(Model.RecipientNumber) && !paid)
+                {
+                    <ol class="mb-guide">
+                        <li>Check the actual bKash transfer you made using details supplied directly by the store.</li>
+                        <li>Confirm the amount was <strong>৳@Model.Amount.ToString("N2")</strong>.</li>
+                        <li>Enter the sender bKash number and TrxID from your official transaction confirmation.</li>
+                        <li>Your order is recorded immediately; staff must independently verify the payment before fulfillment.</li>
+                    </ol>
                 }
                 <div class="mb-privacy"><i class="bi bi-shield-lock"></i> We will never ask for your bKash PIN, password, or OTP. This website does not process the transfer itself.</div>
             </section>

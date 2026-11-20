@@ -67,6 +67,15 @@
                         <div><span>Submitted (BDT)</span><strong>@(payment.ManualSubmittedAt.HasValue ? payment.ManualSubmittedAt.Value.AddHours(6).ToString("dd MMM yyyy · hh:mm tt") : "—")</strong></div>
                         <div><span>Order status</span><strong>@payment.Order.Status</strong></div>
                     </div>
+                    @if (isBkash && string.IsNullOrWhiteSpace(payment.ManualRecipientNumber))
+                    {
+                        <div class="mb-alert" role="note">
+                            <strong>No merchant receiving number was configured for this order.</strong>
+                            The customer reported a manual transfer using payment details supplied outside the site.
+                            Independently reconcile the sender, TrxID, date and exact amount against the store's actual bKash wallet before verifying.
+                            Never approve based only on a customer-entered TrxID.
+                        </div>
+                    }
                     <div class="mb-review-actions">
                         <form method="post" action="/Admin/CheckoutPaymentReview/Confirm/@payment.Id"
                               onsubmit="return confirm('I checked the receiving wallet independently and verified the full amount and transaction ID. Confirm as paid?')">

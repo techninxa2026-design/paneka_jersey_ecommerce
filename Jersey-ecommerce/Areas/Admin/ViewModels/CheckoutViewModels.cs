@@ -60,7 +60,10 @@ public sealed class PaymentPageViewModel
     public CartSummaryDto Cart { get; set; } = new();
     public decimal ShippingCost { get; init; }
     public bool AllowCashOnDelivery { get; init; } = true;
-    public bool AllowManualBkash => !string.IsNullOrWhiteSpace(ManualBkashNumber);
+    // Manual bKash receipt reporting must remain available even when the
+    // merchant wallet has not yet been entered in admin settings.
+    public bool AllowManualBkash => true;
+    public bool HasConfiguredBkashRecipient => !string.IsNullOrWhiteSpace(ManualBkashNumber);
     public string? ManualBkashNumber { get; init; }
     public string ManualBkashInstructions { get; init; } =
         "Send Money to the receiving number displayed, then submit your transaction details for staff verification.";

@@ -302,14 +302,18 @@ public sealed class CheckoutService(
         if (input.PaymentMethod == "COD" && !await CodEnabled())
             throw new CheckoutException("Cash on delivery is disabled.");
 
+        // A merchant number can be configured in Admin, but not having one
+        // must never disable a customer's manual receipt submission.
         var manualRecipient = input.PaymentMethod == "Bkash" ? await ManualBkashNumber() : null;
-        if (input.PaymentMethod == "Bkash" && manualRecipient is null)
-            throw new CheckoutException("Manual bKash is not available. Choose another payment option or contact support.");
         ManualBkashPaymentService.CustomerTransfer? transfer = null;
         if (input.PaymentMethod == "Bkash")
         {
-            if (!string.Equals(input.BkashRecipientNumber, manualRecipient, StringComparison.Ordinal))
-                throw new CheckoutException("The store's bKash number changed. Reload checkout and confirm the latest receiving number before transferring.");
+            // If a wallet is published, pin this checkout to the shown number.
+            // Without one, store a null recipient and allow the submitted TrxID
+            // to be reconciled independently by staff.
+            if (!string.Equals(input.BkashRecipientNumber?.Trim() ?? "",
+                    manualRecipient ?? "", StringComparison.Ordinal))
+                throw new CheckoutException("The store's bKash number changed. Reload checkout to confirm the latest receiving details.");
             if (!prepareManualBkash)
                 transfer = ManualBkashPaymentService.ValidateTransfer(
                     input.BkashSenderNumber, input.BkashTransactionId, input.BkashPaidAtLocal);

@@ -192,7 +192,7 @@
                                 <input asp-for="ManualBkashNumber" class="st-input" inputmode="numeric"
                                        maxlength="11" autocomplete="off" placeholder="01XXXXXXXXX" />
                                 <span asp-validation-for="ManualBkashNumber" class="st-error"></span>
-                                <small>Customers will send the exact order total to this number through the bKash app, then report their transaction ID. Leave blank and save to remove/disable bKash for new orders.</small>
+                                <small>Optional: publish the merchant bKash receiving number in the payment popup. If left blank, the bKash button stays enabled, and customers can submit their sender number and TrxID for transfers arranged directly with PANENKA. Do not ask customers to send money to an unverified number.</small>
                             </div>
                             <div class="st-field" style="margin-top:22px">
                                 <label asp-for="ManualBkashInstructions">Customer transfer instructions</label>

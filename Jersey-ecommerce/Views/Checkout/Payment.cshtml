@@ -73,16 +73,16 @@
                         <div><strong>Pay with bKash</strong><small>Manual Send Money transfer.</small></div>
                         @if (bkashAvailable) { <span class="bd-method-label bd-label-pink">MANUAL</span> }
                     </div>
-                    <p>Reserve your order first, then send the exact total to our number and report your TrxID.</p>
+                    <p>Reserve your order and report the bKash sender number and TrxID from your transfer.</p>
                     <button type="button" class="bd-method-action bd-method-action-pink" id="openBkash"
                             disabled="@(!bkashAvailable)" aria-haspopup="dialog" aria-controls="bkashDialog">
                         @(bkashAvailable ? "PAY WITH BKASH" : "BKASH UNAVAILABLE") <span>→</span>
                     </button>
                 </section>
             </div>
-            @if (!bkashAvailable)
+            @if (!Model.HasConfiguredBkashRecipient)
             {
-                <p class="bd-payment-footnote">Manual bKash is unavailable until the store configures its receiving number. Cash on delivery remains available when enabled.</p>
+                <p class="bd-payment-footnote"><strong>Manual bKash reporting is available.</strong> If you already transferred using payment details supplied by PANENKA, open the popup and enter your sender number and TrxID. If you have not transferred, request the store's verified receiving number before sending money.</p>
             }
 
             <div class="bd-shipping-review">
@@ -118,17 +118,38 @@
                             <button type="button" class="bd-modal-close" data-close-bkash aria-label="Close payment popup"><i class="bi bi-x-lg"></i></button>
                         </header>
                         <div class="bd-modal-body">
-                            <div class="bd-payee">
-                                <div><small>STORE BKASH RECEIVING NUMBER</small><strong id="bkashRecipient">@Model.ManualBkashNumber</strong></div>
-                                <button type="button" id="copyBkash" class="bd-copy-number"><i class="bi bi-copy"></i> COPY</button>
-                            </div>
+                            @if (Model.HasConfiguredBkashRecipient)
+                            {
+                                <div class="bd-payee">
+                                    <div><small>STORE BKASH RECEIVING NUMBER</small><strong id="bkashRecipient">@Model.ManualBkashNumber</strong></div>
+                                    <button type="button" id="copyBkash" class="bd-copy-number"><i class="bi bi-copy"></i> COPY</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="bd-safety" role="note" style="margin-top:0">
+                                    <i class="bi bi-info-circle"></i>
+                                    <span><strong>Report a manual bKash transfer.</strong> If you already sent money to the PANENKA wallet shared by the store, enter your sender number and TrxID below. The store has not published a receiving number here; if you have not paid, contact the store for verified receiving details before sending money.</span>
+                                </div>
+                            }
                             <div class="bd-transfer-total"><span>Exact amount to send</span><strong id="bkashAmount">৳@Model.GrandTotal.ToString("N2")</strong></div>
-                            <p class="bd-modal-instructions">@Model.ManualBkashInstructions</p>
-                            <ol class="bd-transfer-steps">
-                                <li>Open the official bKash app and select <strong>Send Money</strong>.</li>
-                                <li>Check the recipient above and transfer exactly <strong id="bkashStepsAmount">৳@Model.GrandTotal.ToString("N2")</strong>.</li>
-                                <li>Find your transaction ID (TrxID) in the bKash confirmation, then submit the details.</li>
-                            </ol>
+                            @if (Model.HasConfiguredBkashRecipient)
+                            {
+                                <p class="bd-modal-instructions">@Model.ManualBkashInstructions</p>
+                                <ol class="bd-transfer-steps">
+                                    <li>Open the official bKash app and select <strong>Send Money</strong>.</li>
+                                    <li>Check the recipient above and transfer exactly <strong id="bkashStepsAmount">৳@Model.GrandTotal.ToString("N2")</strong>.</li>
+                                    <li>Find your transaction ID (TrxID) in the bKash confirmation, then submit the details.</li>
+                                </ol>
+                            }
+                            else
+                            {
+                                <ol class="bd-transfer-steps">
+                                    <li>Only report money you actually sent using the receiving details supplied by PANENKA.</li>
+                                    <li>Find your bKash confirmation and verify that it matches this order's total: <strong id="bkashStepsAmount">৳@Model.GrandTotal.ToString("N2")</strong>.</li>
+                                    <li>Enter the sender wallet and TrxID below; staff will independently verify the transfer.</li>
+                                </ol>
+                            }
                             <div class="bd-transfer-form">
                                 <input type="hidden" name="BkashRecipientNumber" id="BkashRecipientNumber" value="@Model.ManualBkashNumber" disabled />
                                 <div class="bd-modal-field">
@@ -258,7 +279,7 @@
             }
             if(result.paymentStatus!=='Pending')
                 throw new Error('This order can no longer accept a new payment. Open My Orders for its current status.');
-            if(result.recipientNumber!==recipient.value)
+            if((result.recipientNumber||'')!==(recipient.value||''))
                 throw new Error('The store receiving number changed. Do not transfer money; open My Orders and verify the recipient.');
 
             preparedOrderId=result.orderId;

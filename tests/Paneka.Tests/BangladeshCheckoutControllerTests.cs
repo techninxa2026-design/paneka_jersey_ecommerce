@@ -124,6 +124,45 @@ public sealed class BangladeshCheckoutControllerTests
         Assert.Null(payment.PaidAt);
         Assert.Equal("Pending", (await db.Orders.AsNoTracking().SingleAsync()).Status);
         Assert.Single(await db.PaymentTransactions.AsNoTracking().ToListAsync());
+
+        // Remove the merchant receiving number entirely. The actual MVC
+        // PrepareBkash endpoint must still reserve a new order, and the real
+        // BkashController must accept sender + TrxID for staff review.
+        db.SiteSettings.RemoveRange(await db.SiteSettings.ToListAsync());
+        db.CartItems.Add(new CartItem
+        {
+            ShoppingCartId = 1, ProductVariantId = 1, Quantity = 1
+        });
+        await db.SaveChangesAsync();
+        var secondToken = Guid.NewGuid().ToString("N");
+        http.Session.SetString("PANENKA_ORDER_TOKEN_V2_buyer", secondToken);
+        var noNumberResult = Assert.IsType<OkObjectResult>(
+            await controller.PrepareBkash(secondToken, null));
+        using var noNumberBody = JsonDocument.Parse(
+            JsonSerializer.Serialize(noNumberResult.Value));
+        var secondId = noNumberBody.RootElement.GetProperty("orderId").GetInt32();
+        Assert.Equal(JsonValueKind.Null,
+            noNumberBody.RootElement.GetProperty("recipientNumber").ValueKind);
+        Assert.Equal("Pending",
+            noNumberBody.RootElement.GetProperty("paymentStatus").GetString());
+        Assert.True(secondId != id);
+        var beforeClaim = Assert.IsType<ManualBkashStatusModel>(
+            Assert.IsType<ViewResult>(await paymentController.Status(secondId)).Model);
+        Assert.True(beforeClaim.CanSubmit);
+        Assert.Null(beforeClaim.RecipientNumber);
+
+        var submittedNoNumber = await paymentController.Submit(
+            secondId, "01912345678", "ZX98765432", DateTime.UtcNow.AddHours(6));
+        Assert.IsType<RedirectToActionResult>(submittedNoNumber);
+        var newPayment = await db.Payments.AsNoTracking()
+            .SingleAsync(x => x.OrderId == secondId);
+        Assert.Equal("Submitted", newPayment.Status);
+        Assert.Equal("01912345678", newPayment.ManualSenderNumber);
+        Assert.Equal("ZX98765432", newPayment.TransactionReference);
+        Assert.Null(newPayment.ManualRecipientNumber);
+        Assert.Null(newPayment.PaidAt);
+        Assert.Equal(2, await db.Orders.AsNoTracking().CountAsync());
+        Assert.Equal(2, await db.PaymentTransactions.AsNoTracking().CountAsync());
     }
 
     private sealed class InMemorySessionFeature : ISessionFeature
