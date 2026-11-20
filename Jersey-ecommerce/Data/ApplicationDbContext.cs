@@ -10,6 +10,8 @@ using Jersey_ecommerce.Models.Promotions;
 using Jersey_ecommerce.Models.Content;
 using Jersey_ecommerce.Models.Customers;
 using Jersey_ecommerce.Models.Checkout;
+using Jersey_ecommerce.Models.Notifications;
+using Jersey_ecommerce.Services;
 
 namespace Jersey_ecommerce.Data
 {
@@ -45,6 +47,22 @@ namespace Jersey_ecommerce.Data
                     .HasForeignKey(x => x.OrderId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
+            // Notifications and independent per-admin read acknowledgements.
+            builder.Entity<AdminNotification>(entity =>
+            {
+                entity.HasIndex(n => new { n.CreatedAt, n.Id });
+                entity.HasIndex(n => new { n.Category, n.CreatedAt });
+            });
+            builder.Entity<AdminNotificationRead>(entity =>
+            {
+                entity.HasIndex(r => new { r.AdminUserId, r.AdminNotificationId })
+                    .IsUnique();
+                entity.HasOne(r => r.Notification)
+                    .WithMany(n => n.Reads)
+                    .HasForeignKey(r => r.AdminNotificationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // ==========================================
             // CUSTOMERS: APPLICATION USER -> ADDRESSES
             // ==========================================
@@ -531,6 +549,9 @@ namespace Jersey_ecommerce.Data
         // ==========================================
         // ORDERS
         // ==========================================
+        public DbSet<AdminNotification> AdminNotifications => Set<AdminNotification>();
+        public DbSet<AdminNotificationRead> AdminNotificationReads => Set<AdminNotificationRead>();
+
         public DbSet<SiteSettings> SiteSettings => Set<SiteSettings>();
         public DbSet<Order> Orders => Set<Order>();
 
@@ -613,5 +634,56 @@ namespace Jersey_ecommerce.Data
         public DbSet<ProductCollection> ProductCollections
             => Set<ProductCollection>();
        
+        // Capture domain changes at one central persistence boundary.
+        // Notifications are committed alongside their business transaction,
+        // never generated from an unrelated page visit or background poll.
+        public override int SaveChanges() => SaveChangesAsync().GetAwaiter().GetResult();
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+            => SaveChangesAsync(acceptAllChangesOnSuccess).GetAwaiter().GetResult();
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+            => SaveChangesAsync(true, cancellationToken);
+
+        public override async Task<int> SaveChangesAsync(
+            bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            if (!acceptAllChangesOnSuccess)
+                return await base.SaveChangesAsync(false, cancellationToken);
+
+            var pending = AdminNotificationCollector.Collect(this);
+            if (pending.Count == 0)
+                return await base.SaveChangesAsync(true, cancellationToken);
+
+            // The EF InMemory provider is used by catalog regression tests.
+            // It does not support transactions; SQL Server and SQLite do.
+            if (!Database.IsRelational())
+            {
+                var affectedInMemory = await base.SaveChangesAsync(true, cancellationToken);
+                AdminNotifications.AddRange(pending.Select(factory => factory()));
+                await base.SaveChangesAsync(true, cancellationToken);
+                return affectedInMemory;
+            }
+
+            await using var ownTransaction = Database.CurrentTransaction == null
+                ? await Database.BeginTransactionAsync(cancellationToken)
+                : null;
+            try
+            {
+                var affected = await base.SaveChangesAsync(true, cancellationToken);
+                // Identity keys have now been assigned; event links are exact.
+                AdminNotifications.AddRange(pending.Select(factory => factory()));
+                await base.SaveChangesAsync(true, cancellationToken);
+                if (ownTransaction != null)
+                    await ownTransaction.CommitAsync(cancellationToken);
+                return affected;
+            }
+            catch
+            {
+                if (ownTransaction != null)
+                    await ownTransaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        }
     }
 }

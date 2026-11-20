@@ -1,0 +1,17 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.AdminNotificationBellViewModel
+<div class="dropdown an-bell" id="adminNotificationBell">
+    <button type="button" class="admin-icon-button an-bell-trigger"
+            id="adminNotificationTrigger" data-bs-toggle="dropdown"
+            data-bs-auto-close="outside" aria-expanded="false"
+            aria-haspopup="true" aria-controls="adminNotificationsPopup"
+            aria-label="Admin notifications, @Model.UnreadCount unread">
+        <i class="bi bi-bell"></i>
+        <span id="adminNotificationBadge" class="an-count @(Model.UnreadCount == 0 ? "an-count-hidden" : "")"
+              aria-label="@Model.UnreadCount unread">
+            @(Model.UnreadCount > 99 ? "99+" : Model.UnreadCount.ToString())
+        </span>
+    </button>
+    <div class="dropdown-menu dropdown-menu-end an-dropdown" id="adminNotificationsPopup">
+        @await Html.PartialAsync("~/Areas/Admin/Views/Notifications/_NotificationPopup.cshtml", Model)
+    </div>
+</div>
