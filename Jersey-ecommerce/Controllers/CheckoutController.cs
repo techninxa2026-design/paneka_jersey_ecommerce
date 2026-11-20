@@ -125,6 +125,73 @@ public sealed class CheckoutController(
         });
     }
 
+    // Reserve inventory, coupon and a pending order before displaying transfer
+    // instructions. The browser popup collects TrxID only AFTER the order exists.
+    [HttpPost("Payment/Bkash/Prepare")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> PrepareBkash(string? submissionToken, string? bkashRecipientNumber)
+    {
+        var delivery = ReadDelivery();
+        if (delivery is null || delivery.Region is not ("Dhaka" or "OutsideDhaka") ||
+            !BangladeshDistricts.IsValid(delivery.District) ||
+            (delivery.Region == "Dhaka" && !BangladeshDistricts.IsDhaka(delivery.District)))
+            return BadRequest(new { message = "Your delivery details need updating. Return to Delivery and try again." });
+
+        var storedToken = HttpContext.Session.GetString(OrderTokenSession);
+        if (!Guid.TryParseExact(submissionToken, "N", out _) ||
+            !string.Equals(storedToken, submissionToken, StringComparison.Ordinal))
+            return BadRequest(new { message = "Your checkout session expired. Reload the payment page." });
+
+        var input = new PlaceOrderInput
+        {
+            PaymentMethod = "Bkash", SubmissionToken = submissionToken!,
+            BkashRecipientNumber = bkashRecipientNumber
+        };
+
+        try
+        {
+            var orderId = await cart.PlaceOrder(UserId, delivery, input, prepareManualBkash: true);
+            var order = await db.Orders.AsNoTracking().Include(o => o.Payment)
+                .SingleAsync(o => o.Id == orderId && o.UserId == UserId);
+            if (order.Payment?.Method != "Bkash")
+                return Conflict(new { message = "This checkout belongs to a different payment method. Open My Orders." });
+
+            // Once submitted, do not offer to pay again against a completed or
+            // already-reported payment. Returning the order ID allows resume.
+            return Ok(new
+            {
+                orderId = order.Id,
+                orderNumber = order.OrderNumber,
+                recipientNumber = order.Payment.ManualRecipientNumber,
+                amount = order.Payment.Amount,
+                paymentStatus = order.Payment.Status
+            });
+        }
+        catch (CheckoutException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Could not prepare manual bKash order for customer {UserId}", UserId);
+            var prior = await FindPreviousOrder(submissionToken ?? "");
+            if (prior is not null && prior.Value.Method == "Bkash")
+            {
+                var order = await db.Orders.AsNoTracking().Include(o => o.Payment)
+                    .SingleAsync(o => o.Id == prior.Value.OrderId && o.UserId == UserId);
+                return Ok(new
+                {
+                    orderId = order.Id,
+                    orderNumber = order.OrderNumber,
+                    recipientNumber = order.Payment?.ManualRecipientNumber,
+                    amount = order.Payment?.Amount,
+                    paymentStatus = order.Payment?.Status
+                });
+            }
+            return StatusCode(503, new { message = "Could not reserve this order. No transfer should be made until checkout confirms the reservation. Check My Orders before retrying." });
+        }
+    }
+
     [HttpPost("Payment")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Payment(PlaceOrderInput input)
