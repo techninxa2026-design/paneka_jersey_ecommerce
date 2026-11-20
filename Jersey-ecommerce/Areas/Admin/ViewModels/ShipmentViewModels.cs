@@ -14,6 +14,26 @@ public static class ShipmentStatuses
     public static bool IsValid(string? value) =>
         value is not null && Values.Contains(value, StringComparer.Ordinal);
 
+    // The storefront's order status is authoritative. Courier updates may
+    // advance only through real delivery stages, never jump from pending to
+    // delivered or re-open a closed shipment.
+    public static IReadOnlyList<string> AllowedNext(string? current) => current switch
+    {
+        "Pending" => ["Packed"],
+        "Packed" => ["Shipped"],
+        "Shipped" => ["InTransit", "OutForDelivery", "Failed"],
+        "InTransit" => ["OutForDelivery", "Failed"],
+        "OutForDelivery" => ["Delivered", "Failed"],
+        "Failed" => ["InTransit", "OutForDelivery", "Returned"],
+        "Delivered" => ["Returned"],
+        _ => []
+    };
+
+    public static bool CanTransition(string? current, string? next) =>
+        IsValid(current) && IsValid(next) &&
+        (string.Equals(current, next, StringComparison.Ordinal) ||
+         AllowedNext(current).Contains(next!, StringComparer.Ordinal));
+
     public static string Label(string? value) => value switch
     {
         "InTransit" => "In transit",
@@ -59,6 +79,7 @@ public sealed class ShipmentFormViewModel
     public string? OrderNumber { get; set; }
     public string? CustomerName { get; set; }
     public List<SelectListItem> AvailableOrders { get; set; } = new();
+    public List<string> AllowedStatuses { get; set; } = new();
 }
 
 public sealed class ShipmentListRowViewModel
