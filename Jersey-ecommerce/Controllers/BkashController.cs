@@ -45,6 +45,8 @@ public sealed class BkashController(
             PaymentStatus = payment.Status,
             OrderStatus = order.Status,
             RecipientNumber = payment.ManualRecipientNumber,
+            ReceivingAccountIsCurrent = payment.ManualRecipientNumber != null &&
+                payment.ManualRecipientNumber == await manual.CurrentReceivingNumberAsync(),
             Instructions = await manual.CurrentInstructionsAsync(),
             SenderNumber = payment.ManualSenderNumber,
             TransactionId = payment.TransactionReference,
@@ -93,6 +95,7 @@ public sealed class ManualBkashStatusModel
     public string PaymentStatus { get; set; } = "Pending";
     public string OrderStatus { get; set; } = "Pending";
     public string? RecipientNumber { get; set; }
+    public bool ReceivingAccountIsCurrent { get; set; }
     public string Instructions { get; set; } = "";
     public string? SenderNumber { get; set; }
     public string? TransactionId { get; set; }
