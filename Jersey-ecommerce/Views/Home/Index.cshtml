@@ -360,6 +360,45 @@
     const safeText = input => String(input ?? '').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     function safeImage(value, fallback) {if(typeof value !== 'string' || !value.trim()) return fallback;const s=value.trim();if(s.startsWith('data:image/webp;base64,')||s.startsWith('data:image/png;base64,')||s.startsWith('data:image/jpeg;base64,'))return s;try{const u=new URL(s,location.href);if(u.protocol==='https:' || u.protocol==='http:')return u.href;}catch{}return fallback;}
     function safePath(value) {if(typeof value !== 'string'||!value.startsWith('/')||value.startsWith('//')||value.includes('\\'))return '';return value;}
+
+    // Links are configured by staff. Accept only local paths or HTTP(S) destinations.
+    function safeDestination(value) {
+      if(typeof value!=='string')return '';
+      const url=value.trim();
+      if(url.startsWith('/')&&!url.startsWith('//')&&!url.includes('\\'))return url;
+      if(url.startsWith('#')&&!url.includes('\\'))return url;
+      try{const parsed=new URL(url);if(parsed.protocol==='https:'||parsed.protocol==='http:')return parsed.href;}catch{}
+      return '';
+    }
+    function renderCampaigns(banners) {
+      document.querySelectorAll('[data-campaign-placement]').forEach(node=>node.remove());
+      const slots={
+        HomeTop:{target:document.querySelector('.hero'),where:'afterend'},
+        Home:{target:byId('collections'),where:'afterend'},
+        HomeMiddle:{target:byId('arrivals'),where:'afterend'},
+        Footer:{target:document.querySelector('.site-footer'),where:'beforebegin'}
+      };
+      const lastBySlot={};
+      for(const banner of banners){
+        const placement=banner?.placement||'Home';
+        const slot=slots[placement];
+        const imgSrc=safeImage(banner?.imageUrl,'');
+        if(!slot?.target||!imgSrc)continue;
+        const section=document.createElement('section');section.className='pn-campaigns';section.dataset.campaignPlacement=placement;
+        const wrap=document.createElement('div');wrap.className='container';
+        const anchor=document.createElement('a');anchor.className='pn-campaign';
+        anchor.href=safeDestination(banner.linkUrl||'/shop')||'/shop';
+        const image=document.createElement('img');image.src=imgSrc;image.alt=String(banner.title||'PANENKA campaign');image.loading='lazy';
+        const copy=document.createElement('span');copy.className='pn-campaign-copy';
+        const title=document.createElement('strong');title.textContent=String(banner.title||'EXPLORE PANENKA');
+        const subtitle=document.createElement('small');subtitle.textContent=String(banner.subtitle||'');
+        const arrow=document.createElement('span');arrow.className='pn-campaign-arrow';arrow.textContent='EXPLORE ↗';
+        copy.append(title,subtitle,arrow);anchor.append(image,copy);wrap.append(anchor);section.append(wrap);
+        if(lastBySlot[placement])lastBySlot[placement].insertAdjacentElement('afterend',section);
+        else slot.target.insertAdjacentElement(slot.where,section);
+        lastBySlot[placement]=section;
+      }
+    }
     function amount(n){return '৳ '+Number(n||0).toLocaleString('en-BD',{maximumFractionDigits:0});}
     function asBool(v){return v===true||v===1||v==='true';}
     const read = (o,...keys) => {for(const k of keys)if(o && o[k]!==undefined && o[k]!==null)return o[k];return undefined;};
@@ -605,7 +644,7 @@
           const live=data.slides.filter(x=>x.imageUrl||x.mobileImageUrl).map(x=>({
             title:safeText(x.title||'PANENKA').replace(/\n/g,'<br>'),
             desc:String(x.subtitle||''),cta:String(x.buttonText||'SHOP NOW'),
-            url:safePath(x.buttonUrl||'/shop')||'/shop',
+            url:safeDestination(x.buttonUrl||'/shop')||'/shop',
             filter:null,edition:'PANENKA<br>FOOTBALL CULTURE',image:safeImage(x.imageUrl||x.mobileImageUrl,'')
           }));
           if(live.length){slides.splice(0,slides.length,...live);showSlide(0);
@@ -623,12 +662,7 @@
             const label=card.querySelector('.category-name');if(label)label.textContent=c.name;
           });
         }
-        if(Array.isArray(data.banners)&&data.banners.length){
-          const card=collectionCards[data.collections?.length||0];
-          if(card){const b=data.banners[0];card.removeAttribute('data-collection');card.href=safePath(b.linkUrl||'/shop')||'/shop';
-            if(b.imageUrl&&safeImage(b.imageUrl,''))card.querySelector('img').src=b.imageUrl;
-            const label=card.querySelector('.category-name');if(label)label.textContent=b.title;}
-        }
+        if(Array.isArray(data.banners))renderCampaigns(data.banners);
         if(data.settings){
           const social={'Instagram':'social.instagram','YouTube':'social.youtube','TikTok':'social.tiktok','Facebook':'social.facebook'};
           document.querySelectorAll('.social-row a[aria-label]').forEach(a=>{
