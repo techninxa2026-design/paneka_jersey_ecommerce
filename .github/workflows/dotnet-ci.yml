@@ -1,0 +1,25 @@
+name: ASP.NET Core MVC build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore "Jersey-ecommerce/Jersey-ecommerce.csproj"
+      - name: Build MVC and Razor views
+        run: dotnet build "Jersey-ecommerce/Jersey-ecommerce.csproj" -c Release --no-restore -p:RazorCompileOnBuild=true
