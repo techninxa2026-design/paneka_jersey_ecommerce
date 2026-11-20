@@ -16,8 +16,12 @@ public sealed class OrderCancellationService(ApplicationDbContext db, InventoryS
         var order = await db.Orders.Include(o => o.Payment).Include(o => o.Shipment)
             .Include(o => o.Items).SingleOrDefaultAsync(o => o.Id == orderId && (asAdmin || o.UserId == userId));
         if (order == null) throw new CheckoutException("Order not found.");
-        if (!asAdmin && (order.Payment?.Method is "ManualAdvance" or "Bkash"))
-            throw new CheckoutException("Online/advance-payment orders require staff payment reconciliation before cancellation. Contact support.");
+        // A manual bKash claim may have been transferred externally even
+        // before the customer submitted a TrxID. The generic unpaid-order
+        // cancellation path must not restore reserved stock without finance
+        // reconciling possible wallet receipts/refunds first.
+        if (order.Payment?.Method is "ManualAdvance" or "Bkash")
+            throw new CheckoutException("Advance and bKash orders require independent finance reconciliation before cancellation. Use staff support.");
         if (order.Status != "Pending" || order.Payment == null || order.Payment.Status != "Pending" ||
             order.Shipment?.Status is not (null or "Pending"))
             throw new CheckoutException("Only pending, unpaid, unshipped orders can be cancelled here. Contact support.");
