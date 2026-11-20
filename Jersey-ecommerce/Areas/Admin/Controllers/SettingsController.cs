@@ -138,7 +138,7 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
 
                 Set("operations.maintenance", Bool(model.IsMaintenanceMode), "Storefront maintenance preference");
                 Set("operations.cash_on_delivery", Bool(model.AllowCashOnDelivery), "Checkout cash on delivery preference");
-                Set("payments.bkash_number", model.ManualBkashNumber, "Manual bKash receiving account number; empty disables new bKash checkout");
+                Set("payments.bkash_number", model.ManualBkashNumber, "Optional receiving number published to customers; manual bKash reporting remains enabled when empty");
                 Set("payments.bkash_instructions", model.ManualBkashInstructions, "Instructions displayed alongside manual bKash payment details");
                 Set("operations.order_notifications", Bool(model.SendOrderNotifications), "Order notification preference");
                 Set("shipping.standard_fee", Money(model.StandardShippingFee), "Standard delivery fee");
