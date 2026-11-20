@@ -15,6 +15,10 @@
         "cancelled" => "po-badge-cancelled",
         "returned" => "po-badge-returned",
         "refunded" => "po-badge-refunded",
+        "paid" => "po-badge-paid",
+        "submitted" => "po-badge-submitted",
+        "rejected" => "po-badge-rejected",
+        "packed" => "po-badge-packed",
         _ => ""
     };
 }
@@ -41,6 +45,11 @@
     @if (TempData["Error"] is string error)
     {
         <div role="alert" class="po-alert po-hide-print"><i class="bi bi-exclamation-triangle"></i> @error</div>
+    }
+
+    @if (order.Payment?.Method == "Bkash")
+    {
+        @await Html.PartialAsync("_ManualBkashReview", order)
     }
 
     <div class="po-detail-grid">
@@ -151,7 +160,7 @@
 
         <aside class="po-stack">
             <section class="po-card">
-                <div class="po-card-h"><div><h2 class="po-card-title">Order status</h2><p class="po-card-subtitle">Fulfillment progression</p></div></div>
+                <div class="po-card-h" id="order-fulfillment"><div><h2 class="po-card-title">Order status</h2><p class="po-card-subtitle">Fulfillment progression</p></div></div>
                 <div class="po-card-body">
                     <div style="margin-bottom:16px"><span class="po-badge @BadgeClass(order.Status)">@order.Status</span></div>
                     @if (Model.NextStatus is not null)
@@ -171,6 +180,12 @@
                         @if (!string.IsNullOrWhiteSpace(Model.NextStatusHint))
                         {
                             <p class="po-muted">@Model.NextStatusHint</p>
+                            @if (order.Payment?.Method == "Bkash" && order.Payment.Status == "Submitted")
+                            {
+                                <a class="po-btn po-btn-sm po-btn-dark" href="#payment-review" style="width:100%;margin-top:14px">
+                                    <i class="bi bi-shield-check"></i> Review &amp; verify bKash payment
+                                </a>
+                            }
                         }
                         else
                         {
@@ -195,6 +210,25 @@
                             <div><div class="po-data-label">Method</div><div class="po-data-value">@order.Payment.Method</div></div>
                             <div><div class="po-data-label">Recorded amount</div><div class="po-data-value po-strong">@order.Payment.Currency @order.Payment.Amount.ToString("N2")</div></div>
                             <div><div class="po-data-label">Transaction reference</div><div class="po-data-value">@(order.Payment.TransactionReference ?? "—")</div></div>
+                            @if (order.Payment.Method == "Bkash")
+                            {
+                                <div><div class="po-data-label">Customer bKash sender</div><div class="po-data-value">@(order.Payment.ManualSenderNumber ?? "Awaiting customer submission")</div></div>
+                                <div><div class="po-data-label">Reported transfer (BDT)</div><div class="po-data-value">@(order.Payment.ManualClaimedPaidAt.HasValue ? order.Payment.ManualClaimedPaidAt.Value.AddHours(6).ToString("dd MMM yyyy, hh:mm tt") : "—")</div></div>
+                                @if (order.Payment.Status == "Submitted")
+                                {
+                                    <a class="po-btn po-btn-sm po-btn-dark" href="#payment-review">
+                                        <i class="bi bi-shield-check"></i> Verify this transfer
+                                    </a>
+                                }
+                                else if (order.Payment.Status == "Rejected")
+                                {
+                                    <p class="po-muted">Rejected. Customer may correct the TrxID.</p>
+                                }
+                                else if (order.Payment.Status == "Paid")
+                                {
+                                    <p class="po-review-paid-hint"><i class="bi bi-check-circle"></i> Verified — order is ready for fulfillment.</p>
+                                }
+                            }
                             @if (order.PaidAt.HasValue)
                             {
                                 <div><div class="po-data-label">Paid at</div><div class="po-data-value">@order.PaidAt.Value.ToString("dd MMM yyyy, HH:mm") UTC</div></div>
