@@ -183,6 +183,7 @@ public class ShipmentsController : Controller
             OrderNumber = shipment.Order.OrderNumber,
             CustomerName = shipment.Order.CustomerName,
             Status = shipment.Status,
+            ExpectedStatus = shipment.Status,
             CourierName = shipment.CourierName,
             TrackingNumber = shipment.TrackingNumber,
             TrackingUrl = shipment.TrackingUrl,
@@ -202,6 +203,12 @@ public class ShipmentsController : Controller
             .Include(s => s.Order).ThenInclude(o => o.Payment)
             .FirstOrDefaultAsync(s => s.Id == id);
         if (shipment == null) return NotFound();
+
+        if (!string.Equals(model.ExpectedStatus, shipment.Status, StringComparison.Ordinal))
+        {
+            TempData["Error"] = "This shipment was updated by another operator. Reload the latest details before editing.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
 
         // OrderId is never editable. Ignore posted OrderId entirely.
         model.OrderId = shipment.OrderId;
