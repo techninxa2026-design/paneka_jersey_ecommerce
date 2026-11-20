@@ -3,6 +3,10 @@
     Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
     ViewData["Title"] = "Manual Payment Review";
     var queue = Model.ToList();
+    var manualPending = (int?)ViewData["ManualPending"] ?? queue.Count(p => p.Method == "Bkash");
+    var legacyPending = (int?)ViewData["LegacyPending"] ?? queue.Count(p => p.Method == "ManualAdvance");
+    var currentPage = (int?)ViewData["Page"] ?? 1;
+    var totalPages = (int?)ViewData["TotalPages"] ?? 1;
 }
 <link rel="stylesheet" href="/css/panenka-manual-bkash.css" asp-append-version="true" />
 <div class="mb-admin">
@@ -26,8 +30,8 @@
         <div class="mb-alert mb-alert-success" role="status">@success</div>
     }
     <div class="mb-admin-overview">
-        <div><span>AWAITING STAFF VERIFICATION</span><strong>@queue.Count(p => p.Method == "Bkash")</strong><small>Manual bKash submissions</small></div>
-        <div><span>LEGACY ADVANCE</span><strong>@queue.Count(p => p.Method == "ManualAdvance")</strong><small>Existing payment records only</small></div>
+        <div><span>AWAITING STAFF VERIFICATION</span><strong>@manualPending</strong><small>Manual bKash submissions</small></div>
+        <div><span>LEGACY ADVANCE</span><strong>@legacyPending</strong><small>Existing payment records only</small></div>
         <div><span>PROCESS</span><strong>1 → 2 → 3</strong><small>Check wallet · Verify reference · Record decision</small></div>
     </div>
 
@@ -95,5 +99,19 @@
                 </article>
             }
         </div>
+        @if (totalPages > 1)
+        {
+            <nav class="mb-admin-pages" aria-label="Verification queue pagination">
+                @if (currentPage > 1)
+                {
+                    <a href="/Admin/CheckoutPaymentReview?page=@(currentPage - 1)">← Previous</a>
+                }
+                <span>Page @currentPage of @totalPages</span>
+                @if (currentPage < totalPages)
+                {
+                    <a href="/Admin/CheckoutPaymentReview?page=@(currentPage + 1)">Next →</a>
+                }
+            </nav>
+        }
     }
 </div>
