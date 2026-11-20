@@ -259,28 +259,41 @@
     </div>
 </main>
 @await Html.PartialAsync("_PanenkaCheckoutFooter")
-@if (payment?.Method == "Bkash" && payment.Status == "Submitted")
-{
-    <script>
-    (() => {
-        let pending = false;
-        // Keep the buyer's order page in sync after staff verifies or rejects
-        // a reported transfer. Only buyer-scoped order status is requested.
-        window.setInterval(async () => {
-            if (document.hidden || pending) return;
-            pending = true;
-            try {
-                const res = await fetch('/Checkout/Bkash/State/@Model.Id', {
-                    credentials: 'same-origin', cache: 'no-store'
-                });
-                if (!res.ok) return;
-                const state = await res.json();
-                if (state.paymentStatus !== 'Submitted') window.location.reload();
-            } catch { /* Keep last known order details during network errors. */ }
-            finally { pending = false; }
-        }, 20000);
-    })();
-    </script>
-}
+<div id="pn-live-order-state" hidden
+     data-order="@Model.Status"
+     data-shipment="@(shipment?.Status ?? "")"
+     data-payment="@(payment?.Status ?? "")"></div>
+<script>
+(() => {
+    const stateElement = document.getElementById('pn-live-order-state');
+    if (!stateElement) return;
+    const initial = {
+        orderStatus: stateElement.dataset.order,
+        shipmentStatus: stateElement.dataset.shipment,
+        paymentStatus: stateElement.dataset.payment
+    };
+    let refreshing = false;
+    // Buyer-only read, never a payment gateway call. After Admin changes a
+    // shipment or verifies a bKash receipt the customer sees the updated
+    // delivery state and newly eligible review prompt without another login.
+    window.setInterval(async () => {
+        if (document.hidden || refreshing) return;
+        refreshing = true;
+        try {
+            const result = await fetch('/MyOrders/State/@Model.Id', {
+                credentials: 'same-origin',
+                cache: 'no-store'
+            });
+            if (!result.ok) return;
+            const next = await result.json();
+            if (next.orderStatus !== initial.orderStatus ||
+                next.shipmentStatus !== initial.shipmentStatus ||
+                next.paymentStatus !== initial.paymentStatus)
+                window.location.reload();
+        } catch { /* Keep the last good order page during network interruptions. */ }
+        finally { refreshing = false; }
+    }, 20000);
+})();
+</script>
 </body>
 </html>
