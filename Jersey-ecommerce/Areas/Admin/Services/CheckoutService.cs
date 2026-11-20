@@ -270,15 +270,25 @@ public sealed class CheckoutService(
     public async Task<int> PlaceOrder(string userId, DeliveryInput delivery, PlaceOrderInput input)
     {
         if (delivery.Region is not ("Dhaka" or "OutsideDhaka")) throw new CheckoutException("Select a delivery region.");
+        var district = BangladeshDistricts.Normalize(delivery.District)
+            ?? throw new CheckoutException("Choose a valid Bangladesh district.");
         if (delivery.Region == "Dhaka" && !string.Equals(delivery.District?.Trim(), "Dhaka", StringComparison.OrdinalIgnoreCase))
             throw new CheckoutException("Inside Dhaka requires Dhaka district.");
-        if (input.PaymentMethod is not ("COD" or "ManualAdvance" or "Bkash"))
-            throw new CheckoutException("Choose a valid payment method.");
+        if (input.PaymentMethod is not ("COD" or "Bkash"))
+            throw new CheckoutException("Choose cash on delivery or manual bKash.");
         // COD is available throughout Bangladesh when the store setting permits it.
         if (input.PaymentMethod == "COD" && !await CodEnabled()) throw new CheckoutException("Cash on delivery is disabled.");
         var manualRecipient = input.PaymentMethod == "Bkash" ? await ManualBkashNumber() : null;
         if (input.PaymentMethod == "Bkash" && manualRecipient is null)
             throw new CheckoutException("Manual bKash is not available. Choose another payment option or contact support.");
+        ManualBkashPaymentService.CustomerTransfer? transfer = null;
+        if (input.PaymentMethod == "Bkash")
+        {
+            if (!string.Equals(input.BkashRecipientNumber, manualRecipient, StringComparison.Ordinal))
+                throw new CheckoutException("The store's bKash number changed while you were checking out. Reload this page and confirm the correct recipient before paying.");
+            transfer = ManualBkashPaymentService.ValidateTransfer(
+                input.BkashSenderNumber, input.BkashTransactionId, input.BkashPaidAtLocal);
+        }
         if (await InMaintenance()) throw new CheckoutException("Checkout is paused by the store.");
         if (!Guid.TryParseExact(input.SubmissionToken, "N", out _)) throw new CheckoutException("Invalid checkout token.");
         var orderNumber = "PNK-" + input.SubmissionToken[..24].ToUpperInvariant();
@@ -300,6 +310,17 @@ public sealed class CheckoutService(
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        if (transfer != null)
+        {
+            // For submitted bKash transfers, prevent one TrxID from being
+            // claimed by multiple orders, including older rejected claims.
+            var duplicate = await db.Payments.AsNoTracking().AnyAsync(p =>
+                p.Method == "Bkash" && p.TransactionReference == transfer.TrxId) ||
+                await db.PaymentTransactions.AsNoTracking().AnyAsync(t =>
+                    t.TransactionType == "ManualBkash" && t.ProviderTransactionId == transfer.TrxId);
+            if (duplicate)
+                throw new CheckoutException("This bKash transaction ID is already linked to another order. Review your payment history or contact support.");
+        }
         var bag = await FindCart(userId);
         if (bag is null) throw new CheckoutException("Your bag is empty.");
         var quote = await GetCart(userId, validateStock: true);
@@ -315,7 +336,7 @@ public sealed class CheckoutService(
             CustomerPhone = delivery.Phone.Trim(),
             ShippingAddressLine1 = delivery.AddressLine1.Trim(),
             ShippingAddressLine2 = delivery.AddressLine2?.Trim(),
-            ShippingCity = delivery.City.Trim(), ShippingDistrict = delivery.District.Trim(),
+            ShippingCity = delivery.City.Trim(), ShippingDistrict = district,
             ShippingPostalCode = delivery.PostalCode?.Trim(), ShippingCountry = "Bangladesh",
             CustomerNote = delivery.Instructions?.Trim(),
             Subtotal = quote.Subtotal, DiscountAmount = quote.DiscountAmount,
@@ -339,23 +360,34 @@ public sealed class CheckoutService(
                 UnitPrice = line.Price, LineTotal = line.Price * line.Quantity, DiscountAmount = 0m
             });
         }
-        db.Payments.Add(new Payment
+        var payment = new Payment
         {
             OrderId = order.Id,
-            Method = input.PaymentMethod switch
-            {
-                "COD" => "CashOnDelivery",
-                "Bkash" => "Bkash",
-                _ => "ManualAdvance"
-            },
-            Status = "Pending",
-            Provider = input.PaymentMethod == "Bkash" ? "bKash (manual transfer)" : "Offline",
+            Method = input.PaymentMethod == "Bkash" ? "Bkash" : "CashOnDelivery",
+            Status = transfer is null ? "Pending" : "Submitted",
+            Provider = transfer is null ? "Offline" : "bKash (manual transfer)",
             ManualRecipientNumber = manualRecipient,
+            ManualSenderNumber = transfer?.Sender,
+            ManualClaimedPaidAt = transfer?.ClaimedPaidAtUtc,
+            ManualSubmittedAt = transfer is null ? null : now,
+            TransactionReference = transfer?.TrxId,
             Amount = order.TotalAmount,
             Currency = "BDT",
-            TransactionReference = input.PaymentMethod == "ManualAdvance" ? input.PaymentReference?.Trim() : null,
             CreatedAt = now
-        });
+        };
+        db.Payments.Add(payment);
+        if (transfer != null)
+        {
+            // Saved in the SAME SQL transaction as order, stock, coupon,
+            // payment and shipment. A failed validation rolls all of it back.
+            db.PaymentTransactions.Add(new PaymentTransaction
+            {
+                Payment = payment, TransactionType = "ManualBkash",
+                Status = "Submitted", Reference = transfer.Sender,
+                ProviderTransactionId = transfer.TrxId,
+                Amount = order.TotalAmount, CreatedAt = now
+            });
+        }
         db.Shipments.Add(new Shipment { OrderId = order.Id, Status = "Pending", CreatedAt = now });
         db.OrderStatusHistories.Add(new OrderStatusHistory
         {
@@ -382,7 +414,7 @@ public sealed class CheckoutService(
             {
                 UserId = userId, FullName = delivery.FullName.Trim(), PhoneNumber = delivery.Phone.Trim(),
                 AddressLine1 = delivery.AddressLine1.Trim(), AddressLine2 = delivery.AddressLine2?.Trim(),
-                City = delivery.City.Trim(), District = delivery.District.Trim(),
+                City = delivery.City.Trim(), District = district,
                 PostalCode = delivery.PostalCode?.Trim(), Country = "Bangladesh", IsDefault = true
             });
         db.CartItems.RemoveRange(await db.CartItems.Where(x => x.ShoppingCartId == bag.Id).ToListAsync());
