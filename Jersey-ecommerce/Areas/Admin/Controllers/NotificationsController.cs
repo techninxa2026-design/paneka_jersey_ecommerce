@@ -135,23 +135,41 @@ public sealed class NotificationsController(
         // Bounded indexed batches avoid loading years of activity at once.
         // The unique index guarantees at most one receipt per admin/event.
         const int batchSize = 500;
+        // ReadAll applies to the activity visible when the action began; new
+        // orders arriving during a long batch operation remain unread.
+        var lastSeenId = await db.AdminNotifications.AsNoTracking()
+            .MaxAsync(n => (long?)n.Id) ?? 0;
         while (true)
         {
             var missing = await db.AdminNotifications.AsNoTracking()
-                .Where(n => !n.Reads.Any(r => r.AdminUserId == AdminId))
+                .Where(n => n.Id <= lastSeenId &&
+                    !n.Reads.Any(r => r.AdminUserId == AdminId))
                 .OrderBy(n => n.Id).Select(n => n.Id)
                 .Take(batchSize).ToListAsync();
             if (missing.Count == 0) break;
 
-            db.AdminNotificationReads.AddRange(missing.Select(id =>
-                new AdminNotificationRead
-                {
-                    AdminNotificationId = id,
-                    AdminUserId = AdminId,
-                    ReadAt = DateTime.UtcNow
-                }));
-            await db.SaveChangesAsync();
-            if (missing.Count < batchSize) break;
+            var batch = missing.Select(id => new AdminNotificationRead
+            {
+                AdminNotificationId = id,
+                AdminUserId = AdminId,
+                ReadAt = DateTime.UtcNow
+            }).ToList();
+            db.AdminNotificationReads.AddRange(batch);
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // Another tab may have marked the same items read. Reset
+                // pending inserts and only retry if nothing changed.
+                foreach (var receipt in batch)
+                    db.Entry(receipt).State = EntityState.Detached;
+                if (!await db.AdminNotificationReads.AsNoTracking()
+                    .AnyAsync(r => r.AdminUserId == AdminId &&
+                        missing.Contains(r.AdminNotificationId)))
+                    throw;
+            }
         }
         TempData["Success"] = "Your notifications have been marked as read.";
         return Redirect(AllowedReturn(returnUrl));
