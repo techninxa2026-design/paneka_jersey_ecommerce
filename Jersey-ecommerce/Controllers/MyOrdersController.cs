@@ -107,7 +107,8 @@ public sealed class MyOrdersController(ApplicationDbContext db, OrderCancellatio
             {
                 i.ProductName,
                 i.ImageUrl,
-                ProductSlug = i.ProductVariant!.Product.Slug
+                ProductSlug = i.ProductVariant!.Product.Slug,
+                ProductIsPublished = i.ProductVariant.Product.IsPublished
             })
             .FirstOrDefaultAsync();
         if (item == null) return null;
@@ -122,6 +123,7 @@ public sealed class MyOrdersController(ApplicationDbContext db, OrderCancellatio
             ProductId = productId,
             ProductName = item.ProductName,
             ProductSlug = item.ProductSlug,
+            ProductIsPublished = item.ProductIsPublished,
             ImageUrl = item.ImageUrl,
             ReviewId = existing?.Id,
             ReviewStatus = existing == null ? "NotReviewed" :
@@ -131,6 +133,25 @@ public sealed class MyOrdersController(ApplicationDbContext db, OrderCancellatio
             Title = existing?.Title,
             Comment = existing?.Comment
         };
+    }
+
+    [HttpGet("State/{id:int}")]
+    public async Task<IActionResult> State(int id)
+    {
+        // Real-time customer tracking shares the same live order, payment and
+        // shipment rows as the Admin side. Never expose other buyers' orders.
+        var current = await db.Orders.AsNoTracking()
+            .Where(o => o.Id == id && o.UserId == UserId)
+            .Select(o => new
+            {
+                orderStatus = o.Status,
+                shipmentStatus = o.Shipment != null ? o.Shipment.Status : "",
+                paymentStatus = o.Payment != null ? o.Payment.Status : ""
+            })
+            .SingleOrDefaultAsync();
+        if (current == null) return NotFound();
+        Response.Headers.CacheControl = "no-store";
+        return Ok(current);
     }
 
     [HttpPost("Cancel/{id:int}")]
