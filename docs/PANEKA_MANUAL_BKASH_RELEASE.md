@@ -18,10 +18,10 @@ PANENKA now offers **Cash on Delivery (COD)** or **manual bKash transfer** at ne
 
 ### Manual bKash
 
-1. Administrator saves an 11-digit receiving number at **Admin → Store settings → Payment methods**. Optionally edits the customer instructions.
-2. Buyer reaches **Checkout → Payment**, where **Place COD order** and **Pay with bKash** appear as adjacent actions. A bKash merchant number must be configured in Admin before the second action is available.
+1. **Pay with bKash stays enabled whether or not the admin has published a receiving number.** Admin may optionally save an 11-digit receiving number at **Admin → Store settings → Payment methods**. This makes the verified receiving wallet visible in the popup.
+2. Buyer reaches **Checkout → Payment**, where **Place COD order** and **Pay with bKash** appear as adjacent active actions. Clicking bKash is always permitted, even when no receiving wallet is configured.
 3. Clicking **Pay with bKash** makes an antiforgery-protected request that **reserves the order before showing payment instructions**: the backend validates stock, coupon, delivery district and rate; creates the pending order, reserves stock, saves the recipient number and creates the pending shipment in one database transaction. Double-clicks reuse the same order.
-4. The on-page bKash dialog opens only after the backend confirms the saved order, actual total and receiving number. Buyer sends money from their own bKash app, then provides their **sender number**, **transaction ID (TrxID)** and **payment time in Bangladesh time** in the dialog. Clicking **Submit & Place order** posts that receipt to the existing customer-owned manual bKash submission endpoint. The saved order's payment becomes `Submitted` and its ledger records the claim. **The order remains Pending/unpaid until staff verification**. A receipt can be reopened from My Orders even if the customer closes the popup before submitting.
+4. The on-page bKash dialog opens after the backend confirms the saved order and exact total. **With a configured merchant wallet**, the popup shows it and Send Money instructions. **Without a configured wallet**, the popup still opens and lets customers report a transfer already made using PANENKA's directly provided receiving details. The site never invents a wallet number and warns customers to ask the store before sending money to an unknown recipient. Customers submit their **sender number** and **transaction ID (TrxID)** (transfer time is pre-filled). Their claim is saved as `Submitted` in the payment ledger. **The order is placed, but the payment stays unpaid and fulfillment is held until staff verification.** Customers can revisit their receipt in My Orders.
 5. Staff opens **Admin → Verify bKash**, checks the **actual merchant wallet**, compares recipient, sender, amount and TrxID, records a note, and checks the independent-verification acknowledgement.
 6. **Verify** sets payment to **Paid**, records review staff/time and PaidAt, records the transaction-ledger event, advances the order to **Confirmed**, and permits normal fulfillment.
 7. **Reject** keeps the order **Pending**, sets payment **Rejected**, logs the reason and allows the buyer to enter corrected details. Previous submission history stays in the ledger.
@@ -34,10 +34,10 @@ No automatic transfer or refund is performed by PANENKA. The website cannot know
 ### Editing/deleting merchant receiving number
 
 - Edit the saved number and **Save payment settings** to change the recipient for **future** orders.
-- Empty the number and save to **disable manual bKash for future checkouts**.
+- Empty the number and save to **stop publishing a merchant receiving number**. This does **not disable Pay with bKash**: customers can still report previously completed transfers using their sender number and TrxID.
 - Existing orders retain their original receiving number in the Payment row for accounting. If the number has been retired, the customer page warns against making new transfers to it, but permits reporting a transaction already sent.
 - Pending bKash reservations hold inventory until independently reconciled. If the customer abandons checkout, staff may open **Admin → Orders → Details → Unpaid bKash reservation**, confirm that no funds reached the actual merchant wallet, add a reconciliation note, and cancel the order to restore stock and coupon usage. Submitted transfers must first be independently rejected before this action is allowed. A transfer that arrived must be reconciled/refunded instead of cancelled as unpaid.
-- If both bKash and COD are unavailable, checkout explains that no payment method is available.
+- bKash manual receipt reporting is available even when COD is disabled or no merchant receiving number has been configured. No gateway call is made.
 
 ## Payment storage (SQL Server)
 
@@ -73,12 +73,12 @@ dotnet ef database update --project "Jersey-ecommerce/Jersey-ecommerce.csproj" -
 
 **Important:** Review existing migration history and the SQL backup before production execution. The unique TrxID index may be rejected if pre-existing bKash orders contain duplicate non-null transaction IDs. Do not delete or modify client payments to force it through; reconcile any conflicts first.
 
-After migration, start the app, visit **Admin → Store settings → Payment methods**, configure the current receiving number, save, and verify it is presented correctly in a new test order.
+After migration, start the app and visit **Admin → Store settings → Payment methods**. Publishing the current receiving number is recommended to guide new transfers, but is optional for manual receipt reporting. Verify the bKash button is active in both configured and unconfigured states.
 
 ## Client acceptance checklist (staging SQL Server)
 
-- [ ] Save, edit and clear merchant number; bKash checkout appears only with a valid active 11-digit number.
-- [ ] Check exact order total and saved receiving number, including after admin later changes the number.
+- [ ] Save, edit and clear merchant number; **Pay with bKash remains active in every state**. If a number is configured it appears in the popup; if blank, no fake number is displayed and sender/TrxID submission still works.
+- [ ] Check exact order total and saved receiving-number snapshot when configured; without a wallet, ensure the order, sender/TrxID and admin verification work with a null recipient.
 - [ ] Place a COD order, confirm stock reservation and correct order/customer records.
 - [ ] Complete the shipment delivery flow and independently confirm cash received in Admin → Payments.
 - [ ] Select from Bangladesh's 64 official districts; test Gazipur / Kaliganj, Dhaka and invalid district rejection. Verify inside/outside Dhaka pricing.
