@@ -4,6 +4,7 @@ using Jersey_ecommerce.Areas.Identity;
 using Jersey_ecommerce.Data;
 using Jersey_ecommerce.Models.Checkout;
 using Jersey_ecommerce.Services.Checkout;
+using Jersey_ecommerce.Services;
 using Jersey_ecommerce.ViewModels.Checkout;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -72,6 +73,9 @@ public sealed class CheckoutController(
             ModelState.AddModelError(nameof(model.Delivery), "Delivery details are required.");
         else
         {
+            var canonicalDistrict = BangladeshDistricts.Normalize(model.Delivery.District);
+            if (canonicalDistrict is not null)
+                model.Delivery.District = canonicalDistrict;
             if (model.Delivery.Region is not ("Dhaka" or "OutsideDhaka"))
                 ModelState.AddModelError("Delivery.Region", "Select a valid shipping region.");
             if (model.Delivery.Region == "Dhaka" &&
@@ -96,7 +100,9 @@ public sealed class CheckoutController(
     public async Task<IActionResult> Payment()
     {
         var delivery = ReadDelivery();
-        if (delivery is null || delivery.Region is not ("Dhaka" or "OutsideDhaka"))
+        if (delivery is null || delivery.Region is not ("Dhaka" or "OutsideDhaka") ||
+            !BangladeshDistricts.IsValid(delivery.District) ||
+            (delivery.Region == "Dhaka" && !BangladeshDistricts.IsDhaka(delivery.District)))
             return RedirectToAction(nameof(Delivery));
         var quote = await cart.GetCart(UserId);
         if (quote.Items.Count == 0) return RedirectToAction("Index", "Cart");
@@ -124,7 +130,9 @@ public sealed class CheckoutController(
     public async Task<IActionResult> Payment(PlaceOrderInput input)
     {
         var delivery = ReadDelivery();
-        if (delivery is null || delivery.Region is not ("Dhaka" or "OutsideDhaka"))
+        if (delivery is null || delivery.Region is not ("Dhaka" or "OutsideDhaka") ||
+            !BangladeshDistricts.IsValid(delivery.District) ||
+            (delivery.Region == "Dhaka" && !BangladeshDistricts.IsDhaka(delivery.District)))
             return RedirectToAction(nameof(Delivery));
 
         var storedToken = HttpContext.Session.GetString(OrderTokenSession);
@@ -158,7 +166,7 @@ public sealed class CheckoutController(
             var orderId = await cart.PlaceOrder(UserId, delivery, input);
             ClearCheckout();
             return input.PaymentMethod == "Bkash"
-                ? RedirectToAction("Start", "Bkash", new { id = orderId })
+                ? RedirectToAction("Status", "Bkash", new { id = orderId })
                 : RedirectToAction(nameof(Success), new { id = orderId });
         }
         catch (CheckoutException ex)
@@ -177,7 +185,7 @@ public sealed class CheckoutController(
             {
                 ClearCheckout();
                 if (input.PaymentMethod == "Bkash" && prior.Value.Method == "Bkash")
-                    return RedirectToAction("Start", "Bkash", new { id = prior.Value.OrderId });
+                    return RedirectToAction("Status", "Bkash", new { id = prior.Value.OrderId });
                 if (input.PaymentMethod == "COD" && prior.Value.Method == "CashOnDelivery")
                     return RedirectToAction(nameof(Success), new { id = prior.Value.OrderId });
 
