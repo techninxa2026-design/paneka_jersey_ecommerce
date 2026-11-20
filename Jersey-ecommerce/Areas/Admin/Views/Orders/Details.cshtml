@@ -168,7 +168,14 @@
                     }
                     else
                     {
-                        <p class="po-muted">No further automatic status transition is available for this order.</p>
+                        @if (!string.IsNullOrWhiteSpace(Model.NextStatusHint))
+                        {
+                            <p class="po-muted">@Model.NextStatusHint</p>
+                        }
+                        else
+                        {
+                            <p class="po-muted">This order is in its final fulfillment state.</p>
+                        }
                     }
                     <div class="po-safety" style="margin-top:16px"><strong>Important:</strong> This action changes only the order fulfillment status and records an audit entry. It does not charge/refund a payment, book a shipment, restore stock, or cancel an order.</div>
                 </div>
@@ -210,6 +217,9 @@
                             <div><div class="po-data-label">Status</div><span class="po-badge @BadgeClass(order.Shipment.Status)">@order.Shipment.Status</span></div>
                             <div><div class="po-data-label">Courier</div><div class="po-data-value">@(order.Shipment.CourierName ?? "—")</div></div>
                             <div><div class="po-data-label">Tracking number</div><div class="po-data-value">@(order.Shipment.TrackingNumber ?? "—")</div></div>
+                            <a class="po-btn po-btn-sm po-hide-print" href="@Url.Action("Edit", "Shipments", new { area = "Admin", id = order.Shipment.Id })">
+                                <i class="bi bi-pencil-square"></i> Update courier &amp; tracking
+                            </a>
                             @if (!string.IsNullOrWhiteSpace(order.Shipment.TrackingUrl) &&
                                  Uri.TryCreate(order.Shipment.TrackingUrl, UriKind.Absolute, out var trackingUri) &&
                                  (trackingUri.Scheme == Uri.UriSchemeHttp || trackingUri.Scheme == Uri.UriSchemeHttps))
