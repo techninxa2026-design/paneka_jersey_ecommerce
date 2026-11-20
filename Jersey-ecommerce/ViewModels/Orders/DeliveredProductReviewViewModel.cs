@@ -12,6 +12,7 @@ public sealed class DeliveredProductReviewViewModel
     public string ProductName { get; set; } = "";
     public string? ImageUrl { get; set; }
     public string ProductSlug { get; set; } = "";
+    public bool ProductIsPublished { get; set; }
     public int? ReviewId { get; set; }
     public string ReviewStatus { get; set; } = "NotReviewed";
     public int Rating { get; set; } = 5;
