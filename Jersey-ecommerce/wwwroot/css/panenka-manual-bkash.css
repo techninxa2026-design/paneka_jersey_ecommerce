@@ -97,3 +97,8 @@
 @media(max-width:900px){.mb-manual-grid{grid-template-columns:1fr}.mb-review-details{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.mb-admin-overview{grid-template-columns:1fr}.mb-review-actions{grid-template-columns:1fr}.mb-review-details{grid-template-columns:1fr}.mb-review-amount{text-align:left}.mb-field-rows{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.mb-button{transition:none}.mb-button:hover{transform:none}}
+
+.mb-admin-pages{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:16px;padding:24px 8px;color:#69747b;font-size:12px;font-weight:750}
+.mb-admin-pages a{padding:10px 15px;border:1px solid #d8dee1;background:#fff;text-decoration:none;border-radius:8px;color:#202831}
+.mb-admin-pages a:hover{border-color:#6e7a81}
+.mb-copy:disabled{opacity:.5;cursor:not-allowed}
