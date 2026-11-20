@@ -1,6 +1,17 @@
-﻿@{
-    ViewData["Title"] = "Privacy Policy";
+@{
+    ViewData["Title"] = "Privacy";
 }
-<h1>@ViewData["Title"]</h1>
-
-<p>Use this page to detail your site's privacy policy.</p>
+<article class="panenka-information">
+    <div class="eyebrow">PANENKA / CUSTOMER INFORMATION</div>
+    <h1>Privacy matters.</h1>
+    <p>Here is an overview of the information the PANENKA storefront uses when you create an account, shop for jerseys, or contact customer support.</p>
+    <h2>Account information</h2>
+    <p>Registration and profile pages collect your name, email address, optional phone number, and optional profile photo. Passwords are handled by ASP.NET Core Identity rather than stored as plain-text passwords.</p>
+    <h2>Orders and delivery</h2>
+    <p>To place and manage orders, the store records the products and variants you choose, delivery contact details and address, order totals, status, and shipment information. Store administrators can view this information to process and support your orders.</p>
+    <h2>Shopping preferences and communications</h2>
+    <p>When signed in, you can save a wishlist and shopping bag. A session cookie supports the checkout flow and selected coupon. If you subscribe to store updates, your email address is recorded for that purpose.</p>
+    <h2>Your information</h2>
+    <p>You can review or update your profile and saved delivery addresses from your account pages. For questions or requests concerning your account or personal data, contact the store directly.</p>
+    <div class="info-note">This page explains the data used by the current storefront. For specific privacy, retention, or deletion requests, please <a asp-controller="Home" asp-action="Contact">contact PANENKA support</a>.</div>
+</article>
