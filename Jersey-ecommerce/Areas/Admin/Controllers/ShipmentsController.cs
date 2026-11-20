@@ -104,7 +104,7 @@ public class ShipmentsController : Controller
             if (existingId > 0)
                 return RedirectToAction(nameof(Edit), new { id = existingId });
         }
-        var model = new ShipmentFormViewModel { OrderId = orderId ?? 0 };
+        var model = new ShipmentFormViewModel { OrderId = orderId ?? 0, AllowedStatuses = ["Pending"] };
         await LoadAvailableOrdersAsync(model);
         return View(model);
     }
@@ -114,7 +114,10 @@ public class ShipmentsController : Controller
     public async Task<IActionResult> Create(ShipmentFormViewModel model)
     {
         Normalize(model);
+        model.AllowedStatuses = ["Pending"];
         ValidateShipment(model);
+        if (model.Status != "Pending")
+            ModelState.AddModelError(nameof(model.Status), "A new shipment always starts as pending. Edit it to record the next stage.");
 
         Order? order = null;
         if (model.OrderId > 0)
@@ -123,8 +126,8 @@ public class ShipmentsController : Controller
                 .FirstOrDefaultAsync(o => o.Id == model.OrderId);
             if (order == null)
                 ModelState.AddModelError(nameof(model.OrderId), "The selected order does not exist.");
-            else if (order.Status is "Cancelled" or "Returned")
-                ModelState.AddModelError(nameof(model.OrderId), "Cancelled or returned orders cannot be shipped.");
+            else if (order.Status is not ("Pending" or "Confirmed" or "Processing"))
+                ModelState.AddModelError(nameof(model.OrderId), "Only pending, confirmed or processing orders can receive a new shipment.");
             else if (IsDispatchStatus(model.Status) && RequiresPaymentVerification(order))
                 ModelState.AddModelError(nameof(model.Status), "Verify the order payment before dispatching this shipment.");
             else if (await _context.Shipments.AnyAsync(s => s.OrderId == model.OrderId))
@@ -180,11 +183,13 @@ public class ShipmentsController : Controller
             OrderNumber = shipment.Order.OrderNumber,
             CustomerName = shipment.Order.CustomerName,
             Status = shipment.Status,
+            ExpectedStatus = shipment.Status,
             CourierName = shipment.CourierName,
             TrackingNumber = shipment.TrackingNumber,
             TrackingUrl = shipment.TrackingUrl,
             EstimatedDeliveryAt = shipment.EstimatedDeliveryAt,
-            Notes = shipment.Notes
+            Notes = shipment.Notes,
+            AllowedStatuses = new[] { shipment.Status }.Concat(ShipmentStatuses.AllowedNext(shipment.Status)).Distinct().ToList()
         });
     }
 
@@ -199,13 +204,25 @@ public class ShipmentsController : Controller
             .FirstOrDefaultAsync(s => s.Id == id);
         if (shipment == null) return NotFound();
 
+        if (!string.Equals(model.ExpectedStatus, shipment.Status, StringComparison.Ordinal))
+        {
+            TempData["Error"] = "This shipment was updated by another operator. Reload the latest details before editing.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         // OrderId is never editable. Ignore posted OrderId entirely.
         model.OrderId = shipment.OrderId;
         ModelState.Remove(nameof(model.OrderId));
         model.OrderNumber = shipment.Order.OrderNumber;
         model.CustomerName = shipment.Order.CustomerName;
+        model.AllowedStatuses = new[] { shipment.Status }
+            .Concat(ShipmentStatuses.AllowedNext(shipment.Status)).Distinct().ToList();
         Normalize(model);
         ValidateShipment(model);
+
+        if (!ShipmentStatuses.CanTransition(shipment.Status, model.Status))
+            ModelState.AddModelError(nameof(model.Status),
+                $"Cannot change shipment from {ShipmentStatuses.Label(shipment.Status)} to {ShipmentStatuses.Label(model.Status)}. Move through the next delivery stage.");
 
         if (model.Status != shipment.Status &&
             (shipment.Order.Status is "Cancelled" or "Returned"))
@@ -216,10 +233,15 @@ public class ShipmentsController : Controller
             ModelState.AddModelError(nameof(model.Status),
                 "Cancel the order from its order details so inventory and the shipment are updated together.");
 
-        if (model.Status != shipment.Status && IsDispatchStatus(model.Status) &&
-            RequiresPaymentVerification(shipment.Order))
-            ModelState.AddModelError(nameof(model.Status),
-                "Verify online or advance payment before dispatch. Cash-on-delivery orders can proceed.");
+        if (model.Status != shipment.Status && IsDispatchStatus(model.Status))
+        {
+            if (RequiresPaymentVerification(shipment.Order))
+                ModelState.AddModelError(nameof(model.Status),
+                    "Verify online or advance payment before dispatch. Cash-on-delivery orders can proceed.");
+            if (shipment.Order.Status is not ("Processing" or "Shipped" or "Delivered"))
+                ModelState.AddModelError(nameof(model.Status),
+                    "Move this order to Processing before marking the courier shipment as dispatched.");
+        }
 
         if (shipment.Status == "Delivered" &&
             model.Status != "Delivered" && model.Status != "Returned")
@@ -267,13 +289,14 @@ public class ShipmentsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        var shipment = await _context.Shipments.FirstOrDefaultAsync(s => s.Id == id);
+        var shipment = await _context.Shipments.Include(s => s.Order).FirstOrDefaultAsync(s => s.Id == id);
         if (shipment == null) return NotFound();
 
-        // Preserve tracking/history after dispatch; only unused shipment records can be removed.
-        if (shipment.Status is not ("Pending" or "Packed" or "Cancelled"))
+        // Checkout creates the sole shipment for each order. Never delete it while
+        // the customer still has an active order; this would break tracking.
+        if (shipment.Order.Status != "Cancelled" || shipment.Status != "Cancelled")
         {
-            TempData["Error"] = "Dispatched shipments cannot be deleted. Update their status instead.";
+            TempData["Error"] = "Active and dispatched orders must retain their shipment history. Cancel the eligible order first.";
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -286,7 +309,7 @@ public class ShipmentsController : Controller
     private async Task LoadAvailableOrdersAsync(ShipmentFormViewModel model)
     {
         var orders = await _context.Orders.AsNoTracking()
-            .Where(o => o.Status != "Cancelled" &&
+            .Where(o => (o.Status == "Pending" || o.Status == "Confirmed" || o.Status == "Processing") &&
                         !_context.Shipments.Any(s => s.OrderId == o.Id))
             .OrderByDescending(o => o.Id)
             .Take(300)

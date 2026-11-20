@@ -2043,7 +2043,7 @@
                 const seq = ++state.seq; if (currentAbort) currentAbort.abort(); currentAbort = new AbortController(); setBusy(); state.busy = true; try {
                     let data; if (state.preview) { data = previewResponse() } else { let params = new URLSearchParams({ page: String(state.page), pageSize: String(SETTINGS.pageSize), sort: state.sort }); if (state.search) params.set('search', state.search); if (state.collection) params.set('collection', state.collection); if (state.categoryId) params.set('categoryId', state.categoryId); if (state.sizeId) params.set('sizeId', state.sizeId); if (state.minPrice !== null) params.set('minPrice', state.minPrice); if (state.maxPrice !== null) params.set('maxPrice', state.maxPrice); if (state.inStock) params.set('inStock', 'true'); const result = await fetch(`${SETTINGS.api}?${params}`, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal: currentAbort.signal }); if (!result.ok) throw new Error(`Catalog API returned HTTP ${result.status}`); data = await result.json(); } if (seq !== state.seq) return; state.items = (data.products || data.Products || []).map(normalize); state.total = Number(data.total ?? data.Total ?? 0); state.page = Number(data.page ?? data.Page ?? state.page); state.totalPages = Math.max(1, Number(data.totalPages ?? data.TotalPages ?? 1)); state.categories = (data.categories || data.Categories || []).map(x => ({ id: Number(x.id ?? x.Id), name: String(x.name ?? x.Name), count: Number(x.count ?? x.Count ?? 0) }));
                     // Collection links map to actual Admin > Collections records through the shop API.
-                    state.sizes = (data.sizes || data.Sizes || []).map(x => ({ id: Number(x.id ?? x.Id), name: String(x.name ?? x.Name) })); const b = data.priceBounds || data.PriceBounds; if (b) { state.bounds = { min: Math.max(0, Math.floor(Number(b.min ?? b.Min ?? 0))), max: Math.max(1, Math.ceil(Number(b.max ?? b.Max ?? 30000))) }; state.bounds.max = Math.max(state.bounds.min + 1, state.bounds.max) } renderFilters(); renderProducts(); syncUrl(); syncActiveNav();
+                    state.sizes = (data.sizes || data.Sizes || []).map(x => ({ id: Number(x.id ?? x.Id), name: String(x.name ?? x.Name) })); const b = data.priceBounds || data.PriceBounds; if (b) { state.bounds = { min: Math.max(0, Math.floor(Number(b.min ?? b.Min ?? 0))), max: Math.max(1, Math.ceil(Number(b.max ?? b.Max ?? 30000))) }; state.bounds.max = Math.max(state.bounds.min + 1, state.bounds.max) } renderFilters(); renderProducts(); syncUrl(); syncActiveNav(); refreshCampaignBanner();
                 } catch (err) { if (err.name === 'AbortError') return; if (seq !== state.seq) return; byId('productGrid').setAttribute('aria-busy', 'false'); byId('topCount').textContent = 'Catalog unavailable'; byId('productGrid').innerHTML = `<div class="notice">${icon('refresh')}<h3>We couldn't load the shop.</h3><p>Check that the ASP.NET Core shop API is running. This page never substitutes sample merchandise for real database products.</p><button type="button" class="outline-btn" id="retryButton">Try again</button></div>`; byId('retryButton').addEventListener('click', loadProducts); console.warn('PANENKA Shop:', err); } finally { if (seq === state.seq) state.busy = false; }
             }
             function updateFilter(cb) { cb(); state.page = 1; loadProducts(); }
@@ -2146,6 +2146,39 @@
             async function loadBagCount(){try{const r=await fetch('/api/storefront/cart/count',{credentials:'same-origin',headers:{Accept:'application/json'}});if(!r.ok||!r.headers.get('content-type')?.includes('json'))return;const data=await r.json();const el=byId('basketCount');el.hidden=!data.count;el.textContent=data.count>99?'99+':data.count;}catch{}}
             async function loadWishlist(){try{const r=await fetch('/api/storefront/cart/wishlist',{credentials:'same-origin',headers:{Accept:'application/json'}});if(!r.ok||!r.headers.get('content-type')?.includes('json'))return;const data=await r.json();state.likes=new Set(data.productIds.map(String));document.querySelectorAll('[data-wish]').forEach(b=>b.setAttribute('aria-pressed',String(state.likes.has(b.dataset.wish))));}catch{}}
 
+            const heroImage=document.querySelector('.hero-image img');
+            const heroTitle=document.querySelector('.hero-content h1');
+            const heroDescription=document.querySelector('.hero-content p');
+            const defaultHero={image:heroImage?.getAttribute('src')||'',title:heroTitle?.innerHTML||'',description:heroDescription?.textContent||''};
+            let bannerCategoryKey=-1,bannerRequestNumber=0;
+            function safeDestination(value){
+                if(typeof value!=='string')return '';
+                const url=value.trim();
+                if(url.startsWith('/')&&!url.startsWith('//')&&!url.includes('\\'))return url;
+                if(url.startsWith('#')&&!url.includes('\\'))return url;
+                try{const parsed=new URL(url);if(parsed.protocol==='http:'||parsed.protocol==='https:')return parsed.href;}catch{}
+                return '';
+            }
+            async function refreshCampaignBanner(){
+                const category=state.categoryId||0;
+                if(category===bannerCategoryKey)return;
+                bannerCategoryKey=category;
+                const request=++bannerRequestNumber;
+                try{
+                    const url='/api/storefront/shop/banner'+(category?'?categoryId='+category:'');
+                    const response=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/json'}});
+                    if(!response.ok&&response.status!==204)throw Error('Campaign unavailable');
+                    const banner=response.status===204?null:await response.json();
+                    if(request!==bannerRequestNumber)return;
+                    if(heroImage)heroImage.src=banner?.imageUrl&&safeImg(banner.imageUrl)?banner.imageUrl:defaultHero.image;
+                    if(heroTitle){if(banner?.title)heroTitle.textContent=banner.title;else heroTitle.innerHTML=defaultHero.title;}
+                    if(heroDescription)heroDescription.textContent=banner?.subtitle||defaultHero.description;
+                    let link=document.querySelector('#pnShopCampaignLink');
+                    if(!link&&heroDescription){link=document.createElement('a');link.id='pnShopCampaignLink';link.className='pn-hero-campaign-link';heroDescription.insertAdjacentElement('afterend',link);}
+                    if(link){const dest=safeDestination(banner?.linkUrl);link.hidden=!banner||!dest;if(dest)link.href=dest;link.textContent='EXPLORE COLLECTION ↗';}
+                }catch(error){console.warn('PANENKA campaign:',error);}
+            }
+
             function init() {
                 byId('year').textContent = new Date().getFullYear(); initNav(); const params = new URLSearchParams(location.search); state.preview = false; state.search = (params.get('search') || '').trim().slice(0, 120); state.categoryId = Number(params.get('categoryId')) || null; state.sizeId = Number(params.get('sizeId')) || null; state.minPrice = params.has('minPrice') ? Math.max(0, Number(params.get('minPrice'))) || 0 : null; state.maxPrice = params.has('maxPrice') ? Math.max(0, Number(params.get('maxPrice'))) || 0 : null; state.inStock = params.get('inStock') === 'true'; state.page = Math.max(1, Number(params.get('page')) || 1); state.sort = ['newest', 'featured', 'price_asc', 'price_desc', 'name'].includes(params.get('sort')) ? params.get('sort') : 'newest'; const collection = params.get('collection'); if (collection) { state.collection = collection.toLowerCase().slice(0, 120); state.pendingCollection = state.collection; } byId('shopSearch').value = state.search; byId('sortSelect').value = state.sort;
                 let searchTimer; byId('shopSearch').addEventListener('input', e => { clearTimeout(searchTimer); searchTimer = setTimeout(() => updateFilter(() => { state.search = e.target.value.trim().slice(0, 120) }), 320) }); byId('sortSelect').addEventListener('change', e => updateFilter(() => { state.sort = e.target.value })); byId('searchShortcut').addEventListener('click', () => { byId('shopSearch').focus(); byId('shopSearch').scrollIntoView({ behavior: 'smooth', block: 'center' }) }); byId('openFilters').addEventListener('click', openDrawer); byId('closeFilters').addEventListener('click', closeDrawer); byId('filterOverlay').addEventListener('click', closeDrawer); byId('applyFilters').addEventListener('click', closeDrawer);
@@ -2175,13 +2208,7 @@
                 // Size/category filter links from homepage: use ?categoryId=... for exact database categories.
                 // ?collection=player/retro matches category names only when using live API's returned metadata.
                 loadProducts(); loadWishlist(); loadBagCount();
-                fetch('/api/storefront/shop/banner',{headers:{Accept:'application/json'}})
-                    .then(r=>r.ok&&r.status!==204?r.json():null).then(b=>{
-                       if(!b)return;
-                       if(b.imageUrl&&safeImg(b.imageUrl))document.querySelector('.hero-image img').src=b.imageUrl;
-                       if(b.title)document.querySelector('.hero-content h1').textContent=b.title;
-                       if(b.subtitle)document.querySelector('.hero-content p').textContent=b.subtitle;
-                    }).catch(()=>{});
+                // Shop hero campaigns refresh alongside category filters.
             }
             init();
     </script>

@@ -14,11 +14,20 @@ public sealed class MyOrdersController(ApplicationDbContext db, OrderCancellatio
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     [HttpGet("")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var orders = await db.Orders.AsNoTracking().Include(o => o.Payment)
-            .Where(o => o.UserId == UserId).OrderByDescending(o => o.CreatedAt)
-            .Take(50).ToListAsync();
+        const int pageSize = 20;
+        var query = db.Orders.AsNoTracking().Where(o => o.UserId == UserId);
+        var total = await query.CountAsync();
+        var pages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+        page = Math.Clamp(page, 1, pages);
+
+        var orders = await query.Include(o => o.Payment).Include(o => o.Shipment)
+            .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        ViewData["Page"] = page;
+        ViewData["TotalPages"] = pages;
+        ViewData["TotalCount"] = total;
         return View(orders);
     }
 
@@ -27,6 +36,7 @@ public sealed class MyOrdersController(ApplicationDbContext db, OrderCancellatio
     {
         var order = await db.Orders.AsNoTracking().AsSplitQuery()
             .Include(o => o.Payment).Include(o => o.Shipment)
+            .Include(o => o.StatusHistory)
             .Include(o => o.Items).ThenInclude(i => i.ProductVariant).ThenInclude(v => v.Product)
             .SingleOrDefaultAsync(o => o.Id == id && o.UserId == UserId);
         if (order == null) return NotFound();

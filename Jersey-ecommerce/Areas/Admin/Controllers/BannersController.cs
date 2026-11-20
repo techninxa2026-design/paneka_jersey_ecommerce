@@ -18,6 +18,8 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
 
         private const long MaxImageBytes = 5 * 1024 * 1024;
         private const string UploadRoot = "uploads/marketing";
+        private static readonly HashSet<string> BannerPlacements =
+            new(StringComparer.Ordinal) { "Home", "HomeTop", "HomeMiddle", "Shop", "Category", "Footer" };
 
         private static readonly HashSet<string> ImageExtensions =
             new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" };
@@ -226,6 +228,7 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
         {
             ValidateSchedule(model.StartsAt, model.EndsAt);
             ValidateLink(model.LinkUrl, nameof(model.LinkUrl));
+            ValidatePlacement(model.Placement);
             await ValidateImageAsync(model.ImageFile, nameof(model.ImageFile), required: true);
             if (!ModelState.IsValid) return View("BannerForm", model);
 
@@ -289,6 +292,7 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
             model.CurrentImageUrl = item.ImageUrl;
             ValidateSchedule(model.StartsAt, model.EndsAt);
             ValidateLink(model.LinkUrl, nameof(model.LinkUrl));
+            ValidatePlacement(model.Placement);
             await ValidateImageAsync(model.ImageFile, nameof(model.ImageFile));
             if (!ModelState.IsValid) return View("BannerForm", model);
 
@@ -350,6 +354,14 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
         }
 
         // =========================== VALIDATION / FILES ======================
+
+        private void ValidatePlacement(string? placement)
+        {
+            if (string.IsNullOrWhiteSpace(placement) ||
+                !BannerPlacements.Contains(placement.Trim()))
+                ModelState.AddModelError(nameof(BannerFormViewModel.Placement),
+                    "Choose a supported banner placement from the list.");
+        }
 
         private void ValidateSchedule(DateTime? startsAt, DateTime? endsAt)
         {

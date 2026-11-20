@@ -1,10 +1,89 @@
 @model IReadOnlyList<Jersey_ecommerce.Models.Orders.Order>
-@{ Layout = null; }
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My orders | PANENKA</title><link rel="stylesheet" href="/css/panenka-checkout.css"><link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true">
-</head><body>
+@{
+    Layout = null;
+    ViewData["Title"] = "Your orders";
+    var currentPage = (int?)ViewData["Page"] ?? 1;
+    var totalPages = (int?)ViewData["TotalPages"] ?? 1;
+    var totalOrders = (int?)ViewData["TotalCount"] ?? Model.Count;
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Check your PANENKA order history and delivery progress." />
+    <title>My orders | PANENKA</title>
+    <link rel="stylesheet" href="/css/panenka-checkout.css" asp-append-version="true" />
+    <link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true" />
+    <link rel="stylesheet" href="/css/panenka-orders.css" asp-append-version="true" />
+</head>
+<body>
 @await Html.PartialAsync("_PanenkaCheckoutHeader")
-<section class="container intro"><div class="kicker">YOUR ACCOUNT / ORDER HISTORY</div><h1>Your orders.</h1><p class="lead">Track payments and fulfillment, all in one place.</p></section>
-<main class="container" style="min-height:55vh;padding-top:45px;padding-bottom:85px">
-@if (Model.Count == 0) { <h2>No orders yet.</h2><p class="lead">Start your collection with a new jersey.</p><a class="primary" href="/shop">SHOP NOW →</a> }
-@foreach (var o in Model) {<a href="/MyOrders/@o.Id" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;padding:25px 0;border-bottom:1px solid #dedede"><div><strong>@o.OrderNumber</strong><div class="lead">@o.CreatedAt.ToString("dd MMM yyyy") · @o.Status</div></div><div><strong>৳@o.TotalAmount.ToString("N2")</strong><div class="lead">Payment: @(o.Payment?.Status ?? "Pending")</div></div><span>View →</span></a>}
-</main>@await Html.PartialAsync("_PanenkaCheckoutFooter")</body></html>
+<section class="container intro">
+    <div class="kicker">YOUR ACCOUNT / ORDER HISTORY</div>
+    <h1>Your orders.</h1>
+    <p class="lead">Every matchday essential, from your bag to your door.</p>
+</section>
+<main class="container pn-order-wrap">
+    <div class="pn-order-top">
+        <div><div class="pn-order-eyebrow">Order history</div><h2 style="margin:7px 0 0;font-size:24px;letter-spacing:-.05em">Purchases & delivery progress</h2>
+            <span class="pn-order-meta">@totalOrders @(totalOrders == 1 ? "order" : "orders")</span></div>
+        <a href="/shop" class="pn-order-action">CONTINUE SHOPPING →</a>
+    </div>
+    @if (Model.Count == 0)
+    {
+        <div class="pn-order-card pn-order-empty">
+            <h2>Your bag's next adventure starts here.</h2>
+            <p>No orders yet. Discover a jersey worth celebrating.</p>
+            <a href="/shop">EXPLORE THE COLLECTION →</a>
+        </div>
+    }
+    else
+    {
+        <div class="pn-order-list">
+            @foreach (var order in Model)
+            {
+                <a class="pn-order-card pn-order-row" asp-area="" asp-controller="MyOrders" asp-action="Details" asp-route-id="@order.Id"
+                   aria-label="View order @order.OrderNumber, @order.Status">
+                    <div>
+                        <strong>@order.OrderNumber</strong>
+                        <span class="pn-order-meta">Placed @order.CreatedAt.ToString("dd MMM yyyy") · @order.CustomerName</span>
+                        <div class="pn-order-badges">
+                            <span class="pn-pill" data-state="@order.Status">Order: @order.Status</span>
+                            @if (order.Shipment is not null)
+                            {
+                                <span class="pn-pill" data-state="@order.Shipment.Status">Delivery: @order.Shipment.Status</span>
+                            }
+                        </div>
+                    </div>
+                    <div>
+                        <strong>৳@order.TotalAmount.ToString("N2")</strong>
+                        <span class="pn-order-meta">Payment: @(order.Payment?.Status ?? "Pending")</span>
+                        @if (!string.IsNullOrWhiteSpace(order.Shipment?.TrackingNumber))
+                        {
+                            <span class="pn-order-meta">Tracking: @order.Shipment.TrackingNumber</span>
+                        }
+                    </div>
+                    <span class="pn-order-arrow" aria-hidden="true">↗</span>
+                </a>
+            }
+        </div>
+        @if (totalPages > 1)
+        {
+            <nav class="pn-order-pagination" aria-label="Order history pages">
+                @if (currentPage > 1)
+                {
+                    <a href="/MyOrders?page=@(currentPage - 1)">← Previous</a>
+                }
+                <span>Page @currentPage of @totalPages</span>
+                @if (currentPage < totalPages)
+                {
+                    <a href="/MyOrders?page=@(currentPage + 1)">Next →</a>
+                }
+            </nav>
+        }
+    }
+</main>
+@await Html.PartialAsync("_PanenkaCheckoutFooter")
+</body>
+</html>

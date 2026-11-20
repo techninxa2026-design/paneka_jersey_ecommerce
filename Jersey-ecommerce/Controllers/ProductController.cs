@@ -60,13 +60,23 @@ public sealed class ProductController(ApplicationDbContext db) : Controller
             TempData["ReviewMessage"] = "One review is allowed per customer after purchasing this product.";
             return RedirectToAction(nameof(Details), new { slug = product.Slug });
         }
-        db.Reviews.Add(new Review
+        var review = new Review
         {
             ProductId = productId, UserId = userId, Rating = rating, Title = title?.Trim(),
             Comment = comment.Trim(), IsApproved = false, IsRejected = false
-        });
-        await db.SaveChangesAsync();
-        TempData["ReviewMessage"] = "Review submitted for moderation.";
+        };
+        db.Reviews.Add(review);
+        try
+        {
+            await db.SaveChangesAsync();
+            TempData["ReviewMessage"] = "Review submitted for moderation.";
+        }
+        catch (DbUpdateException)
+        {
+            // Two fast submissions can race on the unique user/product index.
+            db.Entry(review).State = EntityState.Detached;
+            TempData["ReviewMessage"] = "This review could not be saved. Check whether you have already reviewed this product.";
+        }
         return RedirectToAction(nameof(Details), new { slug = product.Slug });
     }
 }

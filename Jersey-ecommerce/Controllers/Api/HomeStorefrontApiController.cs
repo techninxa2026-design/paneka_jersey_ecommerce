@@ -27,11 +27,12 @@ public sealed class HomeStorefrontApiController(ApplicationDbContext db) : Contr
             .Select(s => new { s.Title, s.Subtitle, s.ImageUrl, s.MobileImageUrl, s.ButtonText, s.ButtonUrl })
             .ToListAsync(ct);
         var banners = await db.Banners.AsNoTracking().Where(b => b.IsActive &&
-            (b.Placement == "Home" || b.Placement == "home") &&
+            (b.Placement == "Home" || b.Placement == "home" ||
+                b.Placement == "HomeTop" || b.Placement == "HomeMiddle" || b.Placement == "Footer") &&
             (!b.StartsAt.HasValue || b.StartsAt.Value <= now) &&
             (!b.EndsAt.HasValue || b.EndsAt.Value >= now))
             .OrderBy(b => b.DisplayOrder)
-            .Select(b => new { b.Title, b.Subtitle, b.ImageUrl, b.LinkUrl })
+            .Select(b => new { b.Title, b.Subtitle, b.ImageUrl, b.LinkUrl, b.Placement })
             .ToListAsync(ct);
         var collections = await db.Collections.AsNoTracking().Where(c => c.IsActive)
             .OrderBy(c => c.DisplayOrder).Select(c => new { c.Id, c.Name, c.Slug, c.ImageUrl })

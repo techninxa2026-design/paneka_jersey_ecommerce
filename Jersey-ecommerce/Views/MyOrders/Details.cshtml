@@ -1,17 +1,179 @@
 @model Jersey_ecommerce.Models.Orders.Order
-@{ Layout = null; }
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>@Model.OrderNumber | PANENKA</title><link rel="stylesheet" href="/css/panenka-checkout.css"><link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true">
-</head><body>
-@await Html.PartialAsync("_PanenkaCheckoutHeader")
-<section class="container intro"><div class="kicker">ORDER REFERENCE / @Model.OrderNumber</div><h1>Order details.</h1><p class="lead">Created @Model.CreatedAt.ToString("dd MMM yyyy") · @Model.Status</p></section>
-<main class="container checkout-layout"><section><h2 class="panel-heading">Items ordered</h2>
-@foreach (var item in Model.Items) {<div class="summary-row" style="padding:14px 0;border-bottom:1px solid #ddd;color:inherit"><div><strong style="color:inherit">@(item.ProductName)</strong><div class="lead">Quantity: @item.Quantity</div></div><strong style="color:inherit">৳@item.LineTotal.ToString("N2")</strong></div>}
-<hr class="sep"><h2 class="panel-heading">Shipping address</h2>
-<p class="lead">@Model.CustomerName · @Model.CustomerPhone<br>@Model.ShippingAddressLine1 @Model.ShippingAddressLine2<br>@Model.ShippingCity, @Model.ShippingDistrict, @Model.ShippingPostalCode<br>@Model.ShippingCountry</p>
-@if (TempData["OrderInfo"] is string notice) { <p class="notice">@notice</p> }
-@if (Model.Status == "Pending" && Model.Payment?.Status == "Pending" && Model.Shipment?.Status is (null or "Pending")) {
-<form method="post" action="/MyOrders/Cancel/@Model.Id" onsubmit="return confirm('Cancel this unpaid order and return its stock?')">@Html.AntiForgeryToken()<button type="submit" class="primary">CANCEL THIS ORDER <span>×</span></button></form>
+@using System
+@using System.Linq
+@{
+    Layout = null;
+    ViewData["Title"] = "Order " + Model.OrderNumber;
+    var shipment = Model.Shipment;
+    var payment = Model.Payment;
+    var trackLinkIsSafe = Uri.TryCreate(shipment?.TrackingUrl, UriKind.Absolute, out var trackingUri)
+        && (trackingUri.Scheme == Uri.UriSchemeHttps || trackingUri.Scheme == Uri.UriSchemeHttp);
+    var hasDispatched = shipment?.ShippedAt != null ||
+        shipment?.Status is "Shipped" or "InTransit" or "OutForDelivery" or "Delivered" or "Failed" or "Returned";
+    var canCancel = Model.Status == "Pending"
+        && payment?.Method == "CashOnDelivery" && payment.Status == "Pending"
+        && shipment?.Status is (null or "Pending");
+    var steps = new[] { "Pending", "Confirmed", "Processing", "Shipped", "Delivered" };
+    var currentStep = Array.IndexOf(steps, Model.Status);
+    var history = Model.StatusHistory.OrderBy(h => h.CreatedAt).ThenBy(h => h.Id).ToList();
 }
-<a href="/MyOrders" class="back">← All orders</a></section>
-<aside class="summary"><h2>Order status</h2><div class="summary-row"><span>Fulfillment</span><strong>@Model.Status</strong></div><div class="summary-row"><span>Payment</span><strong>@(Model.Payment?.Status ?? "Pending")</strong></div><div class="summary-row"><span>Shipment</span><strong>@(Model.Shipment?.Status ?? "Pending")</strong></div><div class="summary-total"><span>Total</span><strong>৳@Model.TotalAmount.ToString("N2")</strong></div></aside></main>
-@await Html.PartialAsync("_PanenkaCheckoutFooter")</body></html>
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="description" content="Track your PANENKA jersey order and courier delivery." />
+    <title>@Model.OrderNumber | PANENKA</title>
+    <link rel="stylesheet" href="/css/panenka-checkout.css" asp-append-version="true" />
+    <link rel="stylesheet" href="/css/panenka-premium.css" asp-append-version="true" />
+    <link rel="stylesheet" href="/css/panenka-orders.css" asp-append-version="true" />
+</head>
+<body>
+@await Html.PartialAsync("_PanenkaCheckoutHeader")
+<section class="container intro">
+    <div class="kicker">YOUR ACCOUNT / ORDER @Model.OrderNumber</div>
+    <h1>Order details.</h1>
+    <p class="lead">Placed @Model.CreatedAt.ToString("dd MMM yyyy") · <strong>@Model.Status</strong></p>
+</section>
+<main class="container pn-order-wrap">
+    @if (TempData["OrderInfo"] is string notice)
+    {
+        <div class="pn-order-alert" role="status">@notice</div>
+    }
+    <div class="pn-order-top">
+        <div>
+            <div class="pn-order-eyebrow">Your purchase</div>
+            <h2 style="margin:6px 0 0;font-size:24px;letter-spacing:-.05em">@Model.OrderNumber</h2>
+        </div>
+        <a class="pn-order-action" href="/MyOrders">← ALL ORDERS</a>
+    </div>
+    <div class="pn-order-grid">
+        <div class="pn-order-stack">
+            <section class="pn-order-card pn-order-section">
+                <h2>Items ordered</h2>
+                <div class="pn-order-rows">
+                    @foreach (var item in Model.Items.OrderBy(x => x.Id))
+                    {
+                        <div class="pn-order-item">
+                            <div>
+                                <strong>@item.ProductName</strong>
+                                <small style="display:block">@(item.SizeName ?? "Size not recorded") / @(item.ColorName ?? "Color not recorded") · Qty @item.Quantity</small>
+                                @if (!string.IsNullOrWhiteSpace(item.SKU))
+                                {
+                                    <small style="display:block">SKU: @item.SKU</small>
+                                }
+                                @if (Model.Status == "Delivered" && !string.IsNullOrWhiteSpace(item.ProductVariant?.Product?.Slug))
+                                {
+                                    <a class="pn-order-action" style="display:inline-block;margin-top:7px"
+                                       href="@($"/Product/Details/{Uri.EscapeDataString(item.ProductVariant!.Product.Slug)}#reviews")">WRITE A PRODUCT REVIEW ↗</a>
+                                }
+                            </div>
+                            <b>৳@item.LineTotal.ToString("N2")</b>
+                        </div>
+                    }
+                </div>
+            </section>
+            <section class="pn-order-card pn-order-section">
+                <h2>Courier & delivery</h2>
+                <div class="pn-order-data"><span>Delivery progress</span><strong>@(shipment?.Status ?? "Not assigned")</strong></div>
+                <div class="pn-order-data"><span>Courier</span><strong>@(string.IsNullOrWhiteSpace(shipment?.CourierName) ? "Awaiting assignment" : shipment.CourierName)</strong></div>
+                @if (!string.IsNullOrWhiteSpace(shipment?.TrackingNumber))
+                {
+                    <div class="pn-order-data"><span>Tracking number</span><strong>@shipment.TrackingNumber</strong></div>
+                }
+                @if (shipment?.EstimatedDeliveryAt is DateTime estimated)
+                {
+                    <div class="pn-order-data"><span>Estimated delivery</span><strong>@estimated.ToString("dd MMM yyyy")</strong></div>
+                }
+                @if (shipment?.ShippedAt is DateTime shipped)
+                {
+                    <div class="pn-order-data"><span>Dispatched</span><strong>@shipped.ToString("dd MMM yyyy")</strong></div>
+                }
+                @if (shipment?.DeliveredAt is DateTime delivered)
+                {
+                    <div class="pn-order-data"><span>Delivered</span><strong>@delivered.ToString("dd MMM yyyy")</strong></div>
+                }
+                @if (trackLinkIsSafe && hasDispatched)
+                {
+                    <a class="pn-order-track" href="@shipment!.TrackingUrl" target="_blank" rel="noopener noreferrer" aria-label="Track order through the courier website">TRACK WITH COURIER ↗</a>
+                }
+                else if (shipment?.Status is "Pending" or "Packed")
+                {
+                    <p class="pn-muted" style="margin:17px 0 0">We are preparing your order. Courier tracking will appear once it is dispatched.</p>
+                }
+                else if (hasDispatched && !trackLinkIsSafe)
+                {
+                    <p class="pn-muted" style="margin:17px 0 0">Tracking is being arranged. Keep your order number handy if you contact support.</p>
+                }
+            </section>
+            <section class="pn-order-card pn-order-section">
+                <h2>Deliver to</h2>
+                <address class="pn-order-address">
+                    <strong>@Model.CustomerName</strong> · @Model.CustomerPhone
+                    <div>@Model.ShippingAddressLine1</div>
+                    @if (!string.IsNullOrWhiteSpace(Model.ShippingAddressLine2)) { <div>@Model.ShippingAddressLine2</div> }
+                    <div>@Model.ShippingCity, @Model.ShippingDistrict @Model.ShippingPostalCode</div>
+                    <div>@Model.ShippingCountry</div>
+                </address>
+            </section>
+            @if (canCancel)
+            {
+                <section class="pn-order-card pn-order-section">
+                    <h2>Need to cancel?</h2>
+                    <p class="pn-muted">You can cancel a pending cash-on-delivery order before the fulfillment team starts processing it.</p>
+                    <form method="post" action="/MyOrders/Cancel/@Model.Id" onsubmit="return confirm('Cancel this unpaid order and restore the reserved stock?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="pn-order-cancel">CANCEL PENDING ORDER</button>
+                    </form>
+                </section>
+            }
+        </div>
+        <aside class="pn-order-stack">
+            <section class="pn-order-card pn-order-section">
+                <h2>Order overview</h2>
+                <div class="pn-order-data"><span>Order status</span><strong><span class="pn-pill" data-state="@Model.Status">@Model.Status</span></strong></div>
+                <div class="pn-order-data"><span>Payment method</span><strong>@(payment?.Method == "CashOnDelivery" ? "Cash on delivery" : payment?.Method ?? "Not recorded")</strong></div>
+                <div class="pn-order-data"><span>Payment status</span><strong>@(payment?.Status ?? "Pending")</strong></div>
+                <div class="pn-order-data"><span>Subtotal</span><strong>৳@Model.Subtotal.ToString("N2")</strong></div>
+                @if (Model.DiscountAmount > 0)
+                {
+                    <div class="pn-order-data"><span>Discount</span><strong>− ৳@Model.DiscountAmount.ToString("N2")</strong></div>
+                }
+                <div class="pn-order-data"><span>Shipping</span><strong>৳@Model.ShippingCost.ToString("N2")</strong></div>
+                <div class="pn-order-total"><span>Total</span><strong>৳@Model.TotalAmount.ToString("N2")</strong></div>
+            </section>
+            <section class="pn-order-card pn-order-section">
+                <h2>Delivery timeline</h2>
+                @if (currentStep >= 0)
+                {
+                    <ol class="pn-order-progress">
+                        @for (var i = 0; i < steps.Length; i++)
+                        {
+                            var stage = steps[i];
+                            var entry = history.LastOrDefault(x => x.Status == stage);
+                            <li class="@(i <= currentStep ? "is-complete" : "")">
+                                <b>@stage</b>
+                                <span>@(entry != null ? entry.CreatedAt.ToString("dd MMM yyyy · HH:mm") + " UTC" : i <= currentStep ? "Completed" : "Not yet")</span>
+                            </li>
+                        }
+                    </ol>
+                }
+                else
+                {
+                    <p class="pn-muted">This order is currently <strong>@Model.Status</strong>.</p>
+                    @if (Model.CancelledAt.HasValue)
+                    {
+                        <p class="pn-muted">Cancelled @Model.CancelledAt.Value.ToString("dd MMM yyyy, HH:mm") UTC</p>
+                    }
+                }
+                @if (shipment?.Status is "InTransit" or "OutForDelivery" or "Failed")
+                {
+                    <p class="pn-muted" style="margin:20px 0 0"><strong>Courier update:</strong> @shipment.Status</p>
+                }
+            </section>
+        </aside>
+    </div>
+</main>
+@await Html.PartialAsync("_PanenkaCheckoutFooter")
+</body>
+</html>

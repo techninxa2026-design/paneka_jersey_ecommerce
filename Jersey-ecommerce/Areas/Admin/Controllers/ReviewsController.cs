@@ -45,7 +45,7 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
                 ApprovedReviews = await all.CountAsync(r => r.IsApproved && !r.IsRejected),
                 PendingReviews = await all.CountAsync(r => !r.IsApproved && !r.IsRejected),
                 RejectedReviews = await all.CountAsync(r => r.IsRejected),
-                AverageRating = await all.AverageAsync(r => (double?)r.Rating) ?? 0
+                AverageRating = await all.Where(r => r.IsApproved && !r.IsRejected).AverageAsync(r => (double?)r.Rating) ?? 0
             };
 
             IQueryable<Review> query = all;

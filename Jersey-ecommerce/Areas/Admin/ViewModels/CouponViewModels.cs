@@ -15,19 +15,19 @@ namespace Jersey_ecommerce.Areas.Admin.ViewModels
             ErrorMessage = "Use letters, numbers, hyphens, or underscores only.")]
         public string Code { get; set; } = string.Empty;
 
-        [StringLength(500)]
+        [StringLength(300)]
         public string? Description { get; set; }
 
         [Required]
         public string DiscountType { get; set; } = "Percentage";
 
-        [Range(typeof(decimal), "0.01", "99999999", ErrorMessage = "Enter a discount greater than zero.")]
+        [Range(typeof(decimal), "0.01", "1000000", ErrorMessage = "Enter a discount greater than zero.")]
         public decimal DiscountValue { get; set; }
 
-        [Range(typeof(decimal), "0", "999999999", ErrorMessage = "Minimum order amount cannot be negative.")]
+        [Range(typeof(decimal), "0", "100000000", ErrorMessage = "Minimum order amount cannot be negative.")]
         public decimal MinimumOrderAmount { get; set; }
 
-        [Range(typeof(decimal), "0.01", "999999999", ErrorMessage = "Maximum discount must be greater than zero.")]
+        [Range(typeof(decimal), "0.01", "100000000", ErrorMessage = "Maximum discount must be greater than zero.")]
         public decimal? MaximumDiscountAmount { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "Enter a positive usage limit.")]

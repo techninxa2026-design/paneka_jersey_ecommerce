@@ -24,11 +24,11 @@
                 <section class="mc-form-card">
                     <div class="mc-form-header"><span>01</span><div><h2>Slide Details</h2><p>Text over the visual and optional destination link.</p></div></div>
                     <div class="mc-form-fields">
-                        <div class="mc-field"><label for="Title">Slide title</label><input name="Title" id="Title" value="@Model.Title" maxlength="200" required class="mc-input" placeholder="e.g. THE NEW SEASON" />@Html.ValidationMessageFor(m => m.Title, "", new { @class = "mc-field-error" })</div>
-                        <div class="mc-field"><label for="Subtitle">Subtitle</label><textarea name="Subtitle" id="Subtitle" class="mc-input mc-textarea" rows="3" placeholder="Discover the latest football jerseys and gear.">@Model.Subtitle</textarea>@Html.ValidationMessageFor(m => m.Subtitle, "", new { @class = "mc-field-error" })</div>
+                        <div class="mc-field"><label for="Title">Slide title</label><input name="Title" id="Title" value="@Model.Title" maxlength="150" required class="mc-input" placeholder="e.g. THE NEW SEASON" />@Html.ValidationMessageFor(m => m.Title, "", new { @class = "mc-field-error" })</div>
+                        <div class="mc-field"><label for="Subtitle">Subtitle</label><textarea name="Subtitle" id="Subtitle" class="mc-input mc-textarea" maxlength="300" rows="3" placeholder="Discover the latest football jerseys and gear.">@Model.Subtitle</textarea>@Html.ValidationMessageFor(m => m.Subtitle, "", new { @class = "mc-field-error" })</div>
                         <div class="mc-field-row">
-                            <div class="mc-field"><label for="ButtonText">Button label</label><input name="ButtonText" id="ButtonText" value="@Model.ButtonText" class="mc-input" placeholder="SHOP NOW" />@Html.ValidationMessageFor(m => m.ButtonText, "", new { @class = "mc-field-error" })</div>
-                            <div class="mc-field"><label for="ButtonUrl">Button destination URL</label><input name="ButtonUrl" id="ButtonUrl" value="@Model.ButtonUrl" class="mc-input" placeholder="/shop or https://..." />@Html.ValidationMessageFor(m => m.ButtonUrl, "", new { @class = "mc-field-error" })</div>
+                            <div class="mc-field"><label for="ButtonText">Button label</label><input name="ButtonText" id="ButtonText" value="@Model.ButtonText" maxlength="100" class="mc-input" placeholder="SHOP NOW" />@Html.ValidationMessageFor(m => m.ButtonText, "", new { @class = "mc-field-error" })</div>
+                            <div class="mc-field"><label for="ButtonUrl">Button destination URL</label><input name="ButtonUrl" id="ButtonUrl" value="@Model.ButtonUrl" maxlength="500" class="mc-input" placeholder="/shop or https://..." />@Html.ValidationMessageFor(m => m.ButtonUrl, "", new { @class = "mc-field-error" })</div>
                         </div>
                     </div>
                 </section>

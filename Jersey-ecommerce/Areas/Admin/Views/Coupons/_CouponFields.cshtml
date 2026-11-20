@@ -6,7 +6,7 @@
         <div class="cp-panel-heading"><div><h2>Coupon details</h2><p>Set the code customers enter at checkout.</p></div><span class="cp-step">01</span></div>
         <div class="cp-fields">
             <div class="cp-field"><label asp-for="Code">Coupon code <span>*</span></label><input asp-for="Code" class="cp-input cp-uppercase" placeholder="EXAMPLE: SAVE20" maxlength="50" autocomplete="off" /><span asp-validation-for="Code" class="cp-error"></span><small>3–50 characters. Letters, numbers, - and _ only.</small></div>
-            <div class="cp-field"><label asp-for="Description">Description</label><textarea asp-for="Description" class="cp-input" rows="3" placeholder="Example: Special discount for returning customers" maxlength="500"></textarea><span asp-validation-for="Description" class="cp-error"></span></div>
+            <div class="cp-field"><label asp-for="Description">Description</label><textarea asp-for="Description" class="cp-input" rows="3" placeholder="Example: Special discount for returning customers" maxlength="300"></textarea><span asp-validation-for="Description" class="cp-error"></span></div>
         </div>
         <div class="cp-section-divider"></div>
         <div class="cp-panel-heading cp-subhead"><div><h2>Discount settings</h2><p>Choose how the promotion reduces the cart total.</p></div><span class="cp-step">02</span></div>

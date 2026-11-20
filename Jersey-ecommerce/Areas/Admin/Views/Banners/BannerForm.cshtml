@@ -23,18 +23,18 @@
                 <section class="mc-form-card">
                     <div class="mc-form-header"><span>01</span><div><h2>Banner Information</h2><p>Name, supporting text, and click-through destination.</p></div></div>
                     <div class="mc-form-fields">
-                        <div class="mc-field"><label for="Title">Banner title</label><input name="Title" id="Title" value="@Model.Title" maxlength="200" required class="mc-input" placeholder="e.g. MATCH DAY SPECIAL" />@Html.ValidationMessageFor(m => m.Title, "", new { @class = "mc-field-error" })</div>
-                        <div class="mc-field"><label for="Subtitle">Subtitle</label><textarea name="Subtitle" id="Subtitle" class="mc-input mc-textarea" rows="3" placeholder="Limited-time offers on selected jerseys.">@Model.Subtitle</textarea>@Html.ValidationMessageFor(m => m.Subtitle, "", new { @class = "mc-field-error" })</div>
-                        <div class="mc-field"><label for="LinkUrl">Banner destination URL</label><input name="LinkUrl" id="LinkUrl" value="@Model.LinkUrl" class="mc-input" placeholder="/shop or https://..." />@Html.ValidationMessageFor(m => m.LinkUrl, "", new { @class = "mc-field-error" })</div>
+                        <div class="mc-field"><label for="Title">Banner title</label><input name="Title" id="Title" value="@Model.Title" maxlength="150" required class="mc-input" placeholder="e.g. MATCH DAY SPECIAL" />@Html.ValidationMessageFor(m => m.Title, "", new { @class = "mc-field-error" })</div>
+                        <div class="mc-field"><label for="Subtitle">Subtitle</label><textarea name="Subtitle" id="Subtitle" class="mc-input mc-textarea" maxlength="300" rows="3" placeholder="Limited-time offers on selected jerseys.">@Model.Subtitle</textarea>@Html.ValidationMessageFor(m => m.Subtitle, "", new { @class = "mc-field-error" })</div>
+                        <div class="mc-field"><label for="LinkUrl">Banner destination URL</label><input name="LinkUrl" id="LinkUrl" value="@Model.LinkUrl" maxlength="500" class="mc-input" placeholder="/shop or https://..." />@Html.ValidationMessageFor(m => m.LinkUrl, "", new { @class = "mc-field-error" })</div>
                         <div class="mc-field">
                             <label for="Placement">Placement</label>
                             <select name="Placement" id="Placement" class="mc-input" required>
                                 <option value="Home" selected="@(Model.Placement == "Home" ? "selected" : null)">Home</option>
-                                <option value="HomeTop" selected="@(Model.Placement == "HomeTop" ? "selected" : null)">Home top</option>
-                                <option value="HomeMiddle" selected="@(Model.Placement == "HomeMiddle" ? "selected" : null)">Home middle</option>
+                                <option value="HomeTop" selected="@(Model.Placement == "HomeTop" ? "selected" : null)">Homepage · below hero</option>
+                                <option value="HomeMiddle" selected="@(Model.Placement == "HomeMiddle" ? "selected" : null)">Homepage · below new arrivals</option>
                                 <option value="Shop" selected="@(Model.Placement == "Shop" ? "selected" : null)">Shop</option>
-                                <option value="Category" selected="@(Model.Placement == "Category" ? "selected" : null)">Category</option>
-                                <option value="Footer" selected="@(Model.Placement == "Footer" ? "selected" : null)">Footer</option>
+                                <option value="Category" selected="@(Model.Placement == "Category" ? "selected" : null)">Shop · category-filtered pages</option>
+                                <option value="Footer" selected="@(Model.Placement == "Footer" ? "selected" : null)">Homepage · before footer</option>
                             </select>
                             @Html.ValidationMessageFor(m => m.Placement, "", new { @class = "mc-field-error" })
                             <small>The storefront chooses where to display banners by this value.</small>

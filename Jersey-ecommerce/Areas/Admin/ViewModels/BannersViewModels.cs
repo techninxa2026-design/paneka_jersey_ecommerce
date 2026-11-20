@@ -15,10 +15,10 @@ namespace Jersey_ecommerce.Areas.Admin.ViewModels
         public int Id { get; set; }
 
         [Required(ErrorMessage = "Enter a slide title.")]
-        [StringLength(200)]
+        [StringLength(150)]
         public string Title { get; set; } = string.Empty;
 
-        [StringLength(1000)]
+        [StringLength(300)]
         public string? Subtitle { get; set; }
 
         [Display(Name = "Desktop image")]
@@ -36,7 +36,7 @@ namespace Jersey_ecommerce.Areas.Admin.ViewModels
         [Display(Name = "Button text")]
         public string? ButtonText { get; set; }
 
-        [StringLength(1000)]
+        [StringLength(500)]
         [Display(Name = "Button URL")]
         public string? ButtonUrl { get; set; }
 
@@ -59,10 +59,10 @@ namespace Jersey_ecommerce.Areas.Admin.ViewModels
         public int Id { get; set; }
 
         [Required(ErrorMessage = "Enter a banner title.")]
-        [StringLength(200)]
+        [StringLength(150)]
         public string Title { get; set; } = string.Empty;
 
-        [StringLength(1000)]
+        [StringLength(300)]
         public string? Subtitle { get; set; }
 
         [Display(Name = "Banner image")]
@@ -70,12 +70,12 @@ namespace Jersey_ecommerce.Areas.Admin.ViewModels
 
         public string? CurrentImageUrl { get; set; }
 
-        [StringLength(1000)]
+        [StringLength(500)]
         [Display(Name = "Link URL")]
         public string? LinkUrl { get; set; }
 
         [Required]
-        [StringLength(60)]
+        [StringLength(50)]
         public string Placement { get; set; } = "Home";
 
         [Range(0, 99999)]
