@@ -204,6 +204,45 @@
                 </div>
             </section>
 
+            @if (order.Status == "Pending" && order.Payment?.Method == "Bkash" &&
+                 (order.Payment.Status is "Pending" or "Rejected"))
+            {
+                <section class="po-card po-hide-print">
+                    <div class="po-card-h">
+                        <div class="po-card-heading">
+                            <div class="po-info-icon"><i class="bi bi-shield-exclamation"></i></div>
+                            <div><h2 class="po-card-title">Unpaid bKash reservation</h2>
+                                 <p class="po-card-subtitle">Staff finance reconciliation only</p></div>
+                        </div>
+                    </div>
+                    <div class="po-card-body">
+                        <p class="po-muted" style="line-height:1.7;margin:0 0 17px">
+                            This order reserved stock before the customer was instructed to transfer.
+                            You can cancel and release the stock only after checking your real bKash
+                            receiving account and confirming no money was received for this order.
+                            If a transfer exists, resolve it before cancellation.
+                        </p>
+                        <form method="post" action="/Admin/Orders/CancelPendingBkash/@order.Id"
+                              onsubmit="return confirm('I independently checked the wallet and confirmed no funds were received. Cancel this order and restore stock?')"
+                              style="display:grid;gap:13px">
+                            @Html.AntiForgeryToken()
+                            <label class="po-label" for="financeNote-@order.Id">Independent wallet reconciliation note</label>
+                            <textarea id="financeNote-@order.Id" class="po-textarea"
+                                      name="reconciliationNote" required minlength="10" maxlength="450"
+                                      placeholder="Verified no matching transaction or funds received in the merchant wallet, including any previous customer reference."></textarea>
+                            <label style="display:flex;gap:10px;align-items:flex-start;font-size:12px;line-height:1.6">
+                                <input type="checkbox" name="financeCleared" value="true" required style="margin-top:4px" />
+                                <span>I independently checked the bKash wallet and confirm no payment was received.</span>
+                            </label>
+                            <button type="submit" class="po-btn"
+                                    style="width:100%;border:1px solid #c14c4c;color:#a33333;background:#fff">
+                                <i class="bi bi-x-circle"></i> Cancel unpaid order &amp; restore stock
+                            </button>
+                        </form>
+                    </div>
+                </section>
+            }
+
             <section class="po-card">
                 <div class="po-card-h"><div class="po-card-heading"><div class="po-info-icon"><i class="bi bi-truck"></i></div><h2 class="po-card-title">Shipment</h2></div></div>
                 <div class="po-card-body">

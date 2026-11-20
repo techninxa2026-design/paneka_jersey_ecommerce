@@ -10,21 +10,29 @@ public sealed class OrderCancellationService(ApplicationDbContext db, InventoryS
 {
     // Cancel only an unpaid order that has not entered fulfillment.
     // Runs all stock restores in the same transaction as the status change.
-    public async Task CancelUnpaidPendingOrder(int orderId, string userId, bool asAdmin = false)
+    public async Task CancelUnpaidPendingOrder(int orderId, string userId, bool asAdmin = false,
+        string? financeNote = null)
     {
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var order = await db.Orders.Include(o => o.Payment).Include(o => o.Shipment)
             .Include(o => o.Items).SingleOrDefaultAsync(o => o.Id == orderId && (asAdmin || o.UserId == userId));
         if (order == null) throw new CheckoutException("Order not found.");
-        // A manual bKash claim may have been transferred externally even
-        // before the customer submitted a TrxID. The generic unpaid-order
-        // cancellation path must not restore reserved stock without finance
-        // reconciling possible wallet receipts/refunds first.
-        if (order.Payment?.Method is "ManualAdvance" or "Bkash")
-            throw new CheckoutException("Advance and bKash orders require independent finance reconciliation before cancellation. Use staff support.");
-        if (order.Status != "Pending" || order.Payment == null || order.Payment.Status != "Pending" ||
+        // A bKash pre-reservation can remain unpaid if the customer closes
+        // the popup. Only staff may release stock, after checking the actual
+        // merchant wallet and recording the independent reconciliation.
+        var note = financeNote?.Trim() ?? "";
+        var isManualBkashReconciled = asAdmin &&
+            order.Payment?.Method == "Bkash" &&
+            order.Payment.Status is ("Pending" or "Rejected") &&
+            note.Length is >= 10 and <= 450;
+        if (order.Payment?.Method == "ManualAdvance" ||
+            (order.Payment?.Method == "Bkash" && !isManualBkashReconciled))
+            throw new CheckoutException("A bKash order requires finance confirmation that no transfer was received before stock is released.");
+        if (order.Status != "Pending" || order.Payment == null ||
+            (order.Payment.Status != "Pending" &&
+             !(isManualBkashReconciled && order.Payment.Status == "Rejected")) ||
             order.Shipment?.Status is not (null or "Pending"))
-            throw new CheckoutException("Only pending, unpaid, unshipped orders can be cancelled here. Contact support.");
+            throw new CheckoutException("Only pending, unpaid, unshipped orders can be cancelled after reconciliation.");
 
         foreach (var item in order.Items)
         {
@@ -37,6 +45,24 @@ public sealed class OrderCancellationService(ApplicationDbContext db, InventoryS
         order.UpdatedAt = cancelledAt;
         order.CancelledAt = cancelledAt;
         order.Payment.Status = "Cancelled";
+        if (isManualBkashReconciled)
+        {
+            order.Payment.ManualReviewedAt = cancelledAt;
+            order.Payment.ManualReviewedByUserId = userId;
+            order.Payment.ManualReviewNote = note;
+            db.PaymentTransactions.Add(new PaymentTransaction
+            {
+                PaymentId = order.Payment.Id,
+                TransactionType = "ManualBkash",
+                Status = "Cancelled",
+                Amount = order.Payment.Amount,
+                Reference = order.Payment.ManualSenderNumber,
+                ProviderTransactionId = order.Payment.TransactionReference,
+                FailureReason = "Staff reconciled no funds before cancellation: " + note,
+                CreatedAt = cancelledAt,
+                CompletedAt = cancelledAt
+            });
+        }
         if (order.Shipment != null) order.Shipment.Status = "Cancelled";
         var usage = await db.CouponUsages.FirstOrDefaultAsync(u => u.OrderId == order.Id);
         if (usage != null)
@@ -48,7 +74,10 @@ public sealed class OrderCancellationService(ApplicationDbContext db, InventoryS
         db.OrderStatusHistories.Add(new OrderStatusHistory
         {
             OrderId = orderId, Status = "Cancelled", ChangedByUserId = userId,
-            Note = "Unpaid order cancelled; stock restored and coupon allowance released.",
+            Note = isManualBkashReconciled
+                ? "Manual bKash order cancelled after independent no-funds reconciliation; stock and coupon restored. "
+                    + note[..Math.Min(note.Length, 160)]
+                : "Unpaid order cancelled; stock restored and coupon allowance released.",
             CreatedAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();

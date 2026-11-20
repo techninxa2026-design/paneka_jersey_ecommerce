@@ -4,6 +4,7 @@ using Jersey_ecommerce.Areas.Identity;
 using Jersey_ecommerce.Data;
 using Jersey_ecommerce.Models.Checkout;
 using Jersey_ecommerce.Services.Checkout;
+using Jersey_ecommerce.Services;
 using Jersey_ecommerce.ViewModels.Checkout;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -72,6 +73,9 @@ public sealed class CheckoutController(
             ModelState.AddModelError(nameof(model.Delivery), "Delivery details are required.");
         else
         {
+            var canonicalDistrict = BangladeshDistricts.Normalize(model.Delivery.District);
+            if (canonicalDistrict is not null)
+                model.Delivery.District = canonicalDistrict;
             if (model.Delivery.Region is not ("Dhaka" or "OutsideDhaka"))
                 ModelState.AddModelError("Delivery.Region", "Select a valid shipping region.");
             if (model.Delivery.Region == "Dhaka" &&
@@ -96,7 +100,9 @@ public sealed class CheckoutController(
     public async Task<IActionResult> Payment()
     {
         var delivery = ReadDelivery();
-        if (delivery is null || delivery.Region is not ("Dhaka" or "OutsideDhaka"))
+        if (delivery is null || delivery.Region is not ("Dhaka" or "OutsideDhaka") ||
+            !BangladeshDistricts.IsValid(delivery.District) ||
+            (delivery.Region == "Dhaka" && !BangladeshDistricts.IsDhaka(delivery.District)))
             return RedirectToAction(nameof(Delivery));
         var quote = await cart.GetCart(UserId);
         if (quote.Items.Count == 0) return RedirectToAction("Index", "Cart");
@@ -119,12 +125,81 @@ public sealed class CheckoutController(
         });
     }
 
+    // Reserve inventory, coupon and a pending order before displaying transfer
+    // instructions. The browser popup collects TrxID only AFTER the order exists.
+    [HttpPost("Payment/Bkash/Prepare")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> PrepareBkash(string? submissionToken, string? bkashRecipientNumber)
+    {
+        var delivery = ReadDelivery();
+        if (delivery is null || delivery.Region is not ("Dhaka" or "OutsideDhaka") ||
+            !BangladeshDistricts.IsValid(delivery.District) ||
+            (delivery.Region == "Dhaka" && !BangladeshDistricts.IsDhaka(delivery.District)))
+            return BadRequest(new { message = "Your delivery details need updating. Return to Delivery and try again." });
+
+        var storedToken = HttpContext.Session.GetString(OrderTokenSession);
+        if (!Guid.TryParseExact(submissionToken, "N", out _) ||
+            !string.Equals(storedToken, submissionToken, StringComparison.Ordinal))
+            return BadRequest(new { message = "Your checkout session expired. Reload the payment page." });
+
+        var input = new PlaceOrderInput
+        {
+            PaymentMethod = "Bkash", SubmissionToken = submissionToken!,
+            BkashRecipientNumber = bkashRecipientNumber
+        };
+
+        try
+        {
+            var orderId = await cart.PlaceOrder(UserId, delivery, input, prepareManualBkash: true);
+            var order = await db.Orders.AsNoTracking().Include(o => o.Payment)
+                .SingleAsync(o => o.Id == orderId && o.UserId == UserId);
+            if (order.Payment?.Method != "Bkash")
+                return Conflict(new { message = "This checkout belongs to a different payment method. Open My Orders." });
+
+            // Once submitted, do not offer to pay again against a completed or
+            // already-reported payment. Returning the order ID allows resume.
+            return Ok(new
+            {
+                orderId = order.Id,
+                orderNumber = order.OrderNumber,
+                recipientNumber = order.Payment.ManualRecipientNumber,
+                amount = order.Payment.Amount,
+                paymentStatus = order.Payment.Status
+            });
+        }
+        catch (CheckoutException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Could not prepare manual bKash order for customer {UserId}", UserId);
+            var prior = await FindPreviousOrder(submissionToken ?? "");
+            if (prior is not null && prior.Value.Method == "Bkash")
+            {
+                var order = await db.Orders.AsNoTracking().Include(o => o.Payment)
+                    .SingleAsync(o => o.Id == prior.Value.OrderId && o.UserId == UserId);
+                return Ok(new
+                {
+                    orderId = order.Id,
+                    orderNumber = order.OrderNumber,
+                    recipientNumber = order.Payment?.ManualRecipientNumber,
+                    amount = order.Payment?.Amount,
+                    paymentStatus = order.Payment?.Status
+                });
+            }
+            return StatusCode(503, new { message = "Could not reserve this order. No transfer should be made until checkout confirms the reservation. Check My Orders before retrying." });
+        }
+    }
+
     [HttpPost("Payment")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Payment(PlaceOrderInput input)
     {
         var delivery = ReadDelivery();
-        if (delivery is null || delivery.Region is not ("Dhaka" or "OutsideDhaka"))
+        if (delivery is null || delivery.Region is not ("Dhaka" or "OutsideDhaka") ||
+            !BangladeshDistricts.IsValid(delivery.District) ||
+            (delivery.Region == "Dhaka" && !BangladeshDistricts.IsDhaka(delivery.District)))
             return RedirectToAction(nameof(Delivery));
 
         var storedToken = HttpContext.Session.GetString(OrderTokenSession);
@@ -135,9 +210,11 @@ public sealed class CheckoutController(
             TempData["CheckoutError"] = "Your checkout session expired. Reload the payment step.";
             return RedirectToAction(nameof(Payment));
         }
-        if (!ModelState.IsValid || input.PaymentMethod is not ("COD" or "Bkash"))
+        // bKash uses PrepareBkash (reserve stock first) + BkashController.Submit
+        // (receipt afterward). Do not accept direct pay-before-order submissions.
+        if (!ModelState.IsValid || input.PaymentMethod != "COD")
         {
-            TempData["CheckoutError"] = "Choose cash on delivery or bKash.";
+            TempData["CheckoutError"] = "Choose COD here, or open the Pay with bKash popup to reserve your order before transferring.";
             return RedirectToAction(nameof(Payment));
         }
         if (input.PaymentMethod == "COD" && !await cart.CodEnabled())
@@ -145,21 +222,13 @@ public sealed class CheckoutController(
             TempData["CheckoutError"] = "Cash on delivery is disabled in store settings.";
             return RedirectToAction(nameof(Payment));
         }
-        if (input.PaymentMethod == "Bkash" && await cart.ManualBkashNumber() is null)
-        {
-            TempData["CheckoutError"] = "Manual bKash is not currently available. Choose cash on delivery or contact support.";
-            return RedirectToAction(nameof(Payment));
-        }
-
         try
         {
             // CheckoutService atomically creates the order, stock movements, and Pending
             // payment using the requested method. No second, non-transactional conversion.
             var orderId = await cart.PlaceOrder(UserId, delivery, input);
             ClearCheckout();
-            return input.PaymentMethod == "Bkash"
-                ? RedirectToAction("Start", "Bkash", new { id = orderId })
-                : RedirectToAction(nameof(Success), new { id = orderId });
+            return RedirectToAction(nameof(Success), new { id = orderId });
         }
         catch (CheckoutException ex)
         {
@@ -177,7 +246,7 @@ public sealed class CheckoutController(
             {
                 ClearCheckout();
                 if (input.PaymentMethod == "Bkash" && prior.Value.Method == "Bkash")
-                    return RedirectToAction("Start", "Bkash", new { id = prior.Value.OrderId });
+                    return RedirectToAction("Status", "Bkash", new { id = prior.Value.OrderId });
                 if (input.PaymentMethod == "COD" && prior.Value.Method == "CashOnDelivery")
                     return RedirectToAction(nameof(Success), new { id = prior.Value.OrderId });
 
