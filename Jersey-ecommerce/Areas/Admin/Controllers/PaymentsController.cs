@@ -127,7 +127,7 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
             var payment = await _context.Payments
                 .AsNoTracking()
                 .AsSplitQuery()
-                .Include(p => p.Order)
+                .Include(p => p.Order).ThenInclude(o => o.Shipment)
                 .Include(p => p.Transactions)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
