@@ -269,9 +269,12 @@ public sealed class CheckoutService(
     // return the same order without requiring any new checkout tables or migration.
     public async Task<int> PlaceOrder(string userId, DeliveryInput delivery, PlaceOrderInput input)
     {
-        if (delivery.Region is not ("Dhaka" or "OutsideDhaka")) throw new CheckoutException("Select a delivery region.");
-        if (delivery.Region == "Dhaka" && !string.Equals(delivery.District?.Trim(), "Dhaka", StringComparison.OrdinalIgnoreCase))
-            throw new CheckoutException("Inside Dhaka requires Dhaka district.");
+        if (!BangladeshDistricts.TryNormalize(delivery.District, out var district))
+            throw new CheckoutException("Select a valid district in Bangladesh.");
+        if (delivery.Region != BangladeshDistricts.RegionFor(district))
+            throw new CheckoutException("Shipping region does not match the selected district. Return to Delivery and reselect it.");
+        // Use the approved district spelling when saving Order and Address.
+        delivery.District = district;
         if (input.PaymentMethod is not ("COD" or "ManualAdvance" or "Bkash"))
             throw new CheckoutException("Choose a valid payment method.");
         // COD is available throughout Bangladesh when the store setting permits it.
