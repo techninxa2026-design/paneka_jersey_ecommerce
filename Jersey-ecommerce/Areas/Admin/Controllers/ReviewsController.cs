@@ -136,6 +136,8 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
                 Id = r.Id,
                 ProductId = r.ProductId,
                 ProductName = r.Product.Name,
+                ProductSlug = r.Product.Slug,
+                ProductIsPublished = r.Product.IsPublished,
                 UserId = r.UserId,
                 CustomerName = r.User.UserName ?? r.User.Email ?? "Customer",
                 Email = r.User.Email,
