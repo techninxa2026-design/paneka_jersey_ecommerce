@@ -26,6 +26,82 @@ namespace Paneka.Tests;
 public sealed class ManualPaymentFlowTests
 {
     [Fact]
+    public void Official_bangladesh_district_selector_has_all_64_unique_names_and_canonical_aliases()
+    {
+        var districts = BangladeshDistricts.ByDivision
+            .SelectMany(d => d.Districts).ToList();
+        Assert.Equal(8, BangladeshDistricts.ByDivision.Count);
+        Assert.Equal(64, districts.Count);
+        Assert.Equal(64, districts.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Contains("Dhaka", districts);
+        Assert.Contains("Gazipur", districts);
+        Assert.Contains("Jashore", districts);
+        Assert.Equal("Chattogram", BangladeshDistricts.Normalize("Chittagong"));
+        Assert.Equal("Cumilla", BangladeshDistricts.Normalize("Comilla"));
+        Assert.False(BangladeshDistricts.IsValid("Kolkata"));
+        Assert.False(BangladeshDistricts.IsValid("Kaliganj"));
+    }
+
+    [Fact]
+    public async Task Checkout_never_creates_an_order_for_a_fake_district_or_unreported_bkash_transfer()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = Database(connection);
+        await db.Database.EnsureCreatedAsync();
+        SeedCatalog(db);
+        db.SiteSettings.Add(new SiteSettings
+        {
+            Key = ManualBkashPaymentService.NumberSettingKey, Value = "01712345678"
+        });
+        await db.SaveChangesAsync();
+        var checkout = Checkout(db);
+        var badAddress = Delivery();
+        badAddress.District = "Kolkata";
+        badAddress.Region = "OutsideDhaka";
+        await Assert.ThrowsAsync<CheckoutException>(() =>
+            checkout.PlaceOrder("buyer", badAddress, BkashInput("AD98765432")));
+        var genuineArea = Delivery();
+        genuineArea.District = "Gazipur";
+        genuineArea.City = "Kaliganj";
+        genuineArea.Region = "Dhaka";
+        await Assert.ThrowsAsync<CheckoutException>(() =>
+            checkout.PlaceOrder("buyer", genuineArea, BkashInput("AD98765432")));
+        genuineArea.Region = "OutsideDhaka";
+
+        var missingSender = BkashInput("AD98765432");
+        missingSender.BkashSenderNumber = "";
+        await Assert.ThrowsAsync<CheckoutException>(() =>
+            checkout.PlaceOrder("buyer", genuineArea, missingSender));
+        var missingTrx = BkashInput("AD98765432");
+        missingTrx.BkashTransactionId = null;
+        await Assert.ThrowsAsync<CheckoutException>(() =>
+            checkout.PlaceOrder("buyer", genuineArea, missingTrx));
+        var wrongRecipient = BkashInput("AD98765432");
+        wrongRecipient.BkashRecipientNumber = "01811111111";
+        await Assert.ThrowsAsync<CheckoutException>(() =>
+            checkout.PlaceOrder("buyer", genuineArea, wrongRecipient));
+        var futureTime = BkashInput("AD98765432");
+        futureTime.BkashPaidAtLocal = BangladeshNow().AddDays(2);
+        await Assert.ThrowsAsync<CheckoutException>(() =>
+            checkout.PlaceOrder("buyer", genuineArea, futureTime));
+
+        Assert.Empty(await db.Orders.AsNoTracking().ToListAsync());
+        Assert.Equal(6, (await db.ProductVariants.AsNoTracking().SingleAsync()).StockQuantity);
+        Assert.Single(await db.CartItems.AsNoTracking().ToListAsync());
+
+        var id = await checkout.PlaceOrder("buyer", genuineArea, BkashInput("AD98765432"));
+        var order = await db.Orders.AsNoTracking().Include(x => x.Payment).SingleAsync(x => x.Id == id);
+        Assert.Equal("Gazipur", order.ShippingDistrict);
+        Assert.Equal("Kaliganj", order.ShippingCity);
+        Assert.Equal("Submitted", order.Payment?.Status);
+        Assert.Equal("AD98765432", order.Payment?.TransactionReference);
+        Assert.Equal(4, (await db.ProductVariants.AsNoTracking().SingleAsync()).StockQuantity);
+        Assert.Empty(await db.CartItems.AsNoTracking().ToListAsync());
+        Assert.Single(await db.PaymentTransactions.AsNoTracking().ToListAsync());
+    }
+
+    [Fact]
     public void Additive_manual_bkash_payment_migration_is_discoverable()
     {
         using var db = new ApplicationDbContext(
