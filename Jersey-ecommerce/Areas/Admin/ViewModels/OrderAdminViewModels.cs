@@ -43,6 +43,7 @@ namespace Jersey_ecommerce.Areas.Admin.ViewModels
     {
         public Order Order { get; set; } = null!;
         public string? NextStatus { get; set; }
+        public string? NextStatusHint { get; set; }
     }
 
     public sealed class OrderStatusUpdateViewModel
