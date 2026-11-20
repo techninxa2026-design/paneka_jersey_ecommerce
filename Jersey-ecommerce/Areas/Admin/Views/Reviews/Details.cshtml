@@ -52,26 +52,26 @@
             <div class="rv-detail-actions">
                 @if (!Model.IsApproved || Model.IsRejected)
                 {
-                    <form asp-area="Admin" asp-controller="Reviews" asp-action="Approve" asp-route-id="@Model.Id" method="post">
+                    <form action="@Url.Action("Approve", "Reviews", new { area = "Admin", id = Model.Id })" method="post">
                         @Html.AntiForgeryToken()
                         <button type="submit" class="rv-btn rv-btn-dark"><i class="bi bi-check-circle"></i>Approve review</button>
                     </form>
                 }
                 @if (!Model.IsRejected)
                 {
-                    <form asp-area="Admin" asp-controller="Reviews" asp-action="Reject" asp-route-id="@Model.Id" method="post">
+                    <form action="@Url.Action("Reject", "Reviews", new { area = "Admin", id = Model.Id })" method="post">
                         @Html.AntiForgeryToken()
                         <button type="submit" class="rv-btn rv-btn-danger"><i class="bi bi-x-circle"></i>Reject review</button>
                     </form>
                 }
                 @if (Model.IsApproved || Model.IsRejected)
                 {
-                    <form asp-area="Admin" asp-controller="Reviews" asp-action="Pending" asp-route-id="@Model.Id" method="post">
+                    <form action="@Url.Action("Pending", "Reviews", new { area = "Admin", id = Model.Id })" method="post">
                         @Html.AntiForgeryToken()
                         <button type="submit" class="rv-btn"><i class="bi bi-arrow-counterclockwise"></i>Move to pending</button>
                     </form>
                 }
-                <form asp-area="Admin" asp-controller="Reviews" asp-action="Delete" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Permanently delete this customer review?');">
+                <form action="@Url.Action("Delete", "Reviews", new { area = "Admin", id = Model.Id })" method="post" onsubmit="return confirm('Permanently delete this customer review?');">
                     @Html.AntiForgeryToken()
                     <button type="submit" class="rv-btn rv-btn-danger"><i class="bi bi-trash3"></i>Delete permanently</button>
                 </form>
