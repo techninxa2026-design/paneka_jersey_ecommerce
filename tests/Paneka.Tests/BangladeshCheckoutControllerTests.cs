@@ -5,6 +5,7 @@ using Jersey_ecommerce.Controllers;
 using Jersey_ecommerce.Data;
 using Jersey_ecommerce.Models.Catalog;
 using Jersey_ecommerce.Models.Content;
+using Jersey_ecommerce.Models.Checkout;
 using Jersey_ecommerce.Models.Shopping;
 using Jersey_ecommerce.Services;
 using Jersey_ecommerce.Services.Checkout;
@@ -72,6 +73,20 @@ public sealed class BangladeshCheckoutControllerTests
             NullLogger<CheckoutController>.Instance);
         controller.ControllerContext = new ControllerContext { HttpContext = http };
         controller.TempData = new TempDataDictionary(http, new TestTempDataProvider());
+
+        // Browser checkout must never bypass order reservation by directly
+        // submitting a bKash claim to the COD action.
+        var forgedInlinePayment = await controller.Payment(new PlaceOrderInput
+        {
+            PaymentMethod = "Bkash",
+            SubmissionToken = token,
+            BkashRecipientNumber = "01712345678",
+            BkashSenderNumber = "01912345678",
+            BkashTransactionId = "QW12345678",
+            BkashPaidAtLocal = DateTime.UtcNow.AddHours(6)
+        });
+        Assert.IsType<RedirectToActionResult>(forgedInlinePayment);
+        Assert.Empty(await db.Orders.AsNoTracking().ToListAsync());
 
         var bad = await controller.PrepareBkash(token, "01799999999");
         Assert.IsType<BadRequestObjectResult>(bad);
