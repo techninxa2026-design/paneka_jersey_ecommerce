@@ -16,7 +16,7 @@ public sealed class MyOrdersController(ApplicationDbContext db, OrderCancellatio
     [HttpGet("")]
     public async Task<IActionResult> Index()
     {
-        var orders = await db.Orders.AsNoTracking().Include(o => o.Payment)
+        var orders = await db.Orders.AsNoTracking().Include(o => o.Payment).Include(o => o.Shipment)
             .Where(o => o.UserId == UserId).OrderByDescending(o => o.CreatedAt)
             .Take(50).ToListAsync();
         return View(orders);
@@ -27,6 +27,7 @@ public sealed class MyOrdersController(ApplicationDbContext db, OrderCancellatio
     {
         var order = await db.Orders.AsNoTracking().AsSplitQuery()
             .Include(o => o.Payment).Include(o => o.Shipment)
+            .Include(o => o.StatusHistory)
             .Include(o => o.Items).ThenInclude(i => i.ProductVariant).ThenInclude(v => v.Product)
             .SingleOrDefaultAsync(o => o.Id == id && o.UserId == UserId);
         if (order == null) return NotFound();
