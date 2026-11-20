@@ -340,7 +340,7 @@ public sealed class ManualPaymentFlowTests
     }
 
     [Fact]
-    public async Task Removing_merchant_number_disables_new_bkash_orders_but_not_cod()
+    public async Task Missing_merchant_number_keeps_bkash_active_and_accepts_sender_and_trx()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
@@ -350,16 +350,62 @@ public sealed class ManualPaymentFlowTests
         await db.SaveChangesAsync();
         var checkout = Checkout(db);
         Assert.Null(await checkout.ManualBkashNumber());
-        await Assert.ThrowsAsync<CheckoutException>(() =>
-            checkout.PlaceOrder("buyer", Delivery(), new PlaceOrderInput {
-                PaymentMethod = "Bkash", SubmissionToken = Guid.NewGuid().ToString("N")
-            }));
-        Assert.Empty(await db.Orders.AsNoTracking().ToListAsync());
-        var cod = await checkout.PlaceOrder("buyer", Delivery(), new PlaceOrderInput {
+        Assert.True(new PaymentPageViewModel().AllowManualBkash);
+
+        // No merchant number in Admin: buyer can still use the manual bKash
+        // popup and report a transfer made using store-provided details.
+        var reservation = new PlaceOrderInput
+        {
+            PaymentMethod = "Bkash",
+            SubmissionToken = Guid.NewGuid().ToString("N")
+        };
+        var id = await checkout.PlaceOrder("buyer", Delivery(), reservation,
+            prepareManualBkash: true);
+        var payment = await db.Payments.AsNoTracking().SingleAsync();
+        Assert.Equal("Bkash", payment.Method);
+        Assert.Equal("Pending", payment.Status);
+        Assert.Null(payment.ManualRecipientNumber);
+        Assert.Null(payment.PaidAt);
+
+        var service = new ManualBkashPaymentService(db);
+        var customer = Setup(new BkashController(db, service,
+            NullLogger<BkashController>.Instance), "buyer");
+        var receipt = Assert.IsType<ManualBkashStatusModel>(
+            Assert.IsType<ViewResult>(await customer.Status(id)).Model);
+        Assert.True(receipt.CanSubmit);
+        Assert.Null(receipt.RecipientNumber);
+
+        await service.SubmitAsync(id, "buyer", "01912345678", "PX123456789",
+            BangladeshNow());
+        payment = await db.Payments.AsNoTracking().SingleAsync();
+        Assert.Equal("Submitted", payment.Status);
+        Assert.Equal("01912345678", payment.ManualSenderNumber);
+        Assert.Equal("PX123456789", payment.TransactionReference);
+        Assert.Null(payment.ManualRecipientNumber);
+        Assert.NotNull(payment.ManualSubmittedAt);
+        Assert.Null(payment.PaidAt);
+        Assert.Equal("Pending", (await db.Orders.AsNoTracking().SingleAsync()).Status);
+        Assert.Single(await db.PaymentTransactions.AsNoTracking().ToListAsync());
+
+        await service.VerifyAsync(payment.Id, "staff-1",
+            "Confirmed full transfer amount and TrxID in the actual receiving wallet");
+        Assert.Equal("Paid", (await db.Payments.AsNoTracking().SingleAsync()).Status);
+        Assert.Equal("Confirmed", (await db.Orders.AsNoTracking().SingleAsync()).Status);
+
+        // Cash on delivery is still separately available for new orders.
+        var cart = await db.ShoppingCarts.SingleAsync();
+        db.CartItems.Add(new CartItem
+        {
+            ShoppingCartId = cart.Id, ProductVariantId = 1, Quantity = 1
+        });
+        await db.SaveChangesAsync();
+        var cod = await checkout.PlaceOrder("buyer", Delivery(), new PlaceOrderInput
+        {
             PaymentMethod = "COD", SubmissionToken = Guid.NewGuid().ToString("N")
         });
         Assert.True(cod > 0);
-        Assert.Equal("CashOnDelivery", (await db.Payments.AsNoTracking().SingleAsync()).Method);
+        Assert.Equal("CashOnDelivery",
+            (await db.Payments.AsNoTracking().SingleAsync(x => x.OrderId == cod)).Method);
     }
 
     [Fact]
