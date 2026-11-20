@@ -809,6 +809,85 @@ namespace Jersey_ecommerce.Migrations
                     b.ToTable("Reviews");
                 });
 
+            modelBuilder.Entity("Jersey_ecommerce.Models.Notifications.AdminNotification", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("TargetUrl")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Category", "CreatedAt");
+
+                    b.HasIndex("CreatedAt", "Id");
+
+                    b.ToTable("AdminNotifications");
+                });
+
+            modelBuilder.Entity("Jersey_ecommerce.Models.Notifications.AdminNotificationRead", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AdminNotificationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("AdminUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminNotificationId");
+
+                    b.HasIndex("AdminUserId", "AdminNotificationId")
+                        .IsUnique();
+
+                    b.ToTable("AdminNotificationReads");
+                });
+
             modelBuilder.Entity("Jersey_ecommerce.Models.Orders.InventoryTransaction", b =>
                 {
                     b.Property<int>("Id")
@@ -1724,6 +1803,17 @@ namespace Jersey_ecommerce.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Jersey_ecommerce.Models.Notifications.AdminNotificationRead", b =>
+                {
+                    b.HasOne("Jersey_ecommerce.Models.Notifications.AdminNotification", "Notification")
+                        .WithMany("Reads")
+                        .HasForeignKey("AdminNotificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Notification");
+                });
+
             modelBuilder.Entity("Jersey_ecommerce.Models.Orders.InventoryTransaction", b =>
                 {
                     b.HasOne("Jersey_ecommerce.Models.Orders.Order", "Order")
@@ -2005,6 +2095,11 @@ namespace Jersey_ecommerce.Migrations
             modelBuilder.Entity("Jersey_ecommerce.Models.Catalog.Size", b =>
                 {
                     b.Navigation("Variants");
+                });
+
+            modelBuilder.Entity("Jersey_ecommerce.Models.Notifications.AdminNotification", b =>
+                {
+                    b.Navigation("Reads");
                 });
 
             modelBuilder.Entity("Jersey_ecommerce.Models.Orders.Order", b =>
