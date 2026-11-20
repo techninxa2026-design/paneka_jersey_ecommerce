@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Jersey_ecommerce.Areas.Admin.Controllers;
 using Jersey_ecommerce.Areas.Admin.ViewModels;
 using Jersey_ecommerce.Areas.Identity;
@@ -41,6 +42,11 @@ public sealed class DeliveredReviewWorkflowTests
         var order = await db.Orders.SingleAsync();
         order.Status = "Delivered";
         await db.SaveChangesAsync();
+
+        var live = Assert.IsType<OkObjectResult>(await Customer(db, "buyer").State(1));
+        using (var response = JsonDocument.Parse(JsonSerializer.Serialize(live.Value)))
+            Assert.Equal("Delivered", response.RootElement.GetProperty("orderStatus").GetString());
+        Assert.IsType<NotFoundResult>(await Customer(db, "other").State(1));
 
         Assert.IsType<NotFoundResult>(await Customer(db, "other").Review(1, 1));
         Assert.IsType<NotFoundResult>(await Customer(db, "buyer").Review(1, 999));
