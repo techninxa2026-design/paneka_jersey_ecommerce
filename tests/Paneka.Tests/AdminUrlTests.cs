@@ -3,6 +3,8 @@ using Jersey_ecommerce.Areas.Admin.ViewModels;
 using Jersey_ecommerce.Data;
 using Jersey_ecommerce.Models.Catalog;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,6 +24,7 @@ public sealed class AdminUrlTests
         db.Brands.Add(new Brand { Name = "Classic", Slug = "classic" });
         await db.SaveChangesAsync();
         var admin = new BrandsController(db, null!, NullLogger<BrandsController>.Instance);
+        admin.TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider());
         var result = await admin.Create(new BrandFormViewModel {
             Name = "Classic", Slug = "inject-a-user-url", IsActive = true
         });
@@ -38,12 +41,19 @@ public sealed class AdminUrlTests
         await using var db = NewDb(conn);
         await db.Database.EnsureCreatedAsync();
         var admin = new CollectionsController(db, null!, NullLogger<CollectionsController>.Instance);
+        admin.TempData = new TempDataDictionary(new DefaultHttpContext(), new TestTempDataProvider());
         var result = await admin.Create(new CollectionFormViewModel {
             Name = "Retro Icons", Slug = "malicious-slug", IsActive = true
         });
         Assert.IsType<RedirectToActionResult>(result);
         var created = await db.Collections.SingleAsync();
         Assert.Equal("retro-icons", created.Slug);
+    }
+
+    private sealed class TestTempDataProvider : ITempDataProvider
+    {
+        public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
+        public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
     }
 
     private static ApplicationDbContext NewDb(SqliteConnection connection) =>
