@@ -202,5 +202,28 @@
     </div>
 </main>
 @await Html.PartialAsync("_PanenkaCheckoutFooter")
+@if (payment?.Method == "Bkash" && payment.Status == "Submitted")
+{
+    <script>
+    (() => {
+        let pending = false;
+        // Keep the buyer's order page in sync after staff verifies or rejects
+        // a reported transfer. Only buyer-scoped order status is requested.
+        window.setInterval(async () => {
+            if (document.hidden || pending) return;
+            pending = true;
+            try {
+                const res = await fetch('/Checkout/Bkash/State/@Model.Id', {
+                    credentials: 'same-origin', cache: 'no-store'
+                });
+                if (!res.ok) return;
+                const state = await res.json();
+                if (state.paymentStatus !== 'Submitted') window.location.reload();
+            } catch { /* Keep last known order details during network errors. */ }
+            finally { pending = false; }
+        }, 20000);
+    })();
+    </script>
+}
 </body>
 </html>
