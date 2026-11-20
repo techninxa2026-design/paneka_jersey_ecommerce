@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Jersey_ecommerce.Areas.Admin.ViewModels;
 using Jersey_ecommerce.Data;
+using Jersey_ecommerce.Services;
 using Jersey_ecommerce.Models.Catalog;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -82,6 +83,8 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
         public async Task<IActionResult> Create(BrandFormViewModel model)
         {
             NormalizeAndValidate(model);
+            model.Slug = await CatalogSlug.UniqueAsync(model.Name, "brand", 120,
+                candidate => _db.Brands.AnyAsync(x => x.Slug == candidate));
             await ValidateUniqueSlugAsync(model.Slug!, exceptId: null);
 
             if (!ModelState.IsValid)
@@ -151,6 +154,10 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
             // Do not trust a hidden LogoUrl field submitted by the browser.
             model.LogoUrl = brand.LogoUrl;
             NormalizeAndValidate(model);
+            model.Slug = string.Equals(brand.Name, model.Name, StringComparison.OrdinalIgnoreCase)
+                ? brand.Slug
+                : await CatalogSlug.UniqueAsync(model.Name, "brand", 120,
+                    candidate => _db.Brands.AnyAsync(x => x.Slug == candidate && x.Id != id));
             await ValidateUniqueSlugAsync(model.Slug!, exceptId: id);
 
             if (model.LogoFile != null && model.RemoveLogo)
@@ -257,9 +264,7 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
         {
             model.Name = (model.Name ?? "").Trim();
 
-            var slugSource = string.IsNullOrWhiteSpace(model.Slug)
-                ? model.Name : model.Slug;
-            model.Slug = GenerateSlug(slugSource);
+            model.Slug = CatalogSlug.FromName(model.Name, "brand", 120);
 
             // Slug is generated/normalized by the server, not trusted from POST.
             ModelState.Remove(nameof(model.Slug));
