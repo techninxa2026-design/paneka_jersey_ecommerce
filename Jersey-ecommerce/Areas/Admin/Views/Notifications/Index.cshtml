@@ -1,0 +1,134 @@
+@model Jersey_ecommerce.Areas.Admin.ViewModels.AdminNotificationsIndexViewModel
+@{
+    ViewData["Title"] = "Notification Center";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var returnUrl = Context.Request.Path + Context.Request.QueryString.ToString();
+}
+<div class="an-center">
+    <header class="an-center-header">
+        <div>
+            <div class="an-eyebrow">PANENKA / ACTIVITY CONTROL</div>
+            <h1>Notification center<span>.</span></h1>
+            <p>Stay on top of orders, payments, shipments, reviews, inventory, customers, catalog and store changes.</p>
+        </div>
+        <div class="an-center-actions">
+            <div class="an-center-counter"><span>UNREAD ALERTS</span><strong>@Model.UnreadCount</strong></div>
+            <form method="post" action="/Admin/Notifications/ReadAll">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@returnUrl"/>
+                <button class="an-button an-button-dark" type="submit" disabled="@(Model.UnreadCount == 0)">
+                    <i class="bi bi-check2-all"></i> Mark all read
+                </button>
+            </form>
+        </div>
+    </header>
+    @if (TempData["Success"] is string notice)
+    {
+        <div class="an-message" role="status">@notice</div>
+    }
+    <section class="an-center-filter">
+        <form method="get" action="/Admin/Notifications" class="an-filter-form">
+            <div>
+                <label for="anSearch">Search activity</label>
+                <input id="anSearch" name="search" type="search" maxlength="100" value="@Model.Search" placeholder="Order number, payment, stock, event..."/>
+            </div>
+            <div>
+                <label for="anCategory">Category</label>
+                <select id="anCategory" name="category">
+                    <option value="All">All categories</option>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <option value="@category" selected="@(category == Model.Category)">@category</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label for="anStatus">Read status</label>
+                <select id="anStatus" name="status">
+                    <option value="all" selected="@(Model.Status == "all")">All activity</option>
+                    <option value="unread" selected="@(Model.Status == "unread")">Unread only</option>
+                    <option value="read" selected="@(Model.Status == "read")">Read only</option>
+                </select>
+            </div>
+            <button class="an-button an-button-dark" type="submit"><i class="bi bi-funnel"></i> Apply</button>
+            <a class="an-button" href="/Admin/Notifications">Reset</a>
+        </form>
+    </section>
+    <div class="an-list-header">
+        <div><h2>Store activity</h2><span>@Model.Total matching events</span></div>
+        <span>Newest first · Bangladesh time (UTC+06:00)</span>
+    </div>
+    @if (Model.Items.Count == 0)
+    {
+        <div class="an-center-empty">
+            <i class="bi bi-inbox"></i>
+            <h2>No notifications found</h2>
+            <p>Try clearing your filters, or return when the store records new activity.</p>
+            <a class="an-button an-button-dark" href="/Admin/Notifications">Show all activity</a>
+        </div>
+    }
+    else
+    {
+        <div class="an-list">
+            @foreach (var item in Model.Items)
+            {
+                <article class="an-card @(item.IsRead ? "an-is-read" : "an-is-unread")">
+                    <div class="an-card-symbol an-level-@item.Severity.ToLowerInvariant()">
+                        <i class="bi @(item.Category switch
+                            {
+                                "Orders" => "bi-bag-check",
+                                "Payments" => "bi-credit-card",
+                                "Shipping" => "bi-truck",
+                                "Reviews" => "bi-star",
+                                "Inventory" => "bi-box-seam",
+                                "Customers" => "bi-people",
+                                "Catalog" => "bi-grid",
+                                "Promotions" => "bi-ticket-perforated",
+                                "Settings" => "bi-gear",
+                                _ => "bi-activity"
+                            })"></i>
+                    </div>
+                    <div class="an-card-content">
+                        <div class="an-card-overline">
+                            <span>@item.Category</span>
+                            <span>·</span>
+                            <span>@item.CreatedAt.AddHours(6).ToString("dd MMM yyyy, hh:mm tt") BDT</span>
+                            <span class="an-severity an-level-@item.Severity.ToLowerInvariant()">@item.Severity</span>
+                            @if (!item.IsRead) { <span class="an-new">NEW</span> }
+                        </div>
+                        <h3>@item.Title</h3>
+                        <p>@item.Message</p>
+                        <div class="an-card-actions">
+                            <form method="post" action="/Admin/Notifications/Open/@item.Id">
+                                @Html.AntiForgeryToken()
+                                <button class="an-button an-button-dark" type="submit">View related record <i class="bi bi-arrow-up-right"></i></button>
+                            </form>
+                            <form method="post" action="/Admin/Notifications/@(item.IsRead ? "Unread" : "Read")/@item.Id">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="returnUrl" value="@returnUrl"/>
+                                <button type="submit" class="an-button">
+                                    <i class="bi @(item.IsRead ? "bi-circle" : "bi-check2")"></i>
+                                    @(item.IsRead ? "Mark unread" : "Mark read")
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+    }
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="an-pagination" aria-label="Notification pages">
+            @if (Model.Page > 1)
+            {
+                <a href="@Url.Action("Index", "Notifications", new { area = "Admin", category = Model.Category, status = Model.Status, search = Model.Search, page = Model.Page - 1 })">← Previous</a>
+            }
+            <span>Page @Model.Page of @Model.TotalPages</span>
+            @if (Model.Page < Model.TotalPages)
+            {
+                <a href="@Url.Action("Index", "Notifications", new { area = "Admin", category = Model.Category, status = Model.Status, search = Model.Search, page = Model.Page + 1 })">Next →</a>
+            }
+        </nav>
+    }
+</div>
