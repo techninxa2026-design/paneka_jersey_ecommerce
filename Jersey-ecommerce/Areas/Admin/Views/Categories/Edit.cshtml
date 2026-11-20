@@ -544,39 +544,13 @@
                         </div>
 
 
-                        <!-- CATEGORY SLUG -->
+                        <!-- URL identifier is system managed -->
                         <div class="cat-field">
-
-                            <label for="Slug"
-                                   class="cat-label">
-                                URL slug
-                            </label>
-
-                            <input type="text"
-                                   name="Slug"
-                                   id="Slug"
-                                   value="@Model.Slug"
-                                   maxlength="120"
-                                   class="cat-input"
-                                   placeholder="home-jerseys" />
-
-                            @Html.ValidationMessage(
-                                "Slug",
-                                "",
-                                new { @class = "cat-error" })
-
-                            <div class="cat-hint">
-                                Changing the slug may change
-                                the category URL.
-                                It must remain unique.
-                            </div>
-
-                            <div id="slugPreview"
-                                 class="cat-hint"></div>
-
+                            <label class="cat-label">Automatically generated URL identifier</label>
+                            <input type="hidden" name="Slug" id="Slug" value="@Model.Slug" />
+                            <div class="panenka-slug-preview" id="slugPreview" aria-live="polite">@Model.Slug</div>
+                            <div class="cat-hint">Existing identifiers remain unchanged until you rename the category.</div>
                         </div>
-
-
                         <!-- DESCRIPTION -->
                         <div class="cat-field">
 
@@ -935,7 +909,7 @@
 
 
         // SLUG GENERATION
-        let manuallyEdited = true;
+        let manuallyEdited = false;
 
         function generateSlug(value) {
 
@@ -953,8 +927,8 @@
             const value = slugInput.value.trim();
 
             slugPreview.textContent = value
-                ? 'Preview: /category/' + value
-                : 'Preview: Enter a category slug';
+                ? 'Identifier: ' + value
+                : 'Identifier is generated automatically';
         }
 
         nameInput.addEventListener('input', () => {
