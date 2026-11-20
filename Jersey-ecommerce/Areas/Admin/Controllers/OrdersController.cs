@@ -163,6 +163,7 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
             }
 
             var order = await _context.Orders.Include(o => o.Payment)
+                .Include(o => o.Shipment)
                 .FirstOrDefaultAsync(o => o.Id == id);
             if (order == null)
                 return NotFound();
@@ -190,9 +191,32 @@ namespace Jersey_ecommerce.Areas.Admin.Controllers
                 return RedirectToAction(nameof(Details), new { id });
             }
 
+            // Checkout creates one shipment per order. Keep both records in sync
+            // regardless of whether the operator advances from Orders or Shipments.
+            if (allowedNext is "Shipped" or "Delivered")
+            {
+                if (order.Shipment == null || order.Shipment.Status is "Cancelled" or "Returned")
+                {
+                    TempData["Error"] = "A valid shipment is required before dispatch or delivery.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+                if (string.IsNullOrWhiteSpace(order.Shipment.CourierName))
+                {
+                    TempData["Error"] = "Add courier details in Shipments before dispatching this order.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+            }
+
             try
             {
                 var now = DateTime.UtcNow;
+                if (allowedNext is "Shipped" or "Delivered" && order.Shipment != null)
+                {
+                    order.Shipment.Status = allowedNext;
+                    order.Shipment.ShippedAt ??= now;
+                    if (allowedNext == "Delivered")
+                        order.Shipment.DeliveredAt ??= now;
+                }
                 order.Status = allowedNext;
                 order.UpdatedAt = now;
 

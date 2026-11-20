@@ -74,7 +74,7 @@ public sealed class ShopCatalogApiController : ControllerBase
         // A size is available only when an active variant has stock.
         if (sizeId.HasValue)
             query = query.Where(p => p.Variants.Any(v =>
-                v.SizeId == sizeId.Value && v.IsActive && v.StockQuantity > 0));
+                v.SizeId == sizeId.Value && v.IsActive && v.Size.IsActive && v.Color.IsActive && v.StockQuantity > 0));
 
         if (minPrice.HasValue)
             query = query.Where(p => p.BasePrice >= minPrice.Value);
@@ -82,7 +82,7 @@ public sealed class ShopCatalogApiController : ControllerBase
             query = query.Where(p => p.BasePrice <= maxPrice.Value);
 
         if (inStock)
-            query = query.Where(p => p.Variants.Any(v => v.IsActive && v.StockQuantity > 0));
+            query = query.Where(p => p.Variants.Any(v => v.IsActive && v.Size.IsActive && v.Color.IsActive && v.StockQuantity > 0));
 
         int total = await query.CountAsync(cancellationToken);
         int totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
@@ -104,7 +104,8 @@ public sealed class ShopCatalogApiController : ControllerBase
             .Take(pageSize)
             .Include(p => p.Category)
             .Include(p => p.Images)
-            .Include(p => p.Variants)
+            .Include(p => p.Variants).ThenInclude(v => v.Size)
+            .Include(p => p.Variants).ThenInclude(v => v.Color)
             .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
@@ -121,8 +122,8 @@ public sealed class ShopCatalogApiController : ControllerBase
             .ToListAsync(cancellationToken);
 
         var sizes = await _db.Sizes.AsNoTracking()
-            .Where(s => _db.ProductVariants.Any(v =>
-                v.SizeId == s.Id && v.IsActive && v.StockQuantity > 0 &&
+            .Where(s => s.IsActive && _db.ProductVariants.Any(v =>
+                v.SizeId == s.Id && v.IsActive && v.Color.IsActive && v.StockQuantity > 0 &&
                 _db.Products.Any(p => p.Id == v.ProductId && p.IsPublished)))
             .OrderBy(s => s.Id)
             .Select(s => new { id = s.Id, name = s.Name })
@@ -148,9 +149,9 @@ public sealed class ShopCatalogApiController : ControllerBase
             isNewArrival = p.IsNewArrival,
             isFeatured = p.IsFeatured,
             description = p.ShortDescription ?? p.Description,
-            stockQuantity = p.Variants.Where(v => v.IsActive).Sum(v => (long)v.StockQuantity),
+            stockQuantity = p.Variants.Where(v => v.IsActive && v.Size.IsActive && v.Color.IsActive).Sum(v => (long)v.StockQuantity),
             availableSizes = p.Variants
-                .Where(v => v.IsActive && v.StockQuantity > 0 && sizeNames.ContainsKey(v.SizeId))
+                .Where(v => v.IsActive && v.Size.IsActive && v.Color.IsActive && v.StockQuantity > 0 && sizeNames.ContainsKey(v.SizeId))
                 .Select(v => v.SizeId)
                 .Distinct()
                 .OrderBy(id => id)

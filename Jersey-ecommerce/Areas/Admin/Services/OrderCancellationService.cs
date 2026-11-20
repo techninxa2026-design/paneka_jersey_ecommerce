@@ -28,8 +28,10 @@ public sealed class OrderCancellationService(ApplicationDbContext db, InventoryS
                 throw new CheckoutException("This order has an item without a variant; an admin must restore its stock manually.");
             await inventory.RestoreCancelledOrderAsync(item.ProductVariantId.Value, item.Quantity, order.Id);
         }
+        var cancelledAt = DateTime.UtcNow;
         order.Status = "Cancelled";
-        order.UpdatedAt = DateTime.UtcNow;
+        order.UpdatedAt = cancelledAt;
+        order.CancelledAt = cancelledAt;
         order.Payment.Status = "Cancelled";
         if (order.Shipment != null) order.Shipment.Status = "Cancelled";
         var usage = await db.CouponUsages.FirstOrDefaultAsync(u => u.OrderId == order.Id);

@@ -61,7 +61,11 @@ else { <span class="gallery-empty">PANENKA</span> }
 const productId=@Model.Id, $=id=>document.getElementById(id), csrf=document.querySelector('meta[name="request-verification-token"]').content;
 const select=$('variant');function chosen(){return variants.find(v=>v.id===Number(select.value))}
 function show(message){$('feedback').hidden=false;$('feedback').textContent=message}
-function sync(){const v=chosen();if(!v)return;$('displayPrice').textContent='৳'+Number(v.price).toLocaleString('en-BD',{minimumFractionDigits:2});
+const compareAtPrice=@((Model.CompareAtPrice ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture));
+function sync(){const v=chosen();if(!v)return;
+const formatted=n=>'৳'+Number(n).toLocaleString('en-BD',{minimumFractionDigits:2,maximumFractionDigits:2});
+const priceEl=$('displayPrice');priceEl.textContent=formatted(v.price);
+if(compareAtPrice>Number(v.price)){const oldPrice=document.createElement('span');oldPrice.className='old';oldPrice.textContent=formatted(compareAtPrice);priceEl.appendChild(oldPrice);}
 $('quantity').max=Math.min(v.stock,100);$('addToBag').disabled=v.stock<=0; if(v.image&&v.image.startsWith('/')){const img=$('productMain');if(img)img.src=v.image;}}
 select.addEventListener('change',sync);if(select.options.length){const available=[...select.options].find(o=>!o.disabled);if(available)select.value=available.value;sync();}
 document.querySelectorAll('[data-photo]').forEach(btn=>btn.addEventListener('click',()=>{const img=$('productMain');if(img)img.src=btn.dataset.photo;}));

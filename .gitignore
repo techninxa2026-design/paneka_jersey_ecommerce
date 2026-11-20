@@ -1,0 +1,28 @@
+# Visual Studio, Rider, VS Code
+.vs/
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+# .NET build artifacts
+**/bin/
+**/obj/
+TestResults/
+**/TestResults/
+*.nupkg
+*.snupkg
+# Environment-specific secrets and connection strings
+**/appsettings.Local.json
+**/appsettings.Production.json
+**/appsettings.Staging.json
+.env
+.env.*
+!.env.example
+# Runtime uploaded content must be backed up separately from source control
+**/wwwroot/uploads/
+# OS and tooling
+.DS_Store
+Thumbs.db
+*.log

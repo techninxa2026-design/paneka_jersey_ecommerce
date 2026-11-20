@@ -1,0 +1,10 @@
+@{
+    ViewData["Title"] = "Something went wrong";
+}
+<section class="panenka-information" role="alert">
+    <div class="eyebrow">PANENKA / SERVICE NOTICE</div>
+    <h1>We hit a snag.</h1>
+    <p>We couldn't complete your request. Please try again in a moment. If you're checking out, review <a asp-controller="MyOrders" asp-action="Index">My orders</a> before placing another order.</p>
+    <p><a asp-controller="Home" asp-action="Index">Return to PANENKA</a> or <a asp-controller="Home" asp-action="Contact">contact support</a>.</p>
+    <p class="small text-muted">Request reference: @ViewData["RequestId"]</p>
+</section>

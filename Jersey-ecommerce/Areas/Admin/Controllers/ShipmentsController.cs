@@ -94,6 +94,16 @@ public class ShipmentsController : Controller
     [HttpGet]
     public async Task<IActionResult> Create(int? orderId)
     {
+        if (orderId is > 0)
+        {
+            // Storefront checkout already creates a Pending shipment. Open it instead
+            // of presenting an impossible second-shipment form for the same order.
+            var existingId = await _context.Shipments.AsNoTracking()
+                .Where(x => x.OrderId == orderId.Value)
+                .Select(x => x.Id).FirstOrDefaultAsync();
+            if (existingId > 0)
+                return RedirectToAction(nameof(Edit), new { id = existingId });
+        }
         var model = new ShipmentFormViewModel { OrderId = orderId ?? 0 };
         await LoadAvailableOrdersAsync(model);
         return View(model);
@@ -109,11 +119,14 @@ public class ShipmentsController : Controller
         Order? order = null;
         if (model.OrderId > 0)
         {
-            order = await _context.Orders.FirstOrDefaultAsync(o => o.Id == model.OrderId);
+            order = await _context.Orders.Include(o => o.Payment)
+                .FirstOrDefaultAsync(o => o.Id == model.OrderId);
             if (order == null)
                 ModelState.AddModelError(nameof(model.OrderId), "The selected order does not exist.");
-            else if (order.Status == "Cancelled")
-                ModelState.AddModelError(nameof(model.OrderId), "A cancelled order cannot be shipped.");
+            else if (order.Status is "Cancelled" or "Returned")
+                ModelState.AddModelError(nameof(model.OrderId), "Cancelled or returned orders cannot be shipped.");
+            else if (IsDispatchStatus(model.Status) && RequiresPaymentVerification(order))
+                ModelState.AddModelError(nameof(model.Status), "Verify the order payment before dispatching this shipment.");
             else if (await _context.Shipments.AnyAsync(s => s.OrderId == model.OrderId))
                 ModelState.AddModelError(nameof(model.OrderId), "This order already has a shipment.");
         }
@@ -182,7 +195,7 @@ public class ShipmentsController : Controller
         if (model.Id != id) return BadRequest();
 
         var shipment = await _context.Shipments
-            .Include(s => s.Order)
+            .Include(s => s.Order).ThenInclude(o => o.Payment)
             .FirstOrDefaultAsync(s => s.Id == id);
         if (shipment == null) return NotFound();
 
@@ -193,6 +206,20 @@ public class ShipmentsController : Controller
         model.CustomerName = shipment.Order.CustomerName;
         Normalize(model);
         ValidateShipment(model);
+
+        if (model.Status != shipment.Status &&
+            (shipment.Order.Status is "Cancelled" or "Returned"))
+            ModelState.AddModelError(nameof(model.Status),
+                "A cancelled or returned order cannot resume fulfillment.");
+
+        if (model.Status == "Cancelled" && shipment.Order.Status != "Cancelled")
+            ModelState.AddModelError(nameof(model.Status),
+                "Cancel the order from its order details so inventory and the shipment are updated together.");
+
+        if (model.Status != shipment.Status && IsDispatchStatus(model.Status) &&
+            RequiresPaymentVerification(shipment.Order))
+            ModelState.AddModelError(nameof(model.Status),
+                "Verify online or advance payment before dispatch. Cash-on-delivery orders can proceed.");
 
         if (shipment.Status == "Delivered" &&
             model.Status != "Delivered" && model.Status != "Returned")
@@ -291,6 +318,13 @@ public class ShipmentsController : Controller
                 ModelState.AddModelError(nameof(model.CourierName), "Enter the courier before dispatching.");
         }
     }
+
+    private static bool IsDispatchStatus(string? status) =>
+        status is "Shipped" or "InTransit" or "OutForDelivery" or "Delivered";
+
+    private static bool RequiresPaymentVerification(Order order) =>
+        order.Payment == null ||
+        (order.Payment.Method is "Bkash" or "ManualAdvance" && order.Payment.Status != "Paid");
 
     private static void Normalize(ShipmentFormViewModel model)
     {
