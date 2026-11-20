@@ -48,6 +48,7 @@ builder.Services.AddScoped<InventoryStockService>();
 builder.Services.AddScoped<CheckoutService>();
 builder.Services.AddScoped<OrderCancellationService>();
 builder.Services.AddScoped<ManualBkashPaymentService>();
+builder.Services.AddScoped<AdminNotificationReader>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
