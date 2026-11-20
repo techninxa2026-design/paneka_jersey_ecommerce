@@ -655,6 +655,16 @@ namespace Jersey_ecommerce.Data
             if (pending.Count == 0)
                 return await base.SaveChangesAsync(true, cancellationToken);
 
+            // The EF InMemory provider is used by catalog regression tests.
+            // It does not support transactions; SQL Server and SQLite do.
+            if (!Database.IsRelational())
+            {
+                var affectedInMemory = await base.SaveChangesAsync(true, cancellationToken);
+                AdminNotifications.AddRange(pending.Select(factory => factory()));
+                await base.SaveChangesAsync(true, cancellationToken);
+                return affectedInMemory;
+            }
+
             await using var ownTransaction = Database.CurrentTransaction == null
                 ? await Database.BeginTransactionAsync(cancellationToken)
                 : null;
