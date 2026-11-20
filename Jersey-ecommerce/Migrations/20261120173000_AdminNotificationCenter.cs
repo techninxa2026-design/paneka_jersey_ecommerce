@@ -68,6 +68,57 @@ namespace Jersey_ecommerce.Migrations
                 table: "AdminNotificationReads",
                 columns: new[] { "AdminUserId", "AdminNotificationId" },
                 unique: true);
+
+            // Bring today's outstanding work into the new Admin inbox once,
+            // without replaying years of completed historical events.
+            migrationBuilder.Sql("""
+                INSERT INTO [AdminNotifications]
+                    ([Category], [EventType], [Severity], [Title], [Message], [TargetUrl], [CreatedAt])
+                SELECT TOP (300) 'Payments', 'payment.submitted', 'Warning',
+                    N'bKash payment needs verification',
+                    CONCAT(N'Payment for order ', o.[OrderNumber], N' is awaiting independent bKash wallet verification.'),
+                    CONCAT('/Admin/Orders/Details/', CONVERT(nvarchar(20), o.[Id]), '#payment-review'),
+                    SYSUTCDATETIME()
+                FROM [Payments] p
+                INNER JOIN [Orders] o ON o.[Id] = p.[OrderId]
+                WHERE p.[Method] = 'Bkash' AND p.[Status] = 'Submitted'
+                  AND o.[Status] = 'Pending'
+                ORDER BY p.[Id] DESC;
+                """);
+
+            migrationBuilder.Sql("""
+                INSERT INTO [AdminNotifications]
+                    ([Category], [EventType], [Severity], [Title], [Message], [TargetUrl], [CreatedAt])
+                SELECT TOP (200) 'Reviews', 'review.submitted', 'Warning',
+                    N'Customer review awaiting moderation',
+                    CONCAT(N'A ', CONVERT(nvarchar(5), r.[Rating]),
+                           N'-star product review is waiting for approval.'),
+                    CONCAT('/Admin/Reviews/Details/', CONVERT(nvarchar(20), r.[Id])),
+                    SYSUTCDATETIME()
+                FROM [Reviews] r
+                WHERE r.[IsApproved] = 0 AND r.[IsRejected] = 0
+                ORDER BY r.[Id] DESC;
+                """);
+
+            migrationBuilder.Sql("""
+                INSERT INTO [AdminNotifications]
+                    ([Category], [EventType], [Severity], [Title], [Message], [TargetUrl], [CreatedAt])
+                SELECT TOP (200) 'Inventory',
+                    CASE WHEN v.[StockQuantity] = 0 THEN 'stock.out' ELSE 'stock.low' END,
+                    CASE WHEN v.[StockQuantity] = 0 THEN 'Critical' ELSE 'Warning' END,
+                    CASE WHEN v.[StockQuantity] = 0 THEN
+                        CONCAT(N'Out of stock: ', LEFT(v.[SKU], 125)) ELSE
+                        CONCAT(N'Low stock: ', LEFT(v.[SKU], 125)) END,
+                    CONCAT(N'Variant ', LEFT(v.[SKU], 100), N' has ',
+                           CONVERT(nvarchar(20), v.[StockQuantity]), N' units available.'),
+                    CONCAT('/Admin/Products/Edit/', CONVERT(nvarchar(20), v.[ProductId])),
+                    SYSUTCDATETIME()
+                FROM [ProductVariants] v
+                INNER JOIN [Products] p ON p.[Id] = v.[ProductId]
+                WHERE v.[IsActive] = 1 AND p.[IsPublished] = 1
+                  AND v.[StockQuantity] BETWEEN 0 AND 5
+                ORDER BY v.[Id] DESC;
+                """);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
