@@ -20,8 +20,8 @@ PANENKA now offers **Cash on Delivery (COD)** or **manual bKash transfer** at ne
 
 1. Administrator saves an 11-digit receiving number at **Admin → Store settings → Payment methods**. Optionally edits the customer instructions.
 2. Buyer reaches **Checkout → Payment**, where **Place COD order** and **Pay with bKash** appear as adjacent actions. A bKash merchant number must be configured in Admin before the second action is available.
-3. Clicking **Pay with bKash** opens an on-page dialog showing the exact total, current receiving wallet number, copy button, transfer instructions and form. **The order has not been created yet** at this point. Buyer sends money in their own bKash app, then provides the **sender number**, **transaction ID (TrxID)** and **payment time in Bangladesh time** in that dialog.
-4. Clicking **Submit & Place order** performs a single database transaction that validates the cart/stock/discount and reported details; creates the order, stock reservation, shipment, bKash payment with receiving-number snapshot and `Submitted` status, and a payment-ledger event. **The order is recorded automatically, but remains Pending/unpaid until staff verification.** The customer immediately sees the order number and submission status; a receipt can be revisited from My Orders.
+3. Clicking **Pay with bKash** makes an antiforgery-protected request that **reserves the order before showing payment instructions**: the backend validates stock, coupon, delivery district and rate; creates the pending order, reserves stock, saves the recipient number and creates the pending shipment in one database transaction. Double-clicks reuse the same order.
+4. The on-page bKash dialog opens only after the backend confirms the saved order, actual total and receiving number. Buyer sends money from their own bKash app, then provides their **sender number**, **transaction ID (TrxID)** and **payment time in Bangladesh time** in the dialog. Clicking **Submit & Place order** posts that receipt to the existing customer-owned manual bKash submission endpoint. The saved order's payment becomes `Submitted` and its ledger records the claim. **The order remains Pending/unpaid until staff verification**. A receipt can be reopened from My Orders even if the customer closes the popup before submitting.
 5. Staff opens **Admin → Verify bKash**, checks the **actual merchant wallet**, compares recipient, sender, amount and TrxID, records a note, and checks the independent-verification acknowledgement.
 6. **Verify** sets payment to **Paid**, records review staff/time and PaidAt, records the transaction-ledger event, advances the order to **Confirmed**, and permits normal fulfillment.
 7. **Reject** keeps the order **Pending**, sets payment **Rejected**, logs the reason and allows the buyer to enter corrected details. Previous submission history stays in the ledger.
@@ -29,7 +29,7 @@ PANENKA now offers **Cash on Delivery (COD)** or **manual bKash transfer** at ne
 
 No automatic transfer or refund is performed by PANENKA. The website cannot know if funds arrived without a staff member checking the bKash wallet.
 
-**Operational note:** Because the requested popup collects transfer details before placing the order, a product can become unavailable while the buyer is sending money. If checkout rejects the final submission after an actual transfer, support must reconcile the receipt and issue an appropriate manual refund or replacement order; do not ask the customer to pay twice. For high-volume production use, reserving the order before instructing payment is safer.
+**Production safety:** PANENKA reserves the order and inventory **before** instructing the buyer to transfer money, preventing a sold-out checkout after payment. Closing the popup does not delete the pending order. Customer support must reconcile unverified/abandoned pending bKash orders and avoid asking customers to transfer twice.
 
 ### Editing/deleting merchant receiving number
 
@@ -81,9 +81,10 @@ After migration, start the app, visit **Admin → Store settings → Payment met
 - [ ] Place a COD order, confirm stock reservation and correct order/customer records.
 - [ ] Complete the shipment delivery flow and independently confirm cash received in Admin → Payments.
 - [ ] Select from Bangladesh's 64 official districts; test Gazipur / Kaliganj, Dhaka and invalid district rejection. Verify inside/outside Dhaka pricing.
-- [ ] Click **Pay with bKash**; verify modal receiver number, copy, exact order total and keyboard/mobile operation. Customer provides sender number, TrxID and local time **before** submitting the order.
-- [ ] Place the bKash order from the modal; verify one order is created, payment becomes **Submitted** (not Paid), the ledger records details, inventory is reserved once, and order cannot dispatch before staff approval.
-- [ ] Deliberately submit invalid number/TrxID, expired time and changed merchant number and verify no partial order or stock change.
+- [ ] Click **Pay with bKash**; verify the backend **reserves one pending order** and reduces inventory once before the modal displays the receiving wallet and amount. Retry the same checkout token without duplicate orders.
+- [ ] Confirm the popup shows the saved order number, recipient, accurate amount, copy control and accessible mobile dialog. Enter sender, TrxID and local time, submit, and verify the payment changes from **Pending** to **Submitted** (not Paid).
+- [ ] Close the popup before submitting and recover the pending bKash order from My Orders; then complete the transaction report without another payment or order.
+- [ ] Before order reservation, deliberately use an invalid district, exhausted stock and changed merchant number; verify **no order or stock movement**. After reservation, invalid sender/TrxID/time must not create a claim or mark the order paid.
 - [ ] Try another customer's order URL; no payment details should be exposed.
 - [ ] Attempt reuse of TrxID on another order; verify rejection.
 - [ ] Admin reject a claim; customer sees reason and can submit corrected details without losing ledger history.
