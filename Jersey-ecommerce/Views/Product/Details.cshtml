@@ -50,10 +50,17 @@ else { <span class="gallery-empty">PANENKA</span> }
 <section class="review-list" id="reviews"><h2>Customer reviews (@reviews.Count())</h2>
 @foreach(var review in reviews){<article class="review-card"><div aria-label="@review.Rating stars">@(new string('★', review.Rating))@(new string('☆', 5-review.Rating))</div><h3>@review.Title</h3><small>@(review.User?.FullName ?? "Verified customer") · @review.CreatedAt.ToString("dd MMM yyyy")</small><p>@review.Comment</p></article>}
 @if(!reviews.Any()){<p class="helper">No approved reviews yet.</p>}
+@if (ViewBag.DeliveredOrderId is int deliveredReviewOrder)
+{
+    <div class="review-order-cta" role="status">
+        <strong>@(ViewBag.OwnReviewStatus == "Approved" ? "Your review is published." : ViewBag.OwnReviewStatus == "Pending" ? "Your review is awaiting approval." : ViewBag.OwnReviewStatus == "Rejected" ? "Your review needs a revision." : "You've received this item — tell us how it fits.")</strong>
+        <a href="/MyOrders/@deliveredReviewOrder/Review/@Model.Id">@(ViewBag.OwnReviewStatus == "Approved" ? "VIEW MY REVIEW" : ViewBag.OwnReviewStatus == "Pending" ? "VIEW REVIEW STATUS" : ViewBag.OwnReviewStatus == "Rejected" ? "EDIT & RESUBMIT REVIEW" : "REVIEW MY PURCHASE") ↗</a>
+    </div>
+}
 @if (ViewBag.CanReview == true){<form class="review-form" method="post" action="/Product/Review/@Model.Id">@Html.AntiForgeryToken()
 <h3>Review your purchase</h3><label>Rating<select name="rating" required><option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option></select></label>
 <label>Title<input name="title" maxlength="180" placeholder="Review title"></label>
-<label>Comment<textarea name="comment" maxlength="2000" required placeholder="How was your jersey?"></textarea></label>
+<label>Comment<textarea name="comment" minlength="10" maxlength="2000" required placeholder="How was your jersey? At least 10 characters."></textarea></label>
 <button type="submit" class="primary">SUBMIT FOR REVIEW</button></form>}
 </section></div>
 <footer class="footer"><div class="container">© @DateTime.UtcNow.Year PANENKA · FOOTBALL CULTURE</div></footer>
